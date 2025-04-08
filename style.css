@@ -10,17 +10,43 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap'); /* Import Poppins */
 
+@keyframes move-stars {
+  from { background-position: 0 0; }
+  to   { background-position: -10000px 5000px; } /* Large values for slow movement */
+}
+
 body {
     margin: 0;
     padding: 0;
-    background: linear-gradient(to right bottom, #0f0c29, #302b63, #24243e); /* Nebula gradient */
+    /* Reverted to Starfield */
+    background-color: var(--primary-color); /* Use primary color as base */
+    background-image:
+        /* Smallest/Faintest stars */
+        radial-gradient(1px 1px at 20px 30px, white, rgba(255,255,255,0)),
+        radial-gradient(1px 1px at 40px 70px, white, rgba(255,255,255,0)),
+        /* Medium stars */
+        radial-gradient(1.5px 1.5px at 50px 160px, #ccc, rgba(255,255,255,0)),
+        radial-gradient(1.5px 1.5px at 90px 40px, #ccc, rgba(255,255,255,0)),
+        /* Larger/Brighter stars */
+        radial-gradient(2px 2px at 130px 250px, #ddd, rgba(255,255,255,0)),
+        radial-gradient(2.5px 2.5px at 160px 120px, #eee, rgba(255,255,255,0));
+    background-repeat: repeat;
+    background-size:
+        200px 200px, /* Smallest */
+        300px 300px,
+        400px 400px, /* Medium */
+        500px 500px,
+        600px 600px, /* Larger */
+        800px 800px;
+    animation: move-stars 200s linear infinite;
+
     color: var(--text-color);
     font-family: var(--font-family);
     font-weight: 300; /* Lighter default font weight */
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-attachment: fixed; /* Keep gradient fixed */
+    /* background-attachment: fixed; /* Removed */
     overflow-x: hidden;
 }
 
@@ -50,25 +76,22 @@ header p {
 
 .card-container {
     display: grid; /* Changed from flex */
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid columns */
-    /* Removed align-items: stretch; - Grid handles item height implicitly in rows */
-    gap: 30px;
-    padding: 40px 20px; /* Increased padding */
-    /* Removed flex-wrap: wrap; - Grid handles wrapping */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Smaller min width */
+    gap: 25px; /* Slightly smaller gap */
+    padding: 40px 20px;
     flex-grow: 1;
 }
 
 .card {
     background-color: var(--card-bg);
-    border: 1px solid rgba(255, 255, 255, 0.1); /* More subtle border */
-    border-radius: 8px; /* Standard radius */
-    padding: 30px; /* Slightly more padding */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px; /* Reduced padding */
     text-align: center;
     text-decoration: none;
     color: var(--text-color);
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    /* Removed backdrop-filter */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Adjusted shadow */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .card:hover {
