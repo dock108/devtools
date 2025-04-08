@@ -1,156 +1,123 @@
 :root {
-    /* Active: Sleek Silver/Grey Scheme */
-    --primary-color: #1a1a1a; /* Very dark grey / near black */
-    --secondary-color: #cccccc; /* Light Silver */
-    --accent-color: #ffffff; /* White */
-    --text-color: #f0f0f0; /* Light grey */
-    --card-bg: rgba(50, 50, 50, 0.8); /* Semi-transparent dark grey */
-    --font-family: 'Orbitron', sans-serif; /* Keeping the futuristic font */
-
-    /* Alternative: Gold/Black Scheme (Uncomment to use) */
-    /*
-    --primary-color: #121212; // Deep Black
-    --secondary-color: #daa520; // Gold
-    --accent-color: #f5f5f5; // Off-white/Light Grey
-    --text-color: #e0e0e0; // Light Grey
-    --card-bg: rgba(30, 30, 30, 0.85); // Dark Grey/Black semi-transparent
-    --font-family: 'Orbitron', sans-serif;
-    */
+    /* Revised: Dark Blue/Purple Nebula Theme */
+    --primary-color: #0f0c29; /* Deep Indigo */
+    --secondary-color: #e0e0e0; /* Light Grey (was silver) */
+    --accent-color: #00bfff; /* Deep Sky Blue */
+    --text-color: #f0f0f0;
+    --card-bg: #1c183d; /* Slightly lighter Indigo/purple */
+    --font-family: 'Poppins', sans-serif; /* Cleaner font */
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
-@keyframes move-stars {
-  from { background-position: 0 0; }
-  to   { background-position: -10000px 5000px; } /* Large values for slow movement */
-}
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap'); /* Import Poppins */
 
 body {
     margin: 0;
     padding: 0;
-    background-color: var(--primary-color);
+    background: linear-gradient(to right bottom, #0f0c29, #302b63, #24243e); /* Nebula gradient */
     color: var(--text-color);
     font-family: var(--font-family);
+    font-weight: 300; /* Lighter default font weight */
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-
-    /* Starfield Background */
-    background-image:
-        /* Smallest/Faintest stars */
-        radial-gradient(1px 1px at 20px 30px, white, rgba(255,255,255,0)),
-        radial-gradient(1px 1px at 40px 70px, white, rgba(255,255,255,0)),
-        /* Medium stars */
-        radial-gradient(1.5px 1.5px at 50px 160px, #ccc, rgba(255,255,255,0)),
-        radial-gradient(1.5px 1.5px at 90px 40px, #ccc, rgba(255,255,255,0)),
-        /* Larger/Brighter stars */
-        radial-gradient(2px 2px at 130px 250px, #ddd, rgba(255,255,255,0)),
-        radial-gradient(2.5px 2.5px at 160px 120px, #eee, rgba(255,255,255,0));
-
-    background-repeat: repeat;
-
-    /* Control density/size */
-    background-size:
-        200px 200px, /* Smallest */
-        300px 300px,
-        400px 400px, /* Medium */
-        500px 500px,
-        600px 600px, /* Larger */
-        800px 800px;
-
-    /* Animation */
-    animation: move-stars 200s linear infinite; /* Adjust duration for speed */
-    overflow-x: hidden; /* Prevent horizontal scrollbar */
+    background-attachment: fixed; /* Keep gradient fixed */
+    overflow-x: hidden;
 }
 
 header {
     text-align: center;
     padding: 40px 20px;
-    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-    color: var(--primary-color);
-    clip-path: polygon(0 0, 100% 0, 100% 85%, 0% 100%); /* Angled bottom */
+    /* Removed background gradient and clip-path */
+    background-color: rgba(0,0,0,0.1); /* Subtle darker overlay */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Subtle separator */
     margin-bottom: 40px;
 }
 
 header h1 {
     margin: 0;
-    font-size: 3em;
-    font-weight: 700;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    font-size: 2.8em; /* Slightly smaller */
+    font-weight: 600; /* Bolder */
+    color: var(--secondary-color);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 header p {
     margin: 5px 0 0;
-    font-size: 1.2em;
+    font-size: 1.1em; /* Slightly smaller */
+    color: var(--secondary-color);
+    opacity: 0.8;
 }
 
 .card-container {
-    display: flex;
-    justify-content: center;
-    align-items: stretch; /* Changed from center to stretch */
+    display: grid; /* Changed from flex */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid columns */
+    /* Removed align-items: stretch; - Grid handles item height implicitly in rows */
     gap: 30px;
-    padding: 20px;
-    flex-wrap: wrap;
-    flex-grow: 1; /* Allows main content to push footer down */
+    padding: 40px 20px; /* Increased padding */
+    /* Removed flex-wrap: wrap; - Grid handles wrapping */
+    flex-grow: 1;
 }
 
 .card {
     background-color: var(--card-bg);
-    border: 2px solid var(--secondary-color);
-    border-radius: 15px;
-    padding: 30px;
-    width: 300px;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* More subtle border */
+    border-radius: 8px; /* Standard radius */
+    padding: 30px; /* Slightly more padding */
     text-align: center;
     text-decoration: none;
     color: var(--text-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; /* Added border-color transition */
-    backdrop-filter: blur(5px);
-    box-shadow: 0 0 15px rgba(204, 204, 204, 0.3); /* Adjusted shadow to silver */
-    display: flex; /* Added */
-    flex-direction: column; /* Added */
-    justify-content: space-between; /* Added */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    /* Removed backdrop-filter */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Adjusted shadow */
 }
 
 .card:hover {
-    transform: translateY(-10px) scale(1.03);
-    box-shadow: 0 0 30px var(--secondary-color), 0 0 15px var(--accent-color); /* Adjusted shadow to new colors */
-    border-color: var(--accent-color); /* Changed border color on hover */
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Darker shadow on hover */
+    border-color: var(--accent-color); /* Accent border on hover */
 }
 
 .card h2 {
     margin-top: 0;
-    color: var(--secondary-color);
-    font-size: 1.8em;
+    color: var(--accent-color); /* Use accent for title */
+    font-size: 1.6em; /* Adjusted size */
+    font-weight: 600;
     margin-bottom: 15px;
 }
 
 .card p {
     font-size: 1em;
-    line-height: 1.5;
-    flex-grow: 1; /* Added to allow paragraph to push footer content down */
-    margin-bottom: 20px; /* Added spacing */
+    line-height: 1.6; /* Slightly more line spacing */
+    opacity: 0.9;
+    margin-bottom: 0;
 }
 
 footer {
     text-align: center;
     padding: 20px;
-    margin-top: auto; /* Pushes footer to the bottom */
-    background-color: rgba(26, 26, 26, 0.9); /* Adjusted footer bg */
-    border-top: 1px solid var(--secondary-color);
+    margin-top: auto;
+    background-color: rgba(0,0,0,0.2); /* Subtle overlay */
+    border-top: 1px solid rgba(255, 255, 255, 0.1); /* Subtle separator */
     font-size: 0.9em;
+    opacity: 0.7;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
     header h1 {
-        font-size: 2.5em;
+        font-size: 2.2em;
+    }
+    header p {
+        font-size: 1em;
     }
     .card-container {
-        flex-direction: column;
-        align-items: center;
+        padding: 30px 15px; /* Adjust padding */
+        gap: 20px; /* Adjust gap */
     }
-    .card {
-        width: 80%;
-        max-width: 400px;
+    .card h2 {
+        font-size: 1.4em;
+    }
+    .card p {
+        font-size: 0.95em;
     }
 } 
