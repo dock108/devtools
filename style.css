@@ -20,6 +20,11 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
+@keyframes move-stars {
+  from { background-position: 0 0; }
+  to   { background-position: -10000px 5000px; } /* Large values for slow movement */
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -29,8 +34,33 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://www.transparenttextures.com/patterns/stardust.png'); /* Subtle stardust background */
-    background-attachment: fixed;
+
+    /* Starfield Background */
+    background-image:
+        /* Smallest/Faintest stars */
+        radial-gradient(1px 1px at 20px 30px, white, rgba(255,255,255,0)),
+        radial-gradient(1px 1px at 40px 70px, white, rgba(255,255,255,0)),
+        /* Medium stars */
+        radial-gradient(1.5px 1.5px at 50px 160px, #ccc, rgba(255,255,255,0)),
+        radial-gradient(1.5px 1.5px at 90px 40px, #ccc, rgba(255,255,255,0)),
+        /* Larger/Brighter stars */
+        radial-gradient(2px 2px at 130px 250px, #ddd, rgba(255,255,255,0)),
+        radial-gradient(2.5px 2.5px at 160px 120px, #eee, rgba(255,255,255,0));
+
+    background-repeat: repeat;
+
+    /* Control density/size */
+    background-size:
+        200px 200px, /* Smallest */
+        300px 300px,
+        400px 400px, /* Medium */
+        500px 500px,
+        600px 600px, /* Larger */
+        800px 800px;
+
+    /* Animation */
+    animation: move-stars 200s linear infinite; /* Adjust duration for speed */
+    overflow-x: hidden; /* Prevent horizontal scrollbar */
 }
 
 header {
