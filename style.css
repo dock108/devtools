@@ -1,0 +1,110 @@
+:root {
+    --primary-color: #0a0a23; /* Deep space blue */
+    --secondary-color: #00f2ff; /* Bright cyan */
+    --accent-color: #ff00ff; /* Neon pink */
+    --text-color: #f0f0f0; /* Light grey */
+    --card-bg: rgba(20, 20, 40, 0.8); /* Semi-transparent dark blue */
+    --font-family: 'Orbitron', sans-serif; /* Futuristic font */
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://www.transparenttextures.com/patterns/stardust.png'); /* Subtle stardust background */
+    background-attachment: fixed;
+}
+
+header {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+    color: var(--primary-color);
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 0% 100%); /* Angled bottom */
+    margin-bottom: 40px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 3em;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+header p {
+    margin: 5px 0 0;
+    font-size: 1.2em;
+}
+
+.card-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+    flex-wrap: wrap;
+    flex-grow: 1; /* Allows main content to push footer down */
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 2px solid var(--secondary-color);
+    border-radius: 15px;
+    padding: 30px;
+    width: 300px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+}
+
+.card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 0 30px var(--secondary-color), 0 0 15px var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.card h2 {
+    margin-top: 0;
+    color: var(--secondary-color);
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+.card p {
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: auto; /* Pushes footer to the bottom */
+    background-color: rgba(10, 10, 35, 0.9);
+    border-top: 1px solid var(--secondary-color);
+    font-size: 0.9em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 2.5em;
+    }
+    .card-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .card {
+        width: 80%;
+        max-width: 400px;
+    }
+} 
