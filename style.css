@@ -75,42 +75,47 @@ header p {
 }
 
 .card-container {
-    display: grid; /* Changed from flex */
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Smaller min width */
-    gap: 25px; /* Slightly smaller gap */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Even smaller min width */
+    gap: 20px; /* Reduced gap */
     padding: 40px 20px;
     flex-grow: 1;
+    max-width: 900px; /* Limit container width */
+    margin: 0 auto; /* Center container */
+    justify-content: center; /* Center grid items if space allows */
 }
 
 .card {
-    background-color: var(--card-bg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(28, 24, 61, 0.5); /* Translucent background */
+    border: 1px solid rgba(255, 255, 255, 0.5); /* Semi-transparent white border */
     border-radius: 8px;
-    padding: 20px; /* Reduced padding */
+    padding: 15px; /* Further reduced padding */
     text-align: center;
     text-decoration: none;
     color: var(--text-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease; /* Added background-color transition */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px); /* Frosted glass effect */
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Darker shadow on hover */
-    border-color: var(--accent-color); /* Accent border on hover */
+    background-color: rgba(28, 24, 61, 0.7); /* Slightly less transparent on hover */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.8); /* Brighter white border on hover */
 }
 
 .card h2 {
     margin-top: 0;
-    color: var(--accent-color); /* Use accent for title */
-    font-size: 1.6em; /* Adjusted size */
+    color: var(--accent-color);
+    font-size: 1.3em; /* Reduced size */
     font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 10px; /* Reduced margin */
 }
 
 .card p {
-    font-size: 1em;
-    line-height: 1.6; /* Slightly more line spacing */
+    font-size: 0.9em; /* Reduced size */
+    line-height: 1.5; /* Adjusted line spacing */
     opacity: 0.9;
     margin-bottom: 0;
 }
