@@ -1,10 +1,21 @@
 :root {
-    --primary-color: #0a0a23; /* Deep space blue */
-    --secondary-color: #00f2ff; /* Bright cyan */
-    --accent-color: #ff00ff; /* Neon pink */
+    /* Active: Sleek Silver/Grey Scheme */
+    --primary-color: #1a1a1a; /* Very dark grey / near black */
+    --secondary-color: #cccccc; /* Light Silver */
+    --accent-color: #ffffff; /* White */
     --text-color: #f0f0f0; /* Light grey */
-    --card-bg: rgba(20, 20, 40, 0.8); /* Semi-transparent dark blue */
-    --font-family: 'Orbitron', sans-serif; /* Futuristic font */
+    --card-bg: rgba(50, 50, 50, 0.8); /* Semi-transparent dark grey */
+    --font-family: 'Orbitron', sans-serif; /* Keeping the futuristic font */
+
+    /* Alternative: Gold/Black Scheme (Uncomment to use) */
+    /*
+    --primary-color: #121212; // Deep Black
+    --secondary-color: #daa520; // Gold
+    --accent-color: #f5f5f5; // Off-white/Light Grey
+    --text-color: #e0e0e0; // Light Grey
+    --card-bg: rgba(30, 30, 30, 0.85); // Dark Grey/Black semi-transparent
+    --font-family: 'Orbitron', sans-serif;
+    */
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
@@ -46,7 +57,7 @@ header p {
 .card-container {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: stretch; /* Changed from center to stretch */
     gap: 30px;
     padding: 20px;
     flex-wrap: wrap;
@@ -62,15 +73,18 @@ header p {
     text-align: center;
     text-decoration: none;
     color: var(--text-color);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; /* Added border-color transition */
     backdrop-filter: blur(5px);
-    box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+    box-shadow: 0 0 15px rgba(204, 204, 204, 0.3); /* Adjusted shadow to silver */
+    display: flex; /* Added */
+    flex-direction: column; /* Added */
+    justify-content: space-between; /* Added */
 }
 
 .card:hover {
     transform: translateY(-10px) scale(1.03);
-    box-shadow: 0 0 30px var(--secondary-color), 0 0 15px var(--accent-color);
-    border-color: var(--accent-color);
+    box-shadow: 0 0 30px var(--secondary-color), 0 0 15px var(--accent-color); /* Adjusted shadow to new colors */
+    border-color: var(--accent-color); /* Changed border color on hover */
 }
 
 .card h2 {
@@ -83,13 +97,15 @@ header p {
 .card p {
     font-size: 1em;
     line-height: 1.5;
+    flex-grow: 1; /* Added to allow paragraph to push footer content down */
+    margin-bottom: 20px; /* Added spacing */
 }
 
 footer {
     text-align: center;
     padding: 20px;
     margin-top: auto; /* Pushes footer to the bottom */
-    background-color: rgba(10, 10, 35, 0.9);
+    background-color: rgba(26, 26, 26, 0.9); /* Adjusted footer bg */
     border-top: 1px solid var(--secondary-color);
     font-size: 0.9em;
 }
