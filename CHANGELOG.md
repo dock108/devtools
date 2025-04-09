@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Initial `index.html` structure.
 - Initial `style.css` with modern/futuristic theme.
-- Links to ToneSmith and Mini Golf Break.
+- Links to ToneElevate and Mini Golf Break.
 - AdSense script integration.
 - Basic README.md.
 - Basic CHANGELOG.md. 
