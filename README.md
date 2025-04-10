@@ -5,7 +5,7 @@ This is the simple static homepage for [Dock108.ai](https://dock108.ai).
 It provides links to the different AI tools offered:
 
 *   [ToneElevate](https://toneelevate.com)
-*   [Mini Golf Break](https://mini-golf-break.dock108.ai)
+*   [Mini Golf Break](https://minigolfbreak.com)
 
 ## Deployment
 
