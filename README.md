@@ -6,6 +6,7 @@ It provides links to the different AI tools offered:
 
 *   [ToneElevate](https://toneelevate.com)
 *   [Mini Golf Break](https://minigolfbreak.com)
+*   [Fan Frenzy](https://fanfrenzy.app)
 
 ## Deployment
 
