@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Edge Stripe webhook endpoint `/api/stripe/webhook` with signature verification and Supabase insert.
 - Added `/api/stripe/mock` replay endpoint (auth via `x-demo-key`) for injecting synthetic events.
 - Supabase admin client using service role key.
+- Rule evaluator utility (`lib/guardian/rules.ts`) with velocity & bank-swap detection + unit tests.
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
