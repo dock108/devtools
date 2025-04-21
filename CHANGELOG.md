@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installed shadcn/ui and seeded Button component.
 - Added base design tokens in globals.css.
 - Added initial README.
+- /notary-ci product page with hero, pain/solution, features, pricing, Supabase wait-list.
+- Added accent.notary color token (already present).
+- Added `notary_leads` Supabase table creation instructions.
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
@@ -33,4 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified homepage layout: removed full-height hero and scroll hint.
 - Tailwind theme extended with accent colors (via CSS vars)
 - Updated global font to Inter and base body styles
-- Updated metadata in root layout 
+- Updated metadata in root layout
+- Refactored `GuardianWaitlistForm` to reusable `WaitlistForm` and updated usage.
+- Home grid card and header dropdown now link to /notary-ci (no change needed). 

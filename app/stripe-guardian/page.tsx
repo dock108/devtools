@@ -3,7 +3,7 @@ import { Container } from '@/components/Container'; // Import Container
 import { Zap, Gauge, ShieldCheck, Banknote, SlidersHorizontal, AlertTriangle } from 'lucide-react'; // Import icons
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"; // Assuming shadcn card path
 import { Check } from 'lucide-react';
-import { GuardianWaitlistForm } from '@/components/GuardianWaitlistForm'; // Import the form
+import { WaitlistForm } from '@/components/WaitlistForm'; // Use refactored form
 import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';
 
@@ -114,6 +114,10 @@ const tiers = [
 ]
 
 export default function StripeGuardianPage() {
+  const accentColor = 'var(--accent-guardian)';
+  const productIdentifier = 'guardian';
+  const tableName = 'guardian_leads';
+
   return (
     <>
       {/* Hero Section */}
@@ -132,7 +136,11 @@ export default function StripeGuardianPage() {
             </p>
             {/* Waitlist Form prominently displayed in hero */}
             <div className="mt-8">
-              <GuardianWaitlistForm />
+              <WaitlistForm 
+                productIdentifier={productIdentifier} 
+                accentColorVar={accentColor} 
+                tableName={tableName} 
+              />
             </div>
           </div>
           {/* Guardian Illustration */}
