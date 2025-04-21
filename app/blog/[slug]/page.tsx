@@ -1,11 +1,10 @@
 import { allBlogs, Blog } from 'contentlayer/generated';
 import { notFound } from 'next/navigation';
-import { mdxComponents } from '@/components/mdx-components';
-import { useMDXComponent } from 'next-contentlayer/hooks';
 import { Container } from '@/components/Container';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { BlogPostContent } from '@/components/BlogPostContent';
 
 // Generate segments for all blog posts at build time
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -13,8 +12,9 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
 }
 
 // Generate metadata for the page
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata | undefined> {
-  const post = allBlogs.find((p) => p.slugAsParams === params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata | undefined> {
+  const { slug } = await params;
+  const post = allBlogs.find((p) => p.slugAsParams === slug);
 
   if (!post) {
     return;
@@ -54,14 +54,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 // Render the blog post page
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = allBlogs.find((p) => p.slugAsParams === params.slug);
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = allBlogs.find((p) => p.slugAsParams === slug);
 
   if (!post) {
     return notFound();
   }
-
-  const MDXContent = useMDXComponent(post.body.code);
 
   return (
     <Container className="mt-10">
@@ -101,7 +100,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         )}
 
         {/* Post Content */}
-        <MDXContent components={mdxComponents} />
+        <BlogPostContent code={post.body.code} />
       </article>
 
       {/* Back link */}
