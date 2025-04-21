@@ -4,6 +4,8 @@ import { Zap, Gauge, ShieldCheck, Banknote, SlidersHorizontal, AlertTriangle } f
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"; // Assuming shadcn card path
 import { Check } from 'lucide-react';
 import { GuardianWaitlistForm } from '@/components/GuardianWaitlistForm'; // Import the form
+import { GuardianIcon } from '@/components/GuardianIcon';
+import { cn } from '@/lib/utils';
 
 // Placeholder components
 const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
@@ -14,8 +16,10 @@ const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: st
     {children}
   </span>
 );
-const ShieldIllustration = ({ className }: { className?: string }) => (
-  <div className={`w-64 h-64 bg-gray-200/50 rounded-full ${className || ''}`}></div> // Simple placeholder
+
+// Guardian illustration for hero (larger icon)
+const HeroGuardianIllustration = ({ className }: { className?: string }) => (
+  <GuardianIcon className={cn('h-[24rem] w-[24rem] stroke-[2] text-[var(--accent-guardian)] drop-shadow-xl', className)} />
 );
 
 // Metadata
@@ -116,7 +120,10 @@ export default function StripeGuardianPage() {
       <div className="relative isolate overflow-hidden pt-14">
         <Container className="py-24 sm:py-32 lg:flex lg:items-center lg:gap-x-10 lg:py-40">
           <div className="mx-auto max-w-2xl lg:mx-0 lg:flex-auto">
-            <Badge colorVar="var(--accent-guardian)">STRIPE GUARDIAN</Badge>
+            <div className="flex items-center gap-2">
+              <GuardianIcon />
+              <Badge colorVar="var(--accent-guardian)">STRIPE GUARDIAN</Badge>
+            </div>
             <h1 className="mt-6 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
               Stop fraudulent Stripe payouts before they leave the platform.
             </h1>
@@ -128,9 +135,9 @@ export default function StripeGuardianPage() {
               <GuardianWaitlistForm />
             </div>
           </div>
-          {/* Placeholder Illustration */}
+          {/* Guardian Illustration */}
           <div className="mt-16 sm:mt-24 lg:mt-0 lg:flex-shrink-0 lg:flex-grow">
-             <ShieldIllustration className="mx-auto w-[24rem] h-[24rem] max-w-full drop-shadow-xl" />
+             <HeroGuardianIllustration className="mx-auto" />
            </div>
         </Container>
         {/* Background Gradient (Optional Subtle effect) */}
