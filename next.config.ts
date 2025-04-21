@@ -1,4 +1,4 @@
-import { withContentlayer } from 'next-contentlayer';
+// import { withContentlayer } from 'next-contentlayer'; // Removed
 import createNextMdx from '@next/mdx';
 import type { NextConfig } from 'next';
 
@@ -21,5 +21,5 @@ const nextConfig: NextConfig = {
   // Add other config options here
 };
 
-// Wrap the config with MDX and Contentlayer
-export default withContentlayer(withMDX(nextConfig));
+// Wrap the config only with MDX now
+export default withMDX(nextConfig);

@@ -40,7 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic HTML email templates for welcome and digest emails.
 - SQL for Supabase DB triggers and helper function (`notify_welcome_email`).
 - Added `welcome_sent` column to lead tables.
-- MDX blog engine (/blog) via next-mdx + contentlayer.
+- MDX blog engine (/blog) using `@next/mdx` and `gray-matter`.
+- Blog lib helpers (`lib/blog.ts`) for reading/parsing posts.
 - Blog index and dynamic post page layouts.
 - Tailwind prose styling for blog markdown content.
 
@@ -60,11 +61,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Home grid card and header dropdown link to /crondeck (no change needed).
 - Installed `resend` SDK.
 - Added Blog link to main header navigation.
+- Refactored blog implementation to remove Contentlayer dependencies.
+- Renamed `components/mdx-components.tsx` to `mdx-components.tsx` (root).
+- Updated `next.config.ts` to remove Contentlayer plugin.
+
+### Removed
+- `contentlayer` and `next-contentlayer` dependencies.
+- `contentlayer.config.ts` and `lib/contentlayer.ts` files.
+- `components/MdxRenderer.tsx` client component.
 
 ### Fixed
 - Lint error: Removed unused `Link` import from `app/page.tsx`.
 - Lint error: Removed unused `CardFooter` import from `app/stripe-guardian/page.tsx`.
 - Lint errors in `WaitlistForm`: explicit-any, unescaped-entities, unused `PostgrestError` import.
+- Build errors related to Contentlayer/`useMDXComponent` incompatibility with Next.js 15/React 18.
+- Build error related to missing blog post image placeholder.
 
 [Unreleased]: https://github.com/dock108/home/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/dock108/home/releases/tag/v0.1.0 

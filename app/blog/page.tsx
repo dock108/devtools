@@ -1,7 +1,8 @@
-import { allBlogs } from 'contentlayer/generated';
+// import { allBlogs } from 'contentlayer/generated'; // Removed Contentlayer import
 import Link from 'next/link';
 import { Container } from '@/components/Container';
 import type { Metadata } from 'next';
+import { getSortedPostsData } from '@/lib/blog'; // Import new helper
 
 export const metadata: Metadata = {
   title: 'Blog | DOCK108',
@@ -9,8 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default function BlogIndex() {
-  // Sort posts by date, newest first
-  const posts = allBlogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const posts = getSortedPostsData(); // Use new helper
 
   return (
     <Container>
@@ -20,7 +20,7 @@ export default function BlogIndex() {
         </h1>
         <ul className="space-y-8">
           {posts.map((post) => (
-            <li key={post._id}>
+            <li key={post.slug}> {/* Use slug as key */}
               <article>
                 <Link href={post.url} className="block">
                   <h2 className="text-2xl font-semibold tracking-tight hover:text-primary hover:underline">
@@ -54,3 +54,4 @@ export default function BlogIndex() {
     </Container>
   );
 } 
+ 

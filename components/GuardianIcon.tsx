@@ -14,3 +14,4 @@ export const GuardianIcon = ({ className }: GuardianIconProps) => (
     aria-hidden="true"
   />
 ); 
+ 
