@@ -1,8 +1,6 @@
 import { Container } from '@/components/Container';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { useFakeStripeEvents } from './useFakeStripeEvents';
-import { EventTable } from '@/components/guardian-demo/EventTable';
 import { DemoViewer } from './DemoViewer';
 
 export const metadata: Metadata = {

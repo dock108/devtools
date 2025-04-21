@@ -36,8 +36,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { id, type, created, data, account } = event as any;
-    const amountCents = type === 'payout.paid' ? data.object.amount : null;
+    const { id, type, created, data, account } = event;
+
+    let amountCents: number | null = null;
+    if (type === 'payout.paid') {
+      const payoutObj = data.object as Stripe.Payout;
+      amountCents = typeof payoutObj.amount === 'number' ? payoutObj.amount : null;
+    }
+
     const { error } = await supabaseAdmin.from('guardian_events').insert({
       id,
       type,

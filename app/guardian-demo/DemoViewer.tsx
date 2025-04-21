@@ -6,7 +6,6 @@ import VelocityChart from '@/components/guardian-demo/VelocityChart';
 import ActionLog from '@/components/guardian-demo/ActionLog';
 import SlackAlert from '@/components/guardian-demo/SlackAlert';
 import { useState, useEffect } from 'react';
-import { DemoEvent } from './useFakeStripeEvents';
 
 export function DemoViewer() {
   const [events, resetEvents] = useFakeStripeEvents({ onExpire: () => handleReset(true) });
