@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.1.0] - 2025-04-21
+
+### Added
 - Added missing shadcn/ui `Input` and `Label` components.
 - Stripe Guardian product page (/stripe-guardian) with Hero, Pain/Solution, Features, Pricing, and Supabase Wait-List.
 - Supabase client setup (`lib/supabase.ts`) and `guardian_leads` table creation instructions.
@@ -47,4 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored `GuardianWaitlistForm` to reusable `WaitlistForm` and updated usage.
 - Home grid card and header dropdown now link to /notary-ci (no change needed).
 - Home grid card and header dropdown link to /crondeck (no change needed).
-- Installed `resend` SDK. 
+- Installed `resend` SDK.
+
+### Fixed
+- Lint error: Removed unused `Link` import from `app/page.tsx`.
+- Lint error: Removed unused `CardFooter` import from `app/stripe-guardian/page.tsx`.
+- Lint errors in `WaitlistForm`: explicit-any, unescaped-entities, unused `PostgrestError` import.
+
+[Unreleased]: https://github.com/dock108/home/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/dock108/home/releases/tag/v0.1.0 
