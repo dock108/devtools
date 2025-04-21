@@ -8,8 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- New minimal homepage with hero, product grid, header, footer
+- ProductCard reusable component
+- Placeholder pages and layouts for Docs and Products
 - Scaffolded Next 13 App Router project with Tailwind, ESLint, TypeScript.
 - Integrated @tailwindcss/forms & typography (Note: Plugins installed but config TBD due to Tailwind v4).
 - Installed shadcn/ui and seeded Button component.
 - Added base design tokens in globals.css.
-- Added initial README. 
+- Added initial README.
+
+### Changed
+- Tailwind theme extended with accent colors (via CSS vars)
+- Updated global font to Inter and base body styles
+- Updated metadata in root layout 
