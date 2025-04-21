@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Container } from '@/components/Container'; // Import Container
 import { Zap, Gauge, ShieldCheck, Banknote, SlidersHorizontal, AlertTriangle } from 'lucide-react'; // Import icons
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"; // Assuming shadcn card path
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Removed unused CardFooter
 import { Check } from 'lucide-react';
 import { WaitlistForm } from '@/components/WaitlistForm'; // Use refactored form
 import { GuardianIcon } from '@/components/GuardianIcon';
