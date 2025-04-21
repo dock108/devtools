@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     id,
     type,
     account,
-    amount_cents: amount,
+    amount: amount,
     currency,
     event_time: new Date(created * 1000).toISOString(),
     raw: json,
