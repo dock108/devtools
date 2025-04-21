@@ -7,6 +7,7 @@ import { WaitlistForm } from '@/components/WaitlistForm'; // Use refactored form
 import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';
 import { productLD } from '@/lib/jsonld';
+import Link from 'next/link';
 
 // Placeholder components
 const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
@@ -158,6 +159,13 @@ export default function StripeGuardianPage() {
                 accentColorVar={accentColor} 
                 tableName={tableName} 
               />
+              {/* Live Demo CTA */}
+              <Link
+                href="/guardian-demo"
+                className="mt-6 inline-flex items-center rounded-lg bg-[var(--accent-guardian)] px-6 py-3 font-semibold text-white shadow-lg hover:opacity-90"
+              >
+                View Live Demo &rarr;
+              </Link>
             </div>
           </div>
           {/* Guardian Illustration */}

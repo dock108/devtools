@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic injection of structured data:
   - Product pages: /stripe-guardian, /notary-ci, /crondeck now export `generateMetadata` embedding Product schema.
   - Blog posts dynamically embed BlogPosting schema.
+- /guardian-demo route skeleton with hero, placeholder stream panel, noindex meta.
+- "View Live Demo" CTA added to Stripe Guardian product page.
+- useFakeStripeEvents hook generating realistic Stripe test events.
+- Real‑time VelocityChart integrated into /guardian-demo.
+- ActionLog and SlackAlert components with auto‑pause narrative integrated into /guardian-demo.
+- Installed `stripe` SDK and `@types/stripe-event-types`; added .env.local.example placeholders.
+- Edge Stripe webhook endpoint `/api/stripe/webhook` with signature verification and Supabase insert.
+- Added `/api/stripe/mock` replay endpoint (auth via `x-demo-key`) for injecting synthetic events.
+- Supabase admin client using service role key.
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
