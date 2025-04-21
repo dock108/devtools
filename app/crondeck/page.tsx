@@ -29,11 +29,13 @@ export const metadata: Metadata = {
     title: 'CronDeck – Cron & schedule monitor | DOCK108',
     description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
     url: '/crondeck',
+    images: ['/crondeck/opengraph-image'],
   },
   twitter: { 
     card: 'summary_large_image',
     title: 'CronDeck – Cron & schedule monitor | DOCK108',
     description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
+    images: ['/crondeck/opengraph-image'],
   }
 };
 

@@ -30,13 +30,13 @@ export const metadata: Metadata = {
     title: 'Stripe Guardian – Stop Express payout fraud | DOCK108', // Consistent title 
     description: 'Real-time protection for Stripe Connect platforms.', // Add description
     url: '/stripe-guardian',
-    // Add image later if available
+    images: ['/stripe-guardian/opengraph-image'],
   },
   twitter: { // Add Twitter card data
     card: 'summary_large_image',
     title: 'Stripe Guardian – Stop Express payout fraud | DOCK108',
     description: 'Real-time protection for Stripe Connect platforms.',
-    // Add image later if available
+    images: ['/stripe-guardian/opengraph-image'],
   }
 };
 

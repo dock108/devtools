@@ -29,11 +29,13 @@ export const metadata: Metadata = {
     title: 'Notary CI – Fast macOS notarization | DOCK108',
     description: 'Cloud signing & notarization for indie and studio mac apps.',
     url: '/notary-ci',
+    images: ['/notary-ci/opengraph-image'],
   },
   twitter: { 
     card: 'summary_large_image',
     title: 'Notary CI – Fast macOS notarization | DOCK108',
     description: 'Cloud signing & notarization for indie and studio mac apps.',
+    images: ['/notary-ci/opengraph-image'],
   }
 };
 

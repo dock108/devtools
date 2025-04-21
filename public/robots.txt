@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://www.dock108.ai
+
+# Sitemaps
+Sitemap: https://www.dock108.ai/sitemap.xml

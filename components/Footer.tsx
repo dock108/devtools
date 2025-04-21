@@ -15,8 +15,13 @@ export function Footer() {
           <Link href="https://github.com/dock108" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground">
             GitHub
           </Link>
+          <Link href="/rss.xml" className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground">
+            RSS
+          </Link>
         </div>
       </Container>
     </footer>
   );
 } 
+ 
+ 
