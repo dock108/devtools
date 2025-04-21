@@ -6,6 +6,7 @@ import { Check } from 'lucide-react';
 import { WaitlistForm } from '@/components/WaitlistForm'; // Use refactored form
 import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';
+import { productLD } from '@/lib/jsonld';
 
 // Placeholder components
 const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
@@ -23,21 +24,37 @@ const HeroGuardianIllustration = ({ className }: { className?: string }) => (
 );
 
 // Metadata
-export const metadata: Metadata = {
-  title: 'Stripe Guardian – Stop Express payout fraud | DOCK108',
-  description: 'Real-time protection for Stripe Connect platforms.',
-  openGraph: { 
-    title: 'Stripe Guardian – Stop Express payout fraud | DOCK108', // Consistent title 
-    description: 'Real-time protection for Stripe Connect platforms.', // Add description
-    url: '/stripe-guardian',
-    images: ['/stripe-guardian/opengraph-image'],
-  },
-  twitter: { // Add Twitter card data
-    card: 'summary_large_image',
+export const generateMetadata = (): Metadata => {
+  const url = 'https://www.dock108.ai/stripe-guardian';
+  const image = `${url}/opengraph-image`;
+
+  return {
     title: 'Stripe Guardian – Stop Express payout fraud | DOCK108',
     description: 'Real-time protection for Stripe Connect platforms.',
-    images: ['/stripe-guardian/opengraph-image'],
-  }
+    openGraph: {
+      title: 'Stripe Guardian – Stop Express payout fraud | DOCK108',
+      description: 'Real-time protection for Stripe Connect platforms.',
+      url,
+      images: [image],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Stripe Guardian – Stop Express payout fraud | DOCK108',
+      description: 'Real-time protection for Stripe Connect platforms.',
+      images: [image],
+    },
+    other: {
+      'script:type=application/ld+json': JSON.stringify(
+        productLD({
+          name: 'Stripe Guardian',
+          description: 'Real‑time velocity rules, bank‑swap detection & auto‑pause.',
+          url,
+          image,
+          price: '29.00',
+        })
+      ),
+    },
+  };
 };
 
 const painPoints = [

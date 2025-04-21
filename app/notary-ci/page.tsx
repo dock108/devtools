@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from 'lucide-react';
 import { WaitlistForm } from '@/components/WaitlistForm';
+import { productLD } from '@/lib/jsonld';
 
 // Placeholder components - replace or refine
 const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
@@ -22,21 +23,37 @@ const LaptopCodeIcon = ({ className }: { className?: string }) => (
 );
 
 // Metadata
-export const metadata: Metadata = {
-  title: 'Notary CI – Fast macOS notarization | DOCK108',
-  description: 'Cloud signing & notarization for indie and studio mac apps.',
-  openGraph: { 
+export const generateMetadata = (): Metadata => {
+  const url = 'https://www.dock108.ai/notary-ci';
+  const image = `${url}/opengraph-image`;
+
+  return {
     title: 'Notary CI – Fast macOS notarization | DOCK108',
     description: 'Cloud signing & notarization for indie and studio mac apps.',
-    url: '/notary-ci',
-    images: ['/notary-ci/opengraph-image'],
-  },
-  twitter: { 
-    card: 'summary_large_image',
-    title: 'Notary CI – Fast macOS notarization | DOCK108',
-    description: 'Cloud signing & notarization for indie and studio mac apps.',
-    images: ['/notary-ci/opengraph-image'],
-  }
+    openGraph: {
+      title: 'Notary CI – Fast macOS notarization | DOCK108',
+      description: 'Cloud signing & notarization for indie and studio mac apps.',
+      url,
+      images: [image],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Notary CI – Fast macOS notarization | DOCK108',
+      description: 'Cloud signing & notarization for indie and studio mac apps.',
+      images: [image],
+    },
+    other: {
+      'script:type=application/ld+json': JSON.stringify(
+        productLD({
+          name: 'Notary CI',
+          description: 'Cloud signing & notarization for indie and studio mac apps.',
+          url,
+          image,
+          price: '25.00',
+        })
+      ),
+    },
+  };
 };
 
 const painPoints = [

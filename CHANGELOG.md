@@ -8,14 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
-### Changed
-
-### Fixed
-
-## [0.1.0] - 2025-04-21
-
-### Added
 - Added missing shadcn/ui `Input` and `Label` components.
 - Stripe Guardian product page (/stripe-guardian) with Hero, Pain/Solution, Features, Pricing, and Supabase Wait-List.
 - Supabase client setup (`lib/supabase.ts`) and `guardian_leads` table creation instructions.
@@ -44,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Blog lib helpers (`lib/blog.ts`) for reading/parsing posts.
 - Blog index and dynamic post page layouts.
 - Tailwind prose styling for blog markdown content.
+- JSON‑LD helper (`lib/jsonld.ts`) generating Product and BlogPosting schema.
+- Automatic injection of structured data:
+  - Product pages: /stripe-guardian, /notary-ci, /crondeck now export `generateMetadata` embedding Product schema.
+  - Blog posts dynamically embed BlogPosting schema.
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
@@ -58,3 +54,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated metadata in root layout
 - Refactored `GuardianWaitlistForm` to reusable `WaitlistForm` and updated usage.
 - Home grid card and header dropdown now link to /notary-ci (no change needed).
+
+### Fixed

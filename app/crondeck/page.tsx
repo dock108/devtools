@@ -5,6 +5,7 @@ import { WaitlistForm } from '@/components/WaitlistForm';
 import { ListChecks, BellRing, LineChart } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from 'lucide-react';
+import { productLD } from '@/lib/jsonld';
 
 // Placeholder components - replace or refine
 const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
@@ -22,21 +23,37 @@ const ClockIcon = ({ className }: { className?: string }) => (
 );
 
 // Metadata
-export const metadata: Metadata = {
-  title: 'CronDeck – Cron & schedule monitor | DOCK108',
-  description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-  openGraph: { 
+export const generateMetadata = (): Metadata => {
+  const url = 'https://www.dock108.ai/crondeck';
+  const image = `${url}/opengraph-image`;
+
+  return {
     title: 'CronDeck – Cron & schedule monitor | DOCK108',
     description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-    url: '/crondeck',
-    images: ['/crondeck/opengraph-image'],
-  },
-  twitter: { 
-    card: 'summary_large_image',
-    title: 'CronDeck – Cron & schedule monitor | DOCK108',
-    description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-    images: ['/crondeck/opengraph-image'],
-  }
+    openGraph: {
+      title: 'CronDeck – Cron & schedule monitor | DOCK108',
+      description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
+      url,
+      images: [image],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'CronDeck – Cron & schedule monitor | DOCK108',
+      description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
+      images: [image],
+    },
+    other: {
+      'script:type=application/ld+json': JSON.stringify(
+        productLD({
+          name: 'CronDeck',
+          description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
+          url,
+          image,
+          price: '0.00',
+        })
+      ),
+    },
+  };
 };
 
 const painPoints = [

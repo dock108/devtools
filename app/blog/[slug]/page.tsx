@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllPostSlugs, getPostData } from '@/lib/blog';
 import dynamic from 'next/dynamic'; // Needed for dynamic import
+import { blogLD } from '@/lib/jsonld';
 
 // Generate segments for all blog posts at build time
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -20,7 +21,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   const { title, description, date, url } = post;
-  const ogImage = `/blog/${slug}/opengraph-image`;
+  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.dock108.ai';
+  const fullUrl = `${site}${url}`;
+  const ogImage = `${fullUrl}/opengraph-image`;
 
   return {
     title: `${title} | DOCK108 Blog`,
@@ -30,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description: description,
       type: 'article',
       publishedTime: date,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}${url}`,
+      url: fullUrl,
       images: [ogImage],
     },
     twitter: {
@@ -38,6 +41,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: title,
       description: description,
       images: [ogImage],
+    },
+    other: {
+      'script:type=application/ld+json': JSON.stringify(
+        blogLD({
+          title,
+          description,
+          url: fullUrl,
+          image: ogImage,
+          date,
+        })
+      ),
     },
   };
 }
