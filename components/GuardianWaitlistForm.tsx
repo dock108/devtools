@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { supabase } from '@/lib/supabase'; // Import Supabase client
 import { Input } from '@/components/ui/input'; // Assuming shadcn input path
 import { Button } from '@/components/ui/button'; // Assuming shadcn button path
+import { Label } from "@/components/ui/label"; // Import Label
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -66,9 +67,9 @@ export function GuardianWaitlistForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 flex max-w-md gap-x-4">
-      <label htmlFor="email-address" className="sr-only">
+      <Label htmlFor="email-address" className="sr-only">
         Email address
-      </label>
+      </Label>
       <Input
         id="email-address"
         name="email"

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added missing shadcn/ui `Input` and `Label` components.
 - Stripe Guardian product page (/stripe-guardian) with Hero, Pain/Solution, Features, Pricing, and Supabase Wait-List.
 - Supabase client setup (`lib/supabase.ts`) and `guardian_leads` table creation instructions.
 - Container component for consistent side padding.
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added initial README.
 
 ### Changed
+- Used shadcn `Label` component in GuardianWaitlistForm.
 - Home grid card for Stripe Guardian now links to /stripe-guardian (no change needed).
 - Updated Header component to use a dark background for better logo visibility.
 - Card border-radius, shadow, and accent top borders.
