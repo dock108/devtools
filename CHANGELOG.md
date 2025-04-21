@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Stripe Guardian product page (/stripe-guardian) with Hero, Pain/Solution, Features, Pricing, and Supabase Wait-List.
+- Supabase client setup (`lib/supabase.ts`) and `guardian_leads` table creation instructions.
 - Container component for consistent side padding.
 - Gradient hero background blob for color flare.
 - Integrated public/logo.png in header.
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added initial README.
 
 ### Changed
+- Home grid card for Stripe Guardian now links to /stripe-guardian (no change needed).
 - Updated Header component to use a dark background for better logo visibility.
 - Card border-radius, shadow, and accent top borders.
 - Replaced all Dock108 text references with DOCK108 (uppercase).
