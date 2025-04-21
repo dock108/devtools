@@ -2,25 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [Unreleased]
 
 ### Added
-- Initial `index.html` structure.
-- Initial `style.css` with modern/futuristic theme.
-- Links to ToneElevate and Mini Golf Break.
-- AdSense script integration.
-- Basic README.md.
-- Basic CHANGELOG.md.
-
-### Changed
-- Updated homepage design based on detailed plan:
-    - Added playful tagline: "We don't really know what we're doing, but here's some cool stuff… I think?".
-    - Added Fan Frenzy section with logo, tagline, and link.
-    - Implemented consistent styling (Inter font, light theme, card layout) via `style.css`.
-    - Ensured mobile responsiveness and basic accessibility (alt text, semantic HTML).
-    - Reorganized image assets into `assets/` directory.
-- Updated README.md to include Fan Frenzy.
-
-### Removed
-- AdSense script (commented out in `index.html`).
-- Old starfield background and dark theme from `style.css`. 
+- Scaffolded Next 13 App Router project with Tailwind, ESLint, TypeScript.
+- Integrated @tailwindcss/forms & typography (Note: Plugins installed but config TBD due to Tailwind v4).
+- Installed shadcn/ui and seeded Button component.
+- Added base design tokens in globals.css.
+- Added initial README. 
