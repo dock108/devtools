@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic HTML email templates for welcome and digest emails.
 - SQL for Supabase DB triggers and helper function (`notify_welcome_email`).
 - Added `welcome_sent` column to lead tables.
+- MDX blog engine (/blog) via next-mdx + contentlayer.
+- Blog index and dynamic post page layouts.
+- Tailwind prose styling for blog markdown content.
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Home grid card and header dropdown now link to /notary-ci (no change needed).
 - Home grid card and header dropdown link to /crondeck (no change needed).
 - Installed `resend` SDK.
+- Added Blog link to main header navigation.
 
 ### Fixed
 - Lint error: Removed unused `Link` import from `app/page.tsx`.

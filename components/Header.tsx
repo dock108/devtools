@@ -23,6 +23,9 @@ export function Header() {
           <Link href="/#products" className="text-slate-300 transition-colors hover:text-white">
             Products
           </Link>
+          <Link href="/blog" className="text-slate-300 transition-colors hover:text-white">
+            Blog
+          </Link>
           <Link href="/docs" className="text-slate-300 transition-colors hover:text-white">
             Docs
           </Link>
