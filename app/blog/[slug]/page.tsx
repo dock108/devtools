@@ -1,10 +1,10 @@
-import { allBlogs, Blog } from 'contentlayer/generated';
+import { allBlogs } from 'contentlayer/generated';
 import { notFound } from 'next/navigation';
+import { MdxRenderer } from '@/components/MdxRenderer';
 import { Container } from '@/components/Container';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { BlogPostContent } from '@/components/BlogPostContent';
 
 // Generate segments for all blog posts at build time
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -65,7 +65,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   return (
     <Container className="mt-10">
       <article className="prose prose-slate mx-auto max-w-3xl dark:prose-invert lg:prose-lg">
-         {/* Post Header */}
+        {/* Post Header */}
         <div className="mb-8 text-center">
           <time dateTime={post.date} className="text-sm text-muted-foreground">
             {new Date(post.date).toLocaleDateString('en-US', {
@@ -100,7 +100,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         )}
 
         {/* Post Content */}
-        <BlogPostContent code={post.body.code} />
+        <MdxRenderer code={post.body.code} />
       </article>
 
       {/* Back link */}
