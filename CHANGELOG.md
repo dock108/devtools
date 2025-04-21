@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `notary_leads` Supabase table creation instructions.
 - /crondeck product page with hero, pain/solution, features, pricing, Supabase wait-list.
 - Added `crondeck_leads` Supabase table creation instructions.
+- Supabase Edge Function `send-welcome-email` triggered by new leads.
+- Supabase Edge Function `weekly-digest` (cron) to email recent leads.
+- Basic HTML email templates for welcome and digest emails.
+- SQL for Supabase DB triggers and helper function (`notify_welcome_email`).
+- Added `welcome_sent` column to lead tables.
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
@@ -41,4 +46,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated metadata in root layout
 - Refactored `GuardianWaitlistForm` to reusable `WaitlistForm` and updated usage.
 - Home grid card and header dropdown now link to /notary-ci (no change needed).
-- Home grid card and header dropdown link to /crondeck (no change needed). 
+- Home grid card and header dropdown link to /crondeck (no change needed).
+- Installed `resend` SDK. 
