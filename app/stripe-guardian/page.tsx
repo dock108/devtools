@@ -123,6 +123,10 @@ export default function StripeGuardianPage() {
             <p className="mt-6 text-lg leading-8 text-gray-600">
               Real-time velocity rules, bank-swap detection & instant auto-pause for Connect.
             </p>
+            {/* Waitlist Form prominently displayed in hero */}
+            <div className="mt-8">
+              <GuardianWaitlistForm />
+            </div>
           </div>
           {/* Placeholder Illustration */}
           <div className="mt-16 sm:mt-24 lg:mt-0 lg:flex-shrink-0 lg:flex-grow">
@@ -244,21 +248,6 @@ export default function StripeGuardianPage() {
            <p className="mt-8 text-center text-sm text-gray-500">
             Early-access flat pricing—subject to change after launch.
           </p>
-        </Container>
-      </div>
-      
-      {/* Waitlist Section */}
-      <div className="bg-white py-16 sm:py-24">
-        <Container>
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Get early access</h2>
-            <p className="mt-4 text-lg leading-8 text-gray-600">
-              Join the waitlist to be notified when Stripe Guardian launches.
-            </p>
-            <div className="mt-8 flex items-center justify-center">
-              <GuardianWaitlistForm />
-            </div>
-          </div>
         </Container>
       </div>
     </>
