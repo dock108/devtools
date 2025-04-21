@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
-import type { PostgrestError } from '@supabase/supabase-js';
 
 // Declare gtag type
 declare global {
