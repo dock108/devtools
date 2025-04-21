@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-700/60 bg-slate-900">
       <Container className="flex h-14 items-center">
         <div className="mr-auto flex">
           <Link href="/" className="mr-6 flex items-center">
@@ -20,10 +20,10 @@ export function Header() {
           </Link>
         </div>
         <nav className="flex items-center space-x-6 text-sm font-medium">
-          <Link href="/#products" className="text-foreground/60 transition-colors hover:text-foreground/80">
+          <Link href="/#products" className="text-slate-300 transition-colors hover:text-white">
             Products
           </Link>
-          <Link href="/docs" className="text-foreground/60 transition-colors hover:text-foreground/80">
+          <Link href="/docs" className="text-slate-300 transition-colors hover:text-white">
             Docs
           </Link>
         </nav>

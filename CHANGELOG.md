@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added initial README.
 
 ### Changed
+- Updated Header component to use a dark background for better logo visibility.
 - Card border-radius, shadow, and accent top borders.
 - Replaced all Dock108 text references with DOCK108 (uppercase).
 - Footer and hero spacing adjustments.
