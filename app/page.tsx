@@ -1,7 +1,7 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
-import Link from 'next/link';
+// import Link from 'next/link'; // Removed unused import
 import { Container } from '@/components/Container';
 
 export default function Home() {
