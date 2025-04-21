@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Dock108 Home",
+  title: "DOCK108 Home",
   description: "Developer-first tools that solve real dev pain.",
 };
 
