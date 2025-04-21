@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label";
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
+import type { PostgrestError } from '@supabase/supabase-js';
 
 // Declare gtag type
 declare global {
   interface Window {
-    gtag: (event: string, action: string, params?: Record<string, any>) => void;
+    gtag: (event: string, action: string, params?: Record<string, unknown>) => void;
   }
 }
 
@@ -61,11 +62,17 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
           console.warn('gtag function not found for analytics.');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Supabase insert error:', error);
       setState('error');
-      setErrorMessage(error.message || 'An unexpected error occurred. Please try again.');
-      toast.error(errorMessage);
+      let message = 'An unexpected error occurred. Please try again.';
+      if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+        message = error.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      setErrorMessage(message);
+      toast.error(message);
     }
   }
 
@@ -116,7 +123,7 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
       )}
       {state === 'sent' && (
          <p className="mt-2 text-sm text-green-600">
-           Thanks for joining! We'll be in touch.
+           Thanks for joining! We&apos;ll be in touch.
          </p>
       )}
     </form>
