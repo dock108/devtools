@@ -1,0 +1,223 @@
+[
+  {
+    "delayMs": 0,
+    "type": "account.updated",
+    "payload": {
+      "id": "acct_1NzQ4rCsHXA8Y4Kp",
+      "object": "account",
+      "business_profile": {
+        "name": "Global Export Partners",
+        "url": "https://globalexportpartners.example.com"
+      },
+      "created": 1624567890,
+      "metadata": {
+        "account_age_days": "424",
+        "risk_score": "low"
+      }
+    }
+  },
+  {
+    "delayMs": 3000,
+    "type": "charge.succeeded",
+    "payload": {
+      "id": "ch_3PQs5tCsHXA8Y4Kp1XmNwRbY",
+      "object": "charge",
+      "amount": 42500,
+      "created": 1675051200,
+      "currency": "usd",
+      "customer": "cus_MnO5pQrStU6v",
+      "description": "Order #12345"
+    }
+  },
+  {
+    "delayMs": 6000,
+    "type": "payout.created",
+    "payload": {
+      "id": "po_1PQs9tCsHXA8Y4KpRmNoP2qJ",
+      "object": "payout",
+      "amount": 15000,
+      "arrival_date": 1675137600,
+      "created": 1675051800,
+      "description": "STRIPE PAYOUT",
+      "metadata": {
+        "ip_address": "192.168.1.254",
+        "ip_country": "US",
+        "session_id": "sess_ab1234cd"
+      },
+      "destination": "ba_1NzRtYCsHXA8Y4KpQzYxW3vT",
+      "bank_account": {
+        "id": "ba_1NzRtYCsHXA8Y4KpQzYxW3vT",
+        "bank_name": "FIRST INTERSTATE BANK",
+        "last4": "6789",
+        "country": "US",
+        "account_holder_name": "Global Export Partners LLC"
+      },
+      "status": "created"
+    }
+  },
+  {
+    "delayMs": 7000,
+    "type": "payout.paid",
+    "payload": {
+      "id": "po_1PQs9tCsHXA8Y4KpRmNoP2qJ",
+      "object": "payout",
+      "amount": 15000,
+      "arrival_date": 1675137600,
+      "created": 1675051800,
+      "description": "STRIPE PAYOUT",
+      "metadata": {
+        "ip_address": "192.168.1.254",
+        "ip_country": "US",
+        "session_id": "sess_ab1234cd"
+      },
+      "destination": "ba_1NzRtYCsHXA8Y4KpQzYxW3vT",
+      "bank_account": {
+        "id": "ba_1NzRtYCsHXA8Y4KpQzYxW3vT",
+        "bank_name": "FIRST INTERSTATE BANK",
+        "last4": "6789",
+        "country": "US",
+        "account_holder_name": "Global Export Partners LLC"
+      },
+      "status": "paid"
+    }
+  },
+  {
+    "delayMs": 14000,
+    "type": "external_account.created",
+    "payload": {
+      "id": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR",
+      "object": "bank_account",
+      "account": "acct_1NzQ4rCsHXA8Y4Kp",
+      "account_holder_name": "Global Export Partners LLC",
+      "account_holder_type": "company",
+      "bank_name": "BANK OF NIGERIA",
+      "country": "NG",
+      "currency": "usd",
+      "last4": "1234",
+      "metadata": {
+        "verification_status": "pending",
+        "ip_address": "41.190.30.15",
+        "ip_country": "NG"
+      },
+      "created": 1675053000
+    }
+  },
+  {
+    "delayMs": 15000,
+    "type": "account.updated",
+    "payload": {
+      "id": "acct_1NzQ4rCsHXA8Y4Kp",
+      "object": "account",
+      "business_profile": {
+        "name": "Global Export Partners",
+        "url": "https://globalexportpartners.example.com"
+      },
+      "external_accounts": {
+        "data": [
+          {
+            "id": "ba_1NzRtYCsHXA8Y4KpQzYxW3vT",
+            "bank_name": "FIRST INTERSTATE BANK",
+            "last4": "6789",
+            "country": "US"
+          },
+          {
+            "id": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR",
+            "bank_name": "BANK OF NIGERIA",
+            "last4": "1234",
+            "country": "NG"
+          }
+        ]
+      },
+      "metadata": {
+        "account_age_days": "424",
+        "risk_score": "medium",
+        "new_bank_account_age_hours": "0"
+      }
+    }
+  },
+  {
+    "delayMs": 16000,
+    "type": "account.external_account.default_for_currency.updated",
+    "payload": {
+      "id": "acct_1NzQ4rCsHXA8Y4Kp",
+      "object": "account",
+      "default_for_currency": {
+        "usd": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR"
+      }
+    }
+  },
+  {
+    "delayMs": 17000,
+    "type": "payout.created",
+    "payload": {
+      "id": "po_1PQsIzCsHXA8Y4KpLkJiH8gF",
+      "object": "payout",
+      "amount": 89750,
+      "arrival_date": 1675139400,
+      "created": 1675053120,
+      "description": "STRIPE PAYOUT",
+      "metadata": {
+        "ip_address": "41.190.30.15",
+        "ip_country": "NG",
+        "session_id": "sess_ng5678ef"
+      },
+      "destination": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR",
+      "bank_account": {
+        "id": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR",
+        "bank_name": "BANK OF NIGERIA",
+        "last4": "1234",
+        "country": "NG",
+        "account_holder_name": "Global Export Partners LLC"
+      },
+      "status": "created"
+    }
+  },
+  {
+    "delayMs": 18000,
+    "type": "payout.updated",
+    "payload": {
+      "id": "po_1PQsIzCsHXA8Y4KpLkJiH8gF",
+      "object": "payout",
+      "amount": 89750,
+      "arrival_date": 1675139400,
+      "created": 1675053120,
+      "description": "STRIPE PAYOUT",
+      "metadata": {
+        "ip_address": "41.190.30.15",
+        "ip_country": "NG",
+        "session_id": "sess_ng5678ef",
+        "guardian_action": "paused",
+        "guardian_reason": "bank_account_swap",
+        "risk_factors": "new_bank_account,different_country,large_amount"
+      },
+      "destination": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR",
+      "bank_account": {
+        "id": "ba_1PQsFzCsHXA8Y4KpXvWtU3sR",
+        "bank_name": "BANK OF NIGERIA",
+        "last4": "1234",
+        "country": "NG",
+        "account_holder_name": "Global Export Partners LLC"
+      },
+      "status": "paused",
+      "flagged": true
+    }
+  },
+  {
+    "delayMs": 22000,
+    "type": "account.updated",
+    "payload": {
+      "id": "acct_1NzQ4rCsHXA8Y4Kp",
+      "object": "account",
+      "business_profile": {
+        "name": "Global Export Partners",
+        "url": "https://globalexportpartners.example.com"
+      },
+      "metadata": {
+        "account_age_days": "424",
+        "risk_score": "high",
+        "new_bank_account_age_hours": "0",
+        "manual_review_required": "true"
+      }
+    }
+  }
+] 

@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Initial Guardian schema (connected_accounts, payout_events, alerts).
+- Playwright smoke suite checks /, /stripe-guardian, /guardian-demo to prevent 404s in prod.
+- Rule engine now covered by table-driven Jest tests using demo scenarios.
+- Three detailed fraud scenarios (velocity-breach, bank-swap, geo-mismatch) with rich Stripe event payloads for the Guardian demo.
+- TypeScript types and snapshot tests for scenario validation.
+- Enhanced ScenarioPicker component with localStorage persistence for remembering the last selected fraud scenario.
+- Improved accessibility with shadcn/ui Select component and better keyboard navigation.
+- Deterministic scenario-driven demo replacing random events, with JSON scenario files, progress tracking, and looping capability.
+- Added app/guardian-demo/scenarios/ with three starter scenarios (velocity-breach, bank-swap, geo-mismatch).
+- New useDemoScenario hook for playing back predetermined event sequences.
+- Added ScenarioPicker component with scenario dropdown, loop toggle, and playback speed control.
+- Added README with JSON schema for creating custom scenarios.
 - Added missing shadcn/ui `Input` and `Label` components.
 - Stripe Guardian product page (/stripe-guardian) with Hero, Pain/Solution, Features, Pricing, and Supabase Wait-List.
 - Supabase client setup (`lib/supabase.ts`) and `guardian_leads` table creation instructions.
@@ -49,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Edge Stripe webhook endpoint `/api/stripe/webhook` with signature verification and Supabase insert.
 - Added `/api/stripe/mock` replay endpoint (auth via `x-demo-key`) for injecting synthetic events.
 - Supabase admin client using service role key.
+- Rule evaluator utility (`lib/guardian/rules.ts`) with velocity & bank-swap detection + unit tests.
+- Added contribution guidelines (`docs/CONTRIBUTING.md`) and PR template (`.github/PULL_REQUEST_TEMPLATE.md`).
 
 ### Changed
 - Used shadcn `Label` component in GuardianWaitlistForm.
@@ -65,3 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Home grid card and header dropdown now link to /notary-ci (no change needed).
 
 ### Fixed
+
+### Security
+- Webhook route now validates Stripe signatures; invalid sig returns 400.
