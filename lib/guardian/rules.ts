@@ -1,21 +1,30 @@
 import { GuardianEventRow } from '@/types/supabase';
+<<<<<<< HEAD
 import { Alert, AlertType, createBankSwapAlert, createGeoMismatchAlert, createVelocityAlert } from './alerts';
+=======
+>>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
 
 export type GuardianDecision =
   | { flagged: false }
   | { flagged: true; reason: 'velocity'; breachCount: number }
+<<<<<<< HEAD
   | { flagged: true; reason: 'bank_swap' }
   | { flagged: true; reason: 'geo_mismatch' };
 
 /**
  * Evaluate an event against rules and return decision
  */
+=======
+  | { flagged: true; reason: 'bank_swap' };
+
+>>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
 export function evaluateEvent(
   event: GuardianEventRow,
   history: GuardianEventRow[],
   opts: { velocityLimit?: number; windowSec?: number } = {}
 ): GuardianDecision {
   const { velocityLimit = 3, windowSec = 60 } = opts;
+<<<<<<< HEAD
   
   // Safely handle null/undefined event
   if (!event) {
@@ -90,15 +99,40 @@ export function evaluateEvent(
       return { flagged: false };
     }
     
+=======
+
+  // --- Bank-swap rule ---
+  // Check if it's an account update and if the previous attributes included external_accounts
+  // A simple check for existence implies a change for this basic rule.
+  // A more robust check would compare specific account IDs if available.
+  if (
+    event.type === 'account.updated' &&
+    event.raw?.data?.previous_attributes?.external_accounts
+  ) {
+    return { flagged: true, reason: 'bank_swap' };
+  }
+
+  // --- Velocity rule ---
+  // Only apply to payout events
+  if (event.type === 'payout.paid') {
+>>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
     const now = new Date(event.event_time).getTime();
     const cutoff = now - windowSec * 1000;
 
     // Count the current event + recent history within the window
+<<<<<<< HEAD
     const recentPayouts = (history || []).filter(
       (e) =>
         e && e.type === 'payout.paid' &&
         e.account === event.account && // Ensure same account
         e.event_time && new Date(e.event_time).getTime() >= cutoff
+=======
+    const recentPayouts = history.filter(
+      (e) =>
+        e.type === 'payout.paid' &&
+        e.account === event.account && // Ensure same account
+        new Date(e.event_time).getTime() >= cutoff
+>>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
     );
 
     const totalInWindow = recentPayouts.length + 1; // +1 for the current event
@@ -110,6 +144,7 @@ export function evaluateEvent(
 
   // If no rules matched, return not flagged
   return { flagged: false };
+<<<<<<< HEAD
 }
 
 /**
@@ -178,4 +213,6 @@ export function runRules(
     default:
       return null;
   }
+=======
+>>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
 } 
