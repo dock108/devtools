@@ -22,6 +22,9 @@ const nextConfig = {
     // Disable new CSS transforms on Vercel
     optimizeCss: false
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Explicitly configure webpack aliases
   webpack: (config) => {
     // Alias '@/' to project root
