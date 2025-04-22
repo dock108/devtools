@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Only process the events we care about for Guardian
     if (type.startsWith('payout.') || 
         type === 'account.updated' || 
-        type === 'external_account.created') {
+        type === 'account.external_account.created') {
       
       // Extract payout ID for payout events
       let stripePayoutId = '';
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         (data.object && 'account' in data.object ? data.object.account : '');
       
       // Only proceed if we have valid account ID and either a payout ID or it's an account event
-      if (stripeAccountId && (stripePayoutId || type === 'account.updated' || type === 'external_account.created')) {
+      if (stripeAccountId && (stripePayoutId || type === 'account.updated' || type === 'account.external_account.created')) {
         // Insert into the payout_events table
         const { error } = await supabaseAdmin.from('payout_events').insert({
           stripe_event_id: stripeEventId,
