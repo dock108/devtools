@@ -19,7 +19,7 @@
     "**/*.{js,jsx,ts,tsx,json,md,mdx,yml}": [
       "prettier --write"
     ],
-    "**/*.{js,jsx,ts,tsx}": [
+    "{app,components,lib,pages}/**/*.{js,jsx,ts,tsx}": [
       "next lint --fix"
     ]
   },
