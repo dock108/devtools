@@ -1,9 +1,13 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm ci --legacy-peer-deps",
+  "buildCommand": "npm ci && npm run build",
+  "ignoreCommand": "node -e \"process.exit(process.env.VERCEL_ENV !== 'production')\"",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
-    "NEXT_DISABLE_SOURCEMAPS": "1"
+    "NEXT_DISABLE_SOURCEMAPS": "1",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "buildEnvironment": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
   }
 }

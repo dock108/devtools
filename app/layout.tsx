@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+// Using standard CSS import instead of next/font
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "DOCK108 Home",
@@ -20,9 +15,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} font-sans bg-white text-gray-900 antialiased`}
-      >
+      <head>
+        {/* Load Inter font using standard link tag */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
+          rel="stylesheet" 
+        />
+      </head>
+      <body className="font-sans bg-white text-gray-900 antialiased">
         {children}
       </body>
     </html>
