@@ -1,6 +1,9 @@
 import createMDX from '@next/mdx';
 import { fileURLToPath } from 'url';
-import path from 'path'; // Import path module
+import path from 'path';
+
+// In ESM, __dirname is not defined by default – define it manually
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -20,11 +23,9 @@ const nextConfig = {
     optimizeCss: false
   },
   // Explicitly configure webpack aliases
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Add alias based on tsconfig paths
-    config.resolve.alias['@'] = path.resolve(__dirname); // Resolve '@' to the project root
-
-    // Important: return the modified config
+  webpack: (config) => {
+    // Alias '@/' to project root
+    config.resolve.alias['@'] = __dirname;
     return config;
   },
 };
