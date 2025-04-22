@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export default function GuardianDemo() {
   return (
-    <Container className="py-24 sm:py-32">
+    <Container className="py-10 sm:py-16">
       {/* Header Row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
