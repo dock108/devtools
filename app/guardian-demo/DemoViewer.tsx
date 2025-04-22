@@ -2,11 +2,11 @@
 
 import { useFakeStripeEvents } from './useFakeStripeEvents';
 import { useDemoScenario } from './useDemoScenario';
-import { EventTable } from '@/components/guardian-demo/EventTable';
-import VelocityChart from '@/components/guardian-demo/VelocityChart';
-import ActionLog from '@/components/guardian-demo/ActionLog';
-import SlackAlert from '@/components/guardian-demo/SlackAlert';
-import { ScenarioPicker } from '@/components/guardian-demo/ScenarioPicker';
+import { EventTable } from '../../components/guardian-demo/EventTable';
+import VelocityChart from '../../components/guardian-demo/VelocityChart';
+import ActionLog from '../../components/guardian-demo/ActionLog';
+import SlackAlert from '../../components/guardian-demo/SlackAlert';
+import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
 import { getScenarios } from './getScenarios';
 import { useState, useEffect } from 'react';
 

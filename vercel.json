@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node -e \"const pkg=require('./package.json');delete pkg.scripts.prepare;require('fs').writeFileSync('package.json',JSON.stringify(pkg,null,2))\" && npm ci && npm run build",
+  "buildCommand": "npm ci && npm run build",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
