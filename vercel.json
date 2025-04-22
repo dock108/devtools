@@ -1,10 +1,11 @@
 {
-  "buildCommand": "npm set-script prepare '' && npm ci && npm run build",
+  "buildCommand": "HUSKY=0 npm ci && npm run build",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
     "NEXT_DISABLE_SOURCEMAPS": "1",
     "NEXT_TELEMETRY_DISABLED": "1",
-    "NODE_OPTIONS": "--max-old-space-size=4096"
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "HUSKY": "0"
   }
 }
