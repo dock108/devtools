@@ -6,6 +6,21 @@ import { getAllPostSlugs, getPostData } from '@/lib/blog';
 import dynamic from 'next/dynamic'; // Needed for dynamic import
 import { blogLD } from '@/lib/jsonld';
 
+// Disable static rendering – fallback to SSR to avoid build‑time MDX errors
+export const dynamic = 'force-dynamic';
+
+// Helper to safely import MDX content, replacing with fallback if missing/broken
+const getMdxComponent = (slug: string) =>
+  dynamic(async () => {
+    try {
+      const mod = await import(`@/content/blog/${slug}.mdx`);
+      return mod.default;
+    } catch (err) {
+      console.error('Failed to load MDX for', slug, err);
+      return () => <p className="text-red-600">Post content unavailable.</p>;
+    }
+  });
+
 // Generate segments for all blog posts at build time
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   return getAllPostSlugs().map(({ params }) => ({ slug: params.slug }));
@@ -55,10 +70,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     },
   };
 }
-
-// Dynamically import the MDX component based on slug
-const getMdxComponent = (slug: string) => dynamic(() => import(`@/content/blog/${slug}.mdx`));
-
 
 // Render the blog post page
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
