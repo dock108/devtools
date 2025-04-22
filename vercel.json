@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm ci && npm run build",
+  "buildCommand": "npm set-script prepare '' && npm ci && npm run build",
   "ignoreCommand": "node -e \"process.exit(process.env.VERCEL_ENV !== 'production' ? 1 : 0)\"",
   "framework": "nextjs",
   "outputDirectory": ".next",
