@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, Stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { logger } from '@/lib/logger';
+import { logRequest } from '@/lib/logRequest';
 
 export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
+  logRequest(req);
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
   }
@@ -14,7 +17,8 @@ export async function POST(req: NextRequest) {
 
   try {
     rawBody = await req.text();
-  } catch {
+  } catch (err) {
+    logger.error({ err }, 'Failed to read request body');
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
@@ -27,7 +31,7 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err) {
-    console.error('⚠️  Webhook signature failed', err);
+    logger.error({ err }, 'Webhook signature verification failed');
     return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
   }
 
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (err) {
-    console.error('⚠️  DB insert failed', err);
+    logger.error({ err }, 'Failed to insert event into database');
     return NextResponse.json({ error: 'Database error' }, { status: 500 });
   }
 
