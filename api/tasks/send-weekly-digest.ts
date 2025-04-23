@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { startOfWeek, subWeeks, format } from 'date-fns';
-import { logger } from '@/lib/logger';
-import mjml2html from 'mjml';
+import { logger } from '@/lib/edge-logger';
+import mjml2html from '@/lib/mjml-renderer';
 
 export const config = {
   runtime: 'edge',

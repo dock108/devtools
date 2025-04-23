@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
+import { logger } from '@/lib/edge-logger';
 
 export const config = {
   runtime: 'edge',
@@ -15,7 +16,7 @@ export default async function handler(req: NextRequest) {
       !process.env.RESEND_API_KEY ||
       !process.env.STRIPE_SECRET_KEY
     ) {
-      console.error('Missing environment variables');
+      logger.error('Missing environment variables');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
@@ -26,7 +27,7 @@ export default async function handler(req: NextRequest) {
 
     // Create Stripe client for admin operations
     const stripeAdmin = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2024-04-10',
+      apiVersion: '2023-10-16',
       appInfo: { name: 'Stripe Guardian Admin', version: '0.1.0' },
     });
 
@@ -34,7 +35,7 @@ export default async function handler(req: NextRequest) {
     const { data: notif, error: notifError } = await supabase.rpc('pop_notification');
 
     if (notifError) {
-      console.error({ error: notifError }, 'Failed to pop notification');
+      logger.error({ error: notifError }, 'Failed to pop notification');
       return NextResponse.json({ error: 'Failed to pop notification' }, { status: 500 });
     }
 
@@ -50,7 +51,7 @@ export default async function handler(req: NextRequest) {
       .maybeSingle();
 
     if (alertError) {
-      console.error({ error: alertError }, 'Failed to fetch alert');
+      logger.error({ error: alertError }, 'Failed to fetch alert');
       return NextResponse.json({ error: 'Failed to fetch alert' }, { status: 500 });
     }
 
@@ -72,7 +73,7 @@ export default async function handler(req: NextRequest) {
         // Mark alert as resolved
         await supabase.from('alerts').update({ resolved: true }).eq('id', alert.id);
 
-        console.info(
+        logger.info(
           {
             alertId: alert.id,
             payoutId: alert.stripe_payout_id,
@@ -84,7 +85,7 @@ export default async function handler(req: NextRequest) {
         autoPauseStatus = 'success';
         autoPauseMessage = `<p style="color: #22c55e;"><strong>✓ Payout ${alert.stripe_payout_id} has been automatically paused.</strong></p>`;
       } catch (err) {
-        console.error(
+        logger.error(
           {
             error: err,
             alertId: alert.id,
@@ -145,14 +146,14 @@ export default async function handler(req: NextRequest) {
     });
 
     if (emailError) {
-      console.error({ error: emailError }, 'Failed to send email');
+      logger.error({ error: emailError }, 'Failed to send email');
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
     }
 
-    console.info({ alertId: alert.id, email, autoPauseStatus }, 'Email alert sent');
+    logger.info({ alertId: alert.id, email, autoPauseStatus }, 'Email alert sent');
     return NextResponse.json({ success: true, messageId: emailData?.id, autoPauseStatus });
   } catch (err) {
-    console.error({ error: err }, 'Function error');
+    logger.error({ error: err }, 'Function error');
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

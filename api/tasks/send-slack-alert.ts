@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import { logger } from '@/lib/edge-logger';
 
 // Basic rate limiting (per account on local instance)
 const lastSent: Record<string, number> = {};
@@ -17,7 +18,7 @@ export default async function handler(req: NextRequest) {
       !process.env.SUPABASE_SERVICE_ROLE_KEY ||
       !process.env.STRIPE_SECRET_KEY
     ) {
-      console.error('Missing environment variables for Supabase/Stripe');
+      logger.error('Missing environment variables for Supabase/Stripe');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
@@ -26,7 +27,7 @@ export default async function handler(req: NextRequest) {
 
     // Create Stripe client for admin operations
     const stripeAdmin = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2024-04-10',
+      apiVersion: '2023-10-16',
       appInfo: { name: 'Stripe Guardian Admin', version: '0.1.0' },
     });
 
@@ -34,7 +35,7 @@ export default async function handler(req: NextRequest) {
     const { data: notif, error: notifError } = await supabase.rpc('pop_notification');
 
     if (notifError) {
-      console.error({ error: notifError }, 'Failed to pop notification');
+      logger.error({ error: notifError }, 'Failed to pop notification');
       return NextResponse.json({ error: 'Failed to pop notification' }, { status: 500 });
     }
 
@@ -50,7 +51,7 @@ export default async function handler(req: NextRequest) {
       .maybeSingle();
 
     if (alertError) {
-      console.error({ error: alertError }, 'Failed to fetch alert');
+      logger.error({ error: alertError }, 'Failed to fetch alert');
       return NextResponse.json({ error: 'Failed to fetch alert' }, { status: 500 });
     }
 
@@ -69,7 +70,7 @@ export default async function handler(req: NextRequest) {
         // Mark alert as resolved
         await supabase.from('alerts').update({ resolved: true }).eq('id', alert.id);
 
-        console.info(
+        logger.info(
           {
             alertId: alert.id,
             payoutId: alert.stripe_payout_id,
@@ -80,7 +81,7 @@ export default async function handler(req: NextRequest) {
 
         autoPauseStatus = 'success';
       } catch (err) {
-        console.error(
+        logger.error(
           {
             error: err,
             alertId: alert.id,
@@ -146,11 +147,11 @@ export default async function handler(req: NextRequest) {
     // Always add a small delay for rate limiting
     await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 msg / sec
 
-    console.info({ alertId: alert.id, status: resp.status, autoPauseStatus }, 'Slack alert sent');
+    logger.info({ alertId: alert.id, status: resp.status, autoPauseStatus }, 'Slack alert sent');
 
     return NextResponse.json({ success: true, autoPauseStatus });
   } catch (err) {
-    console.error({ error: err }, 'Function error');
+    logger.error({ error: err }, 'Function error');
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
