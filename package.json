@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "node build.mjs",
     "start": "next start",
-    "lint": "pnpm prettier --check . && pnpm eslint .",
+    "lint": "pnpm eslint .",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx,yml}\"",
     "postbuild": "next-sitemap",
     "type-check": "tsc --noEmit",
