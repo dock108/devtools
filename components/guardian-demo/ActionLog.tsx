@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-export default function ActionLog({ entries }: { entries: string[] }) {
+interface ActionLogProps {
+  entries: string[];
+  className?: string;
+}
+
+export default function ActionLog({ entries, className = '' }: ActionLogProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
 
@@ -14,7 +19,7 @@ export default function ActionLog({ entries }: { entries: string[] }) {
   }, [visible]);
 
   return (
-    <div>
+    <div className={className}>
       <div
         className="h-60 overflow-auto rounded-2xl border border-[var(--accent-guardian)] bg-gray-50 p-4 font-mono text-sm"
         ref={ref}

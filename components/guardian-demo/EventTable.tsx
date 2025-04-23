@@ -6,9 +6,10 @@ import { dateTimeFormatter, currencyFormatter } from '@/lib/formatters';
 
 interface Props {
   events: DemoEvent[];
+  className?: string;
 }
 
-export function EventTable({ events }: Props) {
+export function EventTable({ events, className = '' }: Props) {
   // Keep track of rendered events to ensure unique keys
   const renderedEvents = useRef<Set<string>>(new Set());
   
@@ -20,7 +21,7 @@ export function EventTable({ events }: Props) {
   }, []);
   
   return (
-    <div className="overflow-auto rounded-lg border border-gray-200">
+    <div className={`overflow-x-auto rounded-lg border border-gray-200 ${className}`}>
       <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50">
           <tr>

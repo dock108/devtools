@@ -2,7 +2,6 @@
 
 import { useDemoScenario } from './useDemoScenario';
 import { EventTable } from '../../components/guardian-demo/EventTable';
-import VelocityChart from '../../components/guardian-demo/VelocityChart';
 import ActionLog from '../../components/guardian-demo/ActionLog';
 import SlackAlert from '../../components/guardian-demo/SlackAlert';
 import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
@@ -94,20 +93,14 @@ export function DemoViewer() {
           onRestart={() => handleReset(false)}
         />
       </div>
-      <div className="mt-4 grid gap-6 lg:grid-cols-3">
-        <EventTable events={events} />
-        <div className="rounded-2xl border border-[var(--accent-guardian)] p-4">
-          <h2 className="mb-2 text-lg font-semibold">Payout Velocity (last 60&nbsp;s)</h2>
-          <div className="h-[300px] overflow-hidden">
-            <VelocityChart events={events} />
-          </div>
-        </div>
+      <section className="mt-4 grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <EventTable events={events} className="w-full" />
         <div>
           <h2 className="mb-2 text-lg font-semibold">Action Log</h2>
           <ActionLog entries={log} />
           <SlackAlert alert={alert} />
         </div>
-      </div>
+      </section>
     </>
   );
 } 

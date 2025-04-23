@@ -8,7 +8,7 @@ const securityHeaders: Record<string, string> = {
     "default-src 'self';" +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
     "font-src https://fonts.gstatic.com;" +
-    "script-src 'self' 'unsafe-inline';" +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval';" +
     "img-src 'self' data:;" +
     "connect-src 'self' https://*.supabase.co https://api.stripe.com;",
   'X-Frame-Options': 'DENY',
