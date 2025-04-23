@@ -30,6 +30,40 @@ The rules engine uses a JSON configuration file to set thresholds for each rule.
 }
 ```
 
+### Per-Account Overrides
+
+Guardian supports customizing rule thresholds on a per-account basis. Each Stripe account can have its own rule set that overrides the default settings.
+
+To customize rules for a specific account:
+
+1. Navigate to **Settings > Connected Accounts**
+2. Find the account you want to customize
+3. Click the **Edit Thresholds** button
+4. Modify the JSON configuration to adjust rule sensitivity
+5. Save your changes
+
+For example, to increase velocity breach detection sensitivity for a high-risk account:
+
+```json
+{
+  "velocityBreach": {
+    "maxPayouts": 2,     // More strict than default (3)
+    "windowSeconds": 30  // Shorter window than default (60)
+  },
+  "bankSwap": {
+    "lookbackMinutes": 10,   // Longer window than default (5)
+    "minPayoutUsd": 500      // Lower threshold than default (1000)
+  },
+  "geoMismatch": {
+    "mismatchChargeCount": 1  // More strict than default (2)
+  }
+}
+```
+
+![Account Rule Editor](../images/rule-editor-screenshot.png)
+
+All rule set changes are validated against a schema to prevent invalid configurations. If an account's rule set is invalid for any reason, Guardian will automatically fall back to the default settings.
+
 ### Schema Validation
 
 The configuration is validated against a JSON Schema to ensure all values are within acceptable ranges and required properties are present. This prevents misconfiguration that could lead to false positives or missed fraud cases.

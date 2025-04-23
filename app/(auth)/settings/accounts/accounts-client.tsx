@@ -10,6 +10,7 @@ import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 import { RefreshCcw, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { RuleSetEditor } from '@/components/accounts/RuleSetEditor';
 
 interface Account {
   id: number;
@@ -18,6 +19,7 @@ interface Account {
   live: boolean;
   webhook_secret: string | null;
   created_at: string;
+  rule_set: Record<string, unknown> | null;
   alert_channels: {
     auto_pause: boolean;
   } | null;
@@ -174,9 +176,12 @@ export default function AccountsClient({ initialAccounts }: { initialAccounts: A
                 </CardDescription>
               </div>
               
-              <Badge className={account.live ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'}>
-                {account.live ? 'Live Mode' : 'Test Mode'}
-              </Badge>
+              <div className="flex items-center">
+                <Badge className={account.live ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'}>
+                  {account.live ? 'Live Mode' : 'Test Mode'}
+                </Badge>
+                <RuleSetEditor accountId={account.stripe_account_id} ruleSet={account.rule_set} />
+              </div>
             </div>
           </CardHeader>
           

@@ -25,6 +25,27 @@ export async function evaluateRules(event: StripeEvent): Promise<Alert[]> {
   const lookbackMs = Math.max(3600_000, bankSwapLookbackMs, geoMismatchLookbackMs);
   const lookbackDate = new Date(Date.now() - lookbackMs).toISOString();
   
+  // Get account-specific rule set if available
+  let accountRuleSet = null;
+  try {
+    const { data: account } = await supabaseAdmin
+      .from('connected_accounts')
+      .select('rule_set')
+      .eq('stripe_account_id', accountId)
+      .single();
+    
+    if (account?.rule_set) {
+      accountRuleSet = account.rule_set;
+    }
+  } catch (error) {
+    logger.warn({ error, accountId }, 'Failed to retrieve account rule set');
+  }
+  
+  // Merge account rule set with default config (if available)
+  const mergedConfig = accountRuleSet 
+    ? { ...ruleConfig, ...accountRuleSet } 
+    : ruleConfig;
+  
   // Fetch context data needed for all rules
   const ctx: RuleContext = {
     recentPayouts: (await supabaseAdmin
@@ -43,7 +64,7 @@ export async function evaluateRules(event: StripeEvent): Promise<Alert[]> {
       .gte('created_at', lookbackDate)
       .order('created_at', { ascending: false })).data || [],
       
-    config: ruleConfig,
+    config: mergedConfig,
   };
 
   // Run each rule against the event

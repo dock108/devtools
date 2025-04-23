@@ -9,6 +9,7 @@ export interface ConnectedAccount {
   webhook_secret: string | null;
   live: boolean;
   metadata: Record<string, any> | null;
+  rule_set: Record<string, unknown> | null;
   created_at: string;
 }
 
