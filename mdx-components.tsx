@@ -1,8 +1,8 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
-// @ts-ignore
-import type { MDXComponents } from 'mdx/types'
+import Image from 'next/image';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+// @ts-expect-error — no types published yet
+import type { MDXComponents } from 'mdx/types';
 
 // Define the MDX components using the Next.js 15 pattern
 export function useMDXComponents(components: MDXComponents = {}): MDXComponents {
@@ -10,10 +10,7 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
     // Override default components
     h1: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
       <h1
-        className={cn(
-          'mt-2 scroll-m-20 text-4xl font-bold tracking-tight',
-          className
-        )}
+        className={cn('mt-2 scroll-m-20 text-4xl font-bold tracking-tight', className)}
         {...props}
       />
     ),
@@ -21,34 +18,25 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
       <h2
         className={cn(
           'mt-10 scroll-m-20 border-b pb-1 text-3xl font-semibold tracking-tight first:mt-0',
-          className
+          className,
         )}
         {...props}
       />
     ),
     h3: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
       <h3
-        className={cn(
-          'mt-8 scroll-m-20 text-2xl font-semibold tracking-tight',
-          className
-        )}
+        className={cn('mt-8 scroll-m-20 text-2xl font-semibold tracking-tight', className)}
         {...props}
       />
     ),
     h4: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
       <h4
-        className={cn(
-          'mt-8 scroll-m-20 text-xl font-semibold tracking-tight',
-          className
-        )}
+        className={cn('mt-8 scroll-m-20 text-xl font-semibold tracking-tight', className)}
         {...props}
       />
     ),
     p: ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-      <p
-        className={cn('leading-7 [&:not(:first-child)]:mt-6', className)}
-        {...props}
-      />
+      <p className={cn('leading-7 [&:not(:first-child)]:mt-6', className)} {...props} />
     ),
     ul: ({ className, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
       <ul className={cn('my-6 ml-6 list-disc', className)} {...props} />
@@ -61,10 +49,7 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
     ),
     blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
       <blockquote
-        className={cn(
-          'mt-6 border-l-2 pl-6 italic [&>*]:text-muted-foreground',
-          className
-        )}
+        className={cn('mt-6 border-l-2 pl-6 italic [&>*]:text-muted-foreground', className)}
         {...props}
       />
     ),
@@ -81,16 +66,13 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
       </div>
     ),
     tr: ({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => (
-      <tr
-        className={cn('m-0 border-t p-0 even:bg-muted', className)}
-        {...props}
-      />
+      <tr className={cn('m-0 border-t p-0 even:bg-muted', className)} {...props} />
     ),
     th: ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
       <th
         className={cn(
           'border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right',
-          className
+          className,
         )}
         {...props}
       />
@@ -99,7 +81,7 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
       <td
         className={cn(
           'border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right',
-          className
+          className,
         )}
         {...props}
       />
@@ -108,7 +90,7 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
       <pre
         className={cn(
           'mb-4 mt-6 max-h-[650px] overflow-x-auto rounded-lg border bg-gray-100 py-4 dark:bg-zinc-900',
-          className
+          className,
         )}
         {...props}
       />
@@ -117,21 +99,20 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
       <code
         className={cn(
           'relative rounded border bg-muted/25 px-[0.3rem] py-[0.2rem] font-mono text-sm',
-          className
+          className,
         )}
         {...props}
       />
     ),
     Image,
     a: ({ className, href = '', ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-       <Link
+      <Link
         href={href}
         className={cn('font-medium underline underline-offset-4', className)}
         {...props}
       />
-     ),
+    ),
     // Add any custom components
     ...components,
-  }
-} 
- 
+  };
+}
