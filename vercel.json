@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm ci --ignore-scripts && ./scripts/supabase-deploy.sh && npm run build",
+  "buildCommand": "npm ci --ignore-scripts && bash scripts/supabase-deploy.sh && npm run build",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "env": {
