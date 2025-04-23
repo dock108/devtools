@@ -20,7 +20,9 @@ const nextConfig = {
   // Workaround for lightningcss issues on Vercel
   experimental: {
     // Disable new CSS transforms on Vercel
-    optimizeCss: false
+    optimizeCss: false,
+    // Disable Turbopack in production
+    turbo: false
   },
   eslint: {
     ignoreDuringBuilds: true,

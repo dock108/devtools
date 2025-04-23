@@ -20,7 +20,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: dummy_service_role
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x]
         os: [ubuntu-latest]
 
     steps:
@@ -32,29 +32,22 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      # Install pnpm via Corepack
-      - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@8.15.1 --activate
-
       - name: Install dependencies
-        run: |
-          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi
+        run: npm ci
 
       # Prettier + ESLint
       - name: Lint
-        run: pnpm lint
+        run: npm run lint
 
       # Type check
       - name: Type check
-        run: pnpm type-check
+        run: npm run type-check
 
       # Jest unit tests with coverage
       - name: Unit tests
         continue-on-error: true
         run: |
-          pnpm test -- --coverage --runInBand || echo "::warning::Unit tests failed, review report"
+          npm test -- --coverage --runInBand || echo "::warning::Unit tests failed, review report"
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -66,7 +59,7 @@ jobs:
       - name: Build app
         continue-on-error: true
         run: |
-          pnpm build || echo "::warning::Next.js build failed, skipping Playwright"
+          npm run build || echo "::warning::Next.js build failed, skipping Playwright"
 
       # Playwright smoke tests
       - name: Run Playwright tests
@@ -74,7 +67,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: pnpm test:e2e
+        run: npm run test:e2e
 
       - name: Upload Playwright report
         if: always()
@@ -84,10 +77,10 @@ jobs:
           path: playwright-report/
 
       - name: Build Next app
-        run: pnpm build
+        run: npm run build
 
       - name: Run Lighthouse CI
-        run: pnpm lh-ci
+        run: npm run lh-ci
 
       - name: Upload Lighthouse report
         uses: actions/upload-artifact@v4

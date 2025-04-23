@@ -78,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Standardized builds on Node 20 + npm 10; removed pnpm artifacts; Vercel now runs npm ci, eliminating multi-compiler mismatch.
 - Renamed `SUPABASE_SERVICE_ROLE` → `SUPABASE_SERVICE_ROLE_KEY` across codebase, environment files, CI, and deployment scripts to prevent runtime errors when writing to Supabase.
 - Relaxed Content‑Security‑Policy to include Google Fonts and allow inline scripts for Next.js bootstrap, unblocking Vercel demo pages.
 - Duplicate timers and stale fetch race eliminated in `useDemoScenario`; rapid scenario changes no longer cause duplicated rows.
