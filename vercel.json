@@ -9,7 +9,11 @@
   },
   "crons": [
     {
-      "path": "api/tasks/send-slack-alert",
+      "path": "/api/tasks/send-slack-alert",
+      "schedule": "*/1 * * * * *"
+    },
+    {
+      "path": "/api/tasks/send-email-alert",
       "schedule": "*/1 * * * * *"
     }
   ]

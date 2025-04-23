@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Email dispatcher sends Guardian alerts via Resend using MJML template; environment variable RESEND_API_KEY required.
 - Slack webhook dispatcher Edge Function sends formatted alerts at 1 msg/sec and logs delivery status.
 - Pending_notifications queue table and trigger added; every new alert is automatically enqueued for async dispatch.
 - Alert_channels table with RLS; stores Slack, email, auto-pause settings per Stripe account.
