@@ -10,7 +10,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // List of components to check
 const componentsToCheck = [
   'components/guardian-demo/EventTable.tsx',
-  'components/guardian-demo/VelocityChart.tsx',
   'components/guardian-demo/ActionLog.tsx',
   'components/guardian-demo/SlackAlert.tsx',
   'components/guardian-demo/ScenarioPicker.tsx',
