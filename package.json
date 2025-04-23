@@ -73,7 +73,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@lhci/cli": "^0.13.0",
+    "@lhci/cli": "^0.14.0",
     "@playwright/test": "^1.52.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^20",
