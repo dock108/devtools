@@ -57,4 +57,62 @@ await supabase
     auto_pause: true 
   })
   .eq('account_id', connectedAccountId);
-``` 
+```
+
+# Guardian Alerts Dashboard
+
+The Stripe Guardian Alerts Dashboard provides a real-time view of all detected fraud alerts for your connected Stripe accounts. The dashboard allows you to monitor, filter, and manage alerts as they occur.
+
+![Alerts Dashboard](https://www.dock108.ai/images/guardian-alerts-dashboard.png)
+
+## Features
+
+### Real-time Updates
+
+The dashboard uses Supabase Realtime to provide instant updates when new alerts are generated. You'll see new alerts appear within seconds, without needing to refresh the page.
+
+### Alert Filtering
+
+Alerts are organized into two tabs:
+- **Unresolved**: Shows all active alerts that require attention
+- **Resolved**: Shows alerts that have been addressed and marked as resolved
+
+### Alert Information
+
+Each alert includes:
+- **Date and Time**: When the alert was generated
+- **Rule Type**: The type of fraud rule that triggered the alert (Velocity, Bank-Swap, Geo-Mismatch)
+- **Severity**: Low, Medium, or High - color-coded for quick identification
+- **Message**: Detailed description of the alert
+- **Payout ID**: The Stripe payout ID affected by the alert
+
+### Automatic Payout Pause
+
+The dashboard includes an "Auto-pause" toggle that allows you to:
+
+1. **Enable automatic payout pausing**: When enabled, Guardian will automatically pause payouts in Stripe when high-severity alerts are triggered
+2. **Disable automatic payout pausing**: When disabled, alerts will be displayed but no automatic pausing will occur
+
+## Managing Alerts
+
+### Resolving Alerts
+
+When you've addressed an alert, you can mark it as resolved by clicking the "Resolve" button. This will:
+
+1. Move the alert to the "Resolved" tab
+2. Update the alert status in the database
+3. Remove it from active monitoring
+
+### Security
+
+The alerts dashboard is protected by:
+- Authentication: Only logged-in users can access the dashboard
+- Authorization: Users can only see and manage alerts for their own connected Stripe accounts
+
+## Implementation Notes
+
+The alerts dashboard is built using:
+- Next.js App Router
+- Supabase for data storage and real-time updates
+- Shadcn UI components for the interface
+- Tailwind CSS for styling 

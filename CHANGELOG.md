@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Live /alerts dashboard with real-time feed, severity badges, and auto-pause toggle.
 - Auto-pause payout option: Guardian now pauses payouts in Stripe automatically when critical alerts occur and the account's auto-pause toggle is enabled.
 - Email dispatcher sends Guardian alerts via Resend using MJML template; environment variable RESEND_API_KEY required.
 - Slack webhook dispatcher Edge Function sends formatted alerts at 1 msg/sec and logs delivery status.
