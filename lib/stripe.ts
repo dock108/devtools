@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-const apiVersion: Stripe.LatestApiVersion = '2024-04-10'; // keep in sync with Stripe docs
+const apiVersion: Stripe.LatestApiVersion = '2023-10-16';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('⛔️  STRIPE_SECRET_KEY env var is missing.');

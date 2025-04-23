@@ -3,7 +3,7 @@ import { Container } from '@/components/Container';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getAllPostSlugs, getPostData } from '@/lib/blog';
-import dynamic from 'next/dynamic'; // Needed for dynamic import
+import dynamicImport from 'next/dynamic'; // Renamed to avoid collision
 import { blogLD } from '@/lib/jsonld';
 
 // Disable static rendering – fallback to SSR to avoid build‑time MDX errors
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 // Helper to safely import MDX content, replacing with fallback if missing/broken
 const getMdxComponent = (slug: string) =>
-  dynamic(async () => {
+  dynamicImport(async () => {
     try {
       const mod = await import(`@/content/blog/${slug}.mdx`);
       return mod.default;

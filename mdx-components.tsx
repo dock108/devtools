@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+// @ts-ignore
 import type { MDXComponents } from 'mdx/types'
 
 // Define the MDX components using the Next.js 15 pattern
