@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
-import { stripeAdmin } from '@/lib/stripe';
+import Stripe from 'stripe';
 
 export const config = {
   runtime: 'edge',
@@ -12,7 +12,8 @@ export default async function handler(req: NextRequest) {
     if (
       !process.env.SUPABASE_URL ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      !process.env.RESEND_API_KEY
+      !process.env.RESEND_API_KEY ||
+      !process.env.STRIPE_SECRET_KEY
     ) {
       console.error('Missing environment variables');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
@@ -22,6 +23,12 @@ export default async function handler(req: NextRequest) {
 
     // Create Supabase client with Service Role Key
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    // Create Stripe client for admin operations
+    const stripeAdmin = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-04-10',
+      appInfo: { name: 'Stripe Guardian Admin', version: '0.1.0' },
+    });
 
     // 1. Pop oldest queue row (FOR UPDATE SKIP LOCKED to avoid race)
     const { data: notif, error: notifError } = await supabase.rpc('pop_notification');
