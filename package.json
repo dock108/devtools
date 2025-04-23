@@ -15,6 +15,7 @@
     "test:e2e": "cross-env NODE_ENV=test pw-test",
     "lint-staged": "lint-staged",
     "prepare": "husky install",
+    "vercel:env": "ts-node scripts/set-vercel-env.ts",
     "pw-test": "playwright test"
   },
   "lint-staged": {

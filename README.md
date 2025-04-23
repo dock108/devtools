@@ -97,6 +97,23 @@ See `/tests/e2e/README.md` for more details on e2e tests.
 
 This project is intended for deployment on Vercel. Ensure environment variables for Supabase and Resend are set in the Vercel project settings.
 
+## 🚀 Deploying to Vercel
+
+1. Duplicate `.env.example` → `.env` and fill in the required secrets.
+2. Push the secrets to Vercel:
+
+```bash
+pnpm vercel:env
+```
+
+3. Deploy the app:
+
+```bash
+vercel --prod
+```
+
+The script will fail fast if any required secret is missing locally.
+
 Supabase Edge Functions (`send-welcome-email`, `weekly-digest`) need to be deployed separately using the Supabase CLI and database triggers/cron schedules configured in the Supabase dashboard.
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
