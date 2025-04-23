@@ -23,5 +23,12 @@ module.exports = {
       lines: 80,
       statements: 80
     }
-  }
+  },
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'react-jsx',
+      },
+    },
+  },
 }; 

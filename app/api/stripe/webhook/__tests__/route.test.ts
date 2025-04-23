@@ -112,7 +112,7 @@ describe('Stripe webhook handler', () => {
     (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
     
     // Mock the Supabase insert success
-    (supabaseAdmin.from('guardian_events').insert as any).mockResolvedValue({ error: null });
+    (supabaseAdmin.from('payout_events').insert as any).mockResolvedValue({ error: null });
     
     const response = await POST(req);
     expect(response.status).toBe(200);
@@ -127,8 +127,8 @@ describe('Stripe webhook handler', () => {
     );
     
     // Verify that database insert was called
-    expect(supabaseAdmin.from).toHaveBeenCalledWith('guardian_events');
-    expect(supabaseAdmin.from('guardian_events').insert).toHaveBeenCalled();
+    expect(supabaseAdmin.from).toHaveBeenCalledWith('payout_events');
+    expect(supabaseAdmin.from('payout_events').insert).toHaveBeenCalled();
   });
 
   it('returns 500 if database insert fails', async () => {
@@ -157,7 +157,7 @@ describe('Stripe webhook handler', () => {
     (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
     
     // Mock the Supabase insert to fail
-    (supabaseAdmin.from('guardian_events').insert as any).mockResolvedValue({ 
+    (supabaseAdmin.from('payout_events').insert as any).mockResolvedValue({ 
       error: new Error('Database error') 
     });
     
