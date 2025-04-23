@@ -31,5 +31,12 @@
     ".next/types/**/*.ts",
     ".contentlayer/generated/**/*.ts"
   ],
-  "exclude": ["node_modules", "supabase/functions"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions",
+    "**/__tests__/**",
+    "tests/**",
+    "app/**/__tests__/**",
+    "components/**/__tests__/**"
+  ]
 }
