@@ -2,8 +2,109 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { startOfWeek, subWeeks, format } from 'date-fns';
-import { logger } from '@/lib/edge-logger';
-import mjml2html from '@/lib/mjml-renderer';
+
+// Inline edge-compatible logger
+const logger = {
+  info: (data: any, message?: string) => {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        time: new Date().toISOString(),
+        msg: message || '',
+        data: typeof data === 'object' ? data : { value: data },
+      }),
+    );
+  },
+
+  warn: (data: any, message?: string) => {
+    console.warn(
+      JSON.stringify({
+        level: 'warn',
+        time: new Date().toISOString(),
+        msg: message || '',
+        data: typeof data === 'object' ? data : { value: data },
+      }),
+    );
+  },
+
+  error: (data: any, message?: string) => {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        time: new Date().toISOString(),
+        msg: message || '',
+        data: typeof data === 'object' ? data : { value: data },
+      }),
+    );
+  },
+
+  debug: (data: any, message?: string) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(
+        JSON.stringify({
+          level: 'debug',
+          time: new Date().toISOString(),
+          msg: message || '',
+          data: typeof data === 'object' ? data : { value: data },
+        }),
+      );
+    }
+  },
+};
+
+// Inline edge-compatible MJML renderer
+interface MjmlResult {
+  html: string;
+  errors?: string[];
+}
+
+function mjml2html(mjmlContent: string): MjmlResult {
+  try {
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Email from Dock108</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <!-- 
+    This is a simplified HTML version.
+    In production, implement proper MJML rendering using:
+    1. A browser-compatible MJML library
+    2. Pre-compiled templates
+    3. A remote MJML API service
+  -->
+  ${mjmlContent
+    .replace(/<mjml[^>]*>/g, '')
+    .replace(/<\/mjml>/g, '')
+    .replace(/<mj-head>.*<\/mj-head>/gs, '')
+    .replace(/<mj-body[^>]*>/g, '<div>')
+    .replace(/<\/mj-body>/g, '</div>')
+    .replace(/<mj-section[^>]*>/g, '<div style="margin-bottom: 20px;">')
+    .replace(/<\/mj-section>/g, '</div>')
+    .replace(/<mj-column[^>]*>/g, '<div>')
+    .replace(/<\/mj-column>/g, '</div>')
+    .replace(/<mj-image[^>]*src="([^"]*)"[^>]*>/g, '<img src="$1" style="max-width: 100%;">')
+    .replace(/<mj-divider[^>]*>/g, '<hr style="border: 1px solid #eee;">')
+    .replace(/<mj-text[^>]*>(.*?)<\/mj-text>/gs, '<p>$1</p>')
+    .replace(
+      /<mj-button[^>]*href="([^"]*)"[^>]*>(.*?)<\/mj-button>/g,
+      '<a href="$1" style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 4px;">$2</a>',
+    )}
+</body>
+</html>`;
+
+    return { html };
+  } catch (error) {
+    logger.error({ error }, 'Error rendering MJML');
+    return {
+      html: `<p>Error rendering email template</p>`,
+      errors: [String(error)],
+    };
+  }
+}
 
 export const config = {
   runtime: 'edge',

@@ -2,7 +2,55 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import Stripe from 'stripe';
-import { logger } from '@/lib/edge-logger';
+
+// Inline edge-compatible logger
+const logger = {
+  info: (data: any, message?: string) => {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        time: new Date().toISOString(),
+        msg: message || '',
+        data: typeof data === 'object' ? data : { value: data },
+      }),
+    );
+  },
+
+  warn: (data: any, message?: string) => {
+    console.warn(
+      JSON.stringify({
+        level: 'warn',
+        time: new Date().toISOString(),
+        msg: message || '',
+        data: typeof data === 'object' ? data : { value: data },
+      }),
+    );
+  },
+
+  error: (data: any, message?: string) => {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        time: new Date().toISOString(),
+        msg: message || '',
+        data: typeof data === 'object' ? data : { value: data },
+      }),
+    );
+  },
+
+  debug: (data: any, message?: string) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(
+        JSON.stringify({
+          level: 'debug',
+          time: new Date().toISOString(),
+          msg: message || '',
+          data: typeof data === 'object' ? data : { value: data },
+        }),
+      );
+    }
+  },
+};
 
 export const config = {
   runtime: 'edge',
