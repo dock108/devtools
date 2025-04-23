@@ -13,10 +13,26 @@ module.exports = {
   // Collect coverage from specific directories
   collectCoverageFrom: [
     'lib/guardian/rules.ts',
-    'lib/guardian/alerts.ts'
+    'lib/guardian/alerts.ts',
+    'supabase/functions/**/*.ts',
+    'supabase/functions/**/*.js',
+    '!supabase/functions/**/*.d.ts',
+    '!supabase/functions/**/node_modules/**',
   ],
   // Coverage thresholds
   coverageThreshold: {
+    global: {
+      branches: 75,
+      functions: 75,
+      lines: 75,
+      statements: 75,
+    },
+    'supabase/functions/**': {
+      branches: 90,
+      functions: 90,
+      lines: 90,
+      statements: 90,
+    },
     'lib/guardian/rules.ts': {
       branches: 80,
       functions: 80,

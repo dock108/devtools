@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClientComponentClient } from '@supabase/ssr';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
