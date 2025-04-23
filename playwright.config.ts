@@ -4,19 +4,16 @@ import { defineConfig, devices } from '@playwright/test';
  * See https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests',
   timeout: 30000,
   expect: {
-    timeout: 5000
+    timeout: 5000,
   },
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html', { open: 'never' }],
-    ['list']
-  ],
+  reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -28,10 +25,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  globalSetup: './tests/e2e/global-setup.ts',
   webServer: {
-    command: 'npm run start',
+    command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
-}); 
+});

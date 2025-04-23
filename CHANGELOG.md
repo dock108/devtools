@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- End-to-end Playwright + Jest test covers Connect OAuth, webhook endpoint creation, and payout ingest under RLS.
 - Accounts can now override fraud-rule thresholds via JSON editor; values validated against rule-set.json schema.
 - Stripe Connect OAuth flow implemented: users can link their Stripe account, tokens stored in `connected_accounts`.
 - Row-Level Security (RLS) enabled on Guardian core tables (`payout_events`, `alerts`, and `pending_notifications`) ensuring users can only access data related to their own Stripe connected accounts.
@@ -118,7 +119,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - Connected Account Onboarding
 
 ### Security
+
 - Public sign-up disabled; sign-in restricted to emails in `ALPHA_ALLOW_LIST` during closed alpha.
 
 ### Changed
+
 - Connected accounts table now includes user_id, webhook_secret, live flag, and RLS policies restricting access to the owner.
