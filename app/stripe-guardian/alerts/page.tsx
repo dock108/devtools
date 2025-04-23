@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/ssr';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { createClient } from '@/utils/supabase/client';
 
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,7 @@ export default function AlertsPage() {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [autoPause, setAutoPause] = useState(false);
   const [updatingAutoPause, setUpdatingAutoPause] = useState(false);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   // Fetch user's account and alerts
   useEffect(() => {

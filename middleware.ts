@@ -1,6 +1,7 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { updateSession } from '@/utils/supabase/middleware';
 
+// Security headers
 const PROD_ORIGIN = 'https://www.dock108.ai';
 
 const securityHeaders: Record<string, string> = {
@@ -23,19 +24,34 @@ const corsHeaders: Record<string, string> = {
   'Access-Control-Max-Age': '86400',
 };
 
-export function middleware(req: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Handle CORS pre-flight
-  if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { status: 204, headers: corsHeaders });
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
-  const res = NextResponse.next();
-  Object.entries(securityHeaders).forEach(([k, v]) => res.headers.set(k, v));
-  Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
-  return res;
+  // Update the Supabase auth session
+  const response = await updateSession(request);
+  
+  // Add security headers
+  Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));
+  Object.entries(corsHeaders).forEach(([k, v]) => response.headers.set(k, v));
+  
+  return response;
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-  runtime: 'experimental-edge',
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };
