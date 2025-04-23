@@ -105,3 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Public GitHub link and badge removed from site until repo is open-sourced.
 - Loop-scenario option eliminated; scenarios now run once and can be restarted manually.
 - Velocity payout chart removed; Guardian demo now uses two-column layout (Event Table + Action Log).
+
+## [Unreleased] - Connected Account Onboarding
+
+### Security
+- Public sign-up disabled; sign-in restricted to emails in `ALPHA_ALLOW_LIST` during closed alpha.

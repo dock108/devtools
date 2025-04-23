@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Container } from './Container';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { Button } from './ui/button';
 
 export function Header() {
   const pathname = usePathname();
@@ -44,6 +45,9 @@ export function Header() {
           >
             Docs
           </Link>
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/login">Log In</Link>
+          </Button>
         </nav>
       </Container>
     </header>

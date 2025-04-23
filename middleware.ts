@@ -1,4 +1,5 @@
-import { type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { updateSession } from '@/utils/supabase/middleware';
 
 // Security headers
@@ -24,6 +25,22 @@ const corsHeaders: Record<string, string> = {
   'Access-Control-Max-Age': '86400',
 };
 
+// Public paths that don't require authentication
+const publicPaths = [
+  '/login',
+  '/',
+  '/blog',
+  '/docs',
+  '/api/stripe/webhook',
+  '/api/webhooks'
+];
+
+function isPublicPath(path: string): boolean {
+  return publicPaths.some(publicPath => 
+    path === publicPath || path.startsWith(`${publicPath}/`)
+  );
+}
+
 export async function middleware(request: NextRequest) {
   // Handle CORS pre-flight
   if (request.method === 'OPTIONS') {
@@ -33,8 +50,37 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // Get the pathname from the URL
+  const { pathname } = request.nextUrl;
+
   // Update the Supabase auth session
   const response = await updateSession(request);
+
+  // Check if user is authenticated
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        set() {}, // No-op as we're not setting cookies in middleware check
+        remove() {}, // No-op as we're not removing cookies in middleware check
+        setAll() {}, // No-op
+      },
+    }
+  );
+  
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // If the user is not authenticated and trying to access a non-public path,
+  // redirect them to the login page
+  if (!session && !isPublicPath(pathname)) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
   
   // Add security headers
   Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));

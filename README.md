@@ -159,3 +159,19 @@ pnpm build && pnpm lh-ci
 ## Accessibility
 
 All body text meets WCAG AA contrast (≥4.5:1) against white using slate‑700. Primary navigation uses `data-current` attribute to render a bold, underlined state for the active page without extra JavaScript.
+
+## Alpha Access
+
+During the closed alpha phase, access to the application is restricted to a pre-approved list of email addresses.
+
+To add new testers:
+
+1. Add their email to the `ALPHA_ALLOW_LIST` environment variable in your Vercel settings
+2. Multiple emails should be comma-separated:
+   ```
+   ALPHA_ALLOW_LIST=alice@example.com,bob@company.co,charlie@startup.io
+   ```
+3. Deploy the changes
+4. Share the login URL with your testers
+
+Users not on the allow list will be unable to sign up and will be prompted to contact `beta@dock108.ai` for access.
