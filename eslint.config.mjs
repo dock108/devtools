@@ -76,6 +76,7 @@ const eslintConfig = [
     files: ["**/*.{js,jsx,ts,tsx}"],
     rules: {
       "import/order": "off",
+      "react/display-name": "off",
     },
   },
   // Prettier config (must be last to override others)
