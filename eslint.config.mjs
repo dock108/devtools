@@ -52,14 +52,7 @@ const eslintConfig = [
       ...eslintPluginReact.configs["recommended"].rules,
       ...eslintPluginReactHooks.configs["recommended"].rules,
       // Custom rules
-      "import/order": [
-        "warn",
-        {
-          groups: ["builtin", "external", "internal", "parent", "sibling", "index", "object"],
-          "newlines-between": "always",
-          alphabetize: { order: "asc", caseInsensitive: true },
-        },
-      ],
+      "import/order": "off",
       // Soften noisy rules to warnings
       "import/no-unresolved": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
@@ -78,8 +71,6 @@ const eslintConfig = [
   },
   // Next.js specific config (applied on top)
   ...compat.extends("next/core-web-vitals"),
-  // Prettier config (must be last to override others)
-  eslintConfigPrettier, // Disables rules that conflict with Prettier
   // Final override to ensure import/order never fails CI
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
@@ -87,6 +78,8 @@ const eslintConfig = [
       "import/order": "off",
     },
   },
+  // Prettier config (must be last to override others)
+  eslintConfigPrettier, // Disables rules that conflict with Prettier
 ];
 
 export default eslintConfig;
