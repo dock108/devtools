@@ -8,9 +8,9 @@ This document provides guidelines for contributing to this project. Please adher
 
 We strive for:
 
-*   **Clean Commits:** Each commit should represent a single logical change. Follow our commit style guide below.
-*   **Green CI:** All code pushed must pass linting, type checks, and automated tests. No broken builds on `main`.
-*   **Clear Communication:** Use GitHub Issues for tracking bugs and features, and Pull Requests for proposing changes.
+- **Clean Commits:** Each commit should represent a single logical change. Follow our commit style guide below.
+- **Green CI:** All code pushed must pass linting, type checks, and automated tests. No broken builds on `main`.
+- **Clear Communication:** Use GitHub Issues for tracking bugs and features, and Pull Requests for proposing changes.
 
 ## Getting Started
 
@@ -33,10 +33,10 @@ We strive for:
 
 Please create branches from the `main` branch using the following naming convention:
 
-*   `feature/<short-description>` (e.g., `feature/add-user-profile`) - for new features.
-*   `fix/<short-description>` (e.g., `fix/header-layout-mobile`) - for bug fixes.
-*   `chore/<short-description>` (e.g., `chore/upgrade-nextjs`) - for maintenance tasks (build, deps, config).
-*   `docs/<short-description>` (e.g., `docs/update-readme`) - for documentation changes.
+- `feature/<short-description>` (e.g., `feature/add-user-profile`) - for new features.
+- `fix/<short-description>` (e.g., `fix/header-layout-mobile`) - for bug fixes.
+- `chore/<short-description>` (e.g., `chore/upgrade-nextjs`) - for maintenance tasks (build, deps, config).
+- `docs/<short-description>` (e.g., `docs/update-readme`) - for documentation changes.
 
 ## Commit Style (Conventional Commits)
 
@@ -70,15 +70,15 @@ Closes #123
 
 ## Code Style
 
-*   **Formatting:** We use Prettier for code formatting. It should be run automatically via editor integrations (e.g., VS Code `Format on Save`) or via `npm run format` (if script exists).
-*   **Linting:** We use ESLint with the `eslint-config-next` base configuration. Check for issues with:
-    ```bash
-    npm run lint
-    ```
-*   **TypeScript:** Adhere to static typing. Avoid `any` where possible. Check types with:
-    ```bash
-    npm run type-check
-    ```
+- **Formatting:** We use Prettier for code formatting. It should be run automatically via editor integrations (e.g., VS Code `Format on Save`) or via `npm run format` (if script exists).
+- **Linting:** We use ESLint with the `eslint-config-next` base configuration. Check for issues with:
+  ```bash
+  npm run lint
+  ```
+- **TypeScript:** Adhere to static typing. Avoid `any` where possible. Check types with:
+  ```bash
+  npm run type-check
+  ```
 
 ## Pull Request (PR) Process
 
@@ -100,18 +100,24 @@ Closes #123
 
 ### Pull Request Checklist (Template will be added)
 
-*   [ ] Code passes `npm run lint` and `npm run type-check`.
-*   [ ] All unit tests pass (`npm run test`).
-*   [ ] E2E tests pass (if applicable).
-*   [ ] Documentation updated (if applicable).
-*   [ ] Screenshots included for UI changes (if applicable).
-*   [ ] Commit messages follow Conventional Commits format.
-*   [ ] Linked to relevant GitHub Issue (`Closes #...`).
+- [ ] Code passes `npm run lint` and `npm run type-check`.
+- [ ] All unit tests pass (`npm run test`).
+- [ ] E2E tests pass (if applicable).
+- [ ] Documentation updated (if applicable).
+- [ ] Screenshots included for UI changes (if applicable).
+- [ ] Commit messages follow Conventional Commits format.
+- [ ] Linked to relevant GitHub Issue (`Closes #...`).
 
 ## Local Development Hooks (Future)
 
 We plan to implement pre-push hooks using Husky and lint-staged to automatically run checks before you push. Stay tuned!
 
+## 🛠️ IDE Setup (VS Code)
+
+1. Open the command palette → **"Extensions: Show Recommended Extensions"**.
+2. Click **"Install All"** to install Prettier, ESLint, Tailwind IntelliSense, Jest, and Docker helpers.
+3. VS Code is pre-configured to format on save and run `eslint --fix` automatically, so you'll get instant feedback as you code.
+
 ---
 
-Thank you for contributing! 
+Thank you for contributing!

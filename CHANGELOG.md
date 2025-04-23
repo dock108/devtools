@@ -67,8 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Composite CI workflow now runs lint, type-check, Jest (coverage), and Playwright smoke tests across Node 18/20.
 - Script for syncing env vars to Vercel and docs; CI guard for missing secrets.
 - Lighthouse CI now runs in GitHub Actions after the production build, enforcing a <200 KB JS bundle and LCP <2.5 s budgets. HTML report uploaded as `lhci-report` artifact.
+- VS Code workspace settings enable format-on-save; `extensions.json` recommends Prettier, ESLint, Tailwind IntelliSense, Jest, and Docker.
 
 ### Changed
 
 - Used shadcn `Label`
-- Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.
