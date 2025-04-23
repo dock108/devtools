@@ -24,12 +24,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
 
-      - name: Install dependencies
+      # Install pnpm via Corepack
+      - name: Setup pnpm
         run: |
           corepack enable
-          pnpm i --frozen-lockfile
+          corepack prepare pnpm@8.15.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       # Prettier + ESLint
       - name: Lint
