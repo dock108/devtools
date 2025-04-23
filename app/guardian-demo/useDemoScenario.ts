@@ -11,20 +11,22 @@ export type ScenarioEvent = {
 };
 
 export type ScenarioOptions = {
-  speed?: number;
   onExpire?: () => void;
+  speed?: number;
 };
 
 export function useDemoScenario(
   scenarioName: string | null,
   options: ScenarioOptions = {}
 ) {
-  const { speed = 1, onExpire } = options;
+  const { onExpire, speed = 1 } = options;
   const [events, setEvents] = useState<DemoEvent[]>([]);
   const [scenarioEvents, setScenarioEvents] = useState<ScenarioEvent[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [totalDelayMs, setTotalDelayMs] = useState<number>(0);
   
   const timersRef = useRef<NodeJS.Timeout[]>([]);
   const startRef = useRef<number>(Date.now());
@@ -39,6 +41,7 @@ export function useDemoScenario(
       timersRef.current = [];
     }
     pendingEventsRef.current = [];
+    setIsRunning(false);
   };
 
   const reset = () => {
@@ -82,6 +85,11 @@ export function useDemoScenario(
       
       const data: ScenarioEvent[] = await response.json();
       setScenarioEvents(data);
+      
+      // Calculate total delay time from all events
+      const total = data.reduce((sum, event) => sum + event.delayMs, 0);
+      setTotalDelayMs(total);
+      
       setIsLoading(false);
       setCurrentIndex(0);
       
@@ -103,6 +111,7 @@ export function useDemoScenario(
     clearAllTimers();
     const now = Date.now();
     startRef.current = now;
+    setIsRunning(true);
     
     // Track pending events with information about when they were scheduled
     pendingEventsRef.current = scenarioEvents.map((event, index) => ({
@@ -134,8 +143,10 @@ export function useDemoScenario(
         setEvents(prev => [...prev.slice(-49), demoEvent]);
         setCurrentIndex(index + 1);
         
-        // If this is the last event, expire after 5 minutes
+        // If this is the last event, stop the scenario and set timer to expire after 5 minutes
         if (index === scenarioEvents.length - 1) {
+          setIsRunning(false);
+          
           const expireTimer = setTimeout(() => {
             reset();
             onExpire?.();
@@ -156,12 +167,13 @@ export function useDemoScenario(
     clearAllTimers();
     const now = Date.now();
     const elapsed = now - startRef.current;
+    setIsRunning(true);
     
     // For each pending event, calculate the new delay based on elapsed time
     pendingEventsRef.current.forEach(({ event, index }) => {
       const originalDelay = event.delayMs;
       // Adjust delay based on elapsed time
-      const adjustedDelay = Math.max(0, originalDelay - (elapsed * speed));
+      const adjustedDelay = Math.max(0, originalDelay - (elapsed));
       
       // Schedule with new delay
       const timer = setTimeout(() => {
@@ -185,8 +197,10 @@ export function useDemoScenario(
         setEvents(prev => [...prev.slice(-49), demoEvent]);
         setCurrentIndex(index + 1);
         
-        // If this is the last event, expire after 5 minutes
+        // If this is the last event, stop running and set timer to expire
         if (index === scenarioEvents.length - 1) {
+          setIsRunning(false);
+          
           const expireTimer = setTimeout(() => {
             reset();
             onExpire?.();
@@ -239,6 +253,8 @@ export function useDemoScenario(
     isLoading,
     error,
     restart,
-    reset
+    reset,
+    isRunning,
+    totalDelayMs
   };
 } 

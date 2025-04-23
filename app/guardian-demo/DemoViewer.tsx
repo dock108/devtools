@@ -8,6 +8,7 @@ import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
 import { getScenarios } from './getScenarios';
 import { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import toast from 'react-hot-toast';
 
 // Get scenarios at build time
 const scenarioList = getScenarios();
@@ -24,15 +25,23 @@ export function DemoViewer() {
   
   // We don't need fallback events anymore since we always use scenarios
   const scenarioData = useDemoScenario(scenario, {
-    speed,
-    onExpire: () => handleReset(true)
+    onExpire: () => handleReset(true),
+    speed
   });
   
   // Use scenario events
-  const events = scenarioData.events;
+  const { events, isRunning, totalDelayMs } = scenarioData;
   
   const [log, setLog] = useState<string[]>(['Monitoring started…']);
   const [alert, setAlert] = useState<{ text: string }>();
+  
+  // Check for scenario completion
+  useEffect(() => {
+    // If the scenario was running but now stopped and has played all events
+    if (!isRunning && events.length > 0 && events.length === scenarioData.total) {
+      toast.success('Scenario complete. Click Restart to replay.');
+    }
+  }, [isRunning, events.length, scenarioData.total]);
 
   function handleReset(auto = false) {
     scenarioData.restart();
@@ -86,11 +95,9 @@ export function DemoViewer() {
           scenarioLabels={scenarioLabels}
           currentScenario={scenario}
           onChange={handleScenarioChange}
-          speedFactor={speed}
-          onSpeedChange={setSpeed}
-          currentIndex={scenarioData.currentIndex}
-          totalEvents={scenarioData.total}
           onRestart={() => handleReset(false)}
+          speed={speed}
+          onSpeedChange={setSpeed}
         />
       </div>
       <section className="mt-4 grid gap-6 lg:grid-cols-[2fr_1fr]">

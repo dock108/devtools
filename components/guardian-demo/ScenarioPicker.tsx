@@ -8,16 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 export type ScenarioPickerProps = {
   scenarios: string[];          // ['velocity-breach', ...]
   scenarioLabels?: Record<string, string>; // Friendly labels for scenarios
   currentScenario: string;      // active key
   onChange: (name: string) => void;
-  speedFactor?: number;
+  speed?: number;
   onSpeedChange?: (speed: number) => void;
-  currentIndex?: number;
-  totalEvents?: number;
   onRestart?: () => void;
 };
 
@@ -28,10 +27,8 @@ export function ScenarioPicker({
   scenarioLabels = {},
   currentScenario,
   onChange,
-  speedFactor = 1,
+  speed = 1,
   onSpeedChange,
-  currentIndex = 0,
-  totalEvents = 0,
   onRestart
 }: ScenarioPickerProps) {
   // If no scenario is selected, default to the first one
@@ -100,38 +97,17 @@ export function ScenarioPicker({
           </Select>
         </div>
         
-        {/* Speed selector */}
+        {/* Speed toggle button */}
         {onSpeedChange && (
-          <div className="flex items-center space-x-2">
-            <label htmlFor="speed-select" className="text-sm text-gray-600">
-              Speed:
-            </label>
-            <select
-              id="speed-select"
-              value={speedFactor}
-              onChange={(e) => onSpeedChange(Number(e.target.value))}
-              className="rounded-md border-gray-300 shadow-sm focus:border-[var(--accent-guardian)] focus:ring-[var(--accent-guardian)]"
+          <div className="flex justify-end">
+            <Button 
+              variant="secondary" 
+              onClick={() => onSpeedChange(speed === 1 ? 2 : 1)}
+              className="ml-auto"
+              aria-pressed={speed === 2}
             >
-              <option value="0.5">0.5x</option>
-              <option value="1">1x</option>
-              <option value="2">2x</option>
-              <option value="4">4x</option>
-            </select>
-          </div>
-        )}
-        
-        {currentScenario && totalEvents > 0 && (
-          <div className="mt-2">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Progress:</span>
-              <span>{currentIndex} / {totalEvents}</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-[var(--accent-guardian)] h-2.5 rounded-full"
-                style={{ width: `${(currentIndex / totalEvents) * 100}%` }}
-              ></div>
-            </div>
+              {speed === 1 ? '2× speed' : 'Normal speed'}
+            </Button>
           </div>
         )}
       </div>

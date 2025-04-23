@@ -54,7 +54,6 @@ describe('ScenarioPicker', () => {
     expect(screen.getByText('Velocity Breach')).toBeInTheDocument();
     expect(screen.getByText('Bank Account Swap')).toBeInTheDocument();
     expect(screen.getByText('Geo-Location Mismatch')).toBeInTheDocument();
-    expect(screen.getByText('Random (Legacy)')).toBeInTheDocument();
   });
 
   it('calls onChange and stores selection in localStorage when a scenario is selected', async () => {
@@ -79,30 +78,6 @@ describe('ScenarioPicker', () => {
     
     // Check if localStorage.setItem was called with the correct key and value
     expect(localStorageMock.setItem).toHaveBeenCalledWith('sg:scenario', 'bank-swap');
-  });
-
-  it('calls onChange with empty string when Random option is selected', async () => {
-    render(
-      <ScenarioPicker
-        scenarios={mockScenarios}
-        scenarioLabels={mockLabels}
-        currentScenario="velocity-breach"
-        onChange={mockOnChange}
-        onRestart={mockOnRestart}
-      />
-    );
-
-    // Open the select dropdown
-    fireEvent.click(screen.getByRole('combobox'));
-    
-    // Select Random option
-    fireEvent.click(screen.getByText('Random (Legacy)'));
-
-    // Check if onChange was called with empty string
-    expect(mockOnChange).toHaveBeenCalledWith('');
-    
-    // Check if localStorage.setItem was called with empty string
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('sg:scenario', '');
   });
 
   it('loads scenario from localStorage on mount if no currentScenario is provided', () => {

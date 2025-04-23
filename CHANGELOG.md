@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeScript types and snapshot tests for scenario validation.
 - Enhanced ScenarioPicker component with localStorage persistence for remembering the last selected fraud scenario.
 - Improved accessibility with shadcn/ui Select component and better keyboard navigation.
+- One-click 2× speed toggle button in Guardian demo for faster playback of fraud scenarios.
 - Deterministic scenario-driven demo replacing random events, with JSON scenario files, progress tracking, and looping capability.
 - Added app/guardian-demo/scenarios/ with three starter scenarios (velocity-breach, bank-swap, geo-mismatch).
 - New useDemoScenario hook for playing back predetermined event sequences.
@@ -71,7 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.
 - Memoised Intl DateTime & currency formatters via lib/formatters and refactored components to use them.
 - Composite index `(stripe_account_id, created_at)` on `payout_events` table to speed up velocity rule queries and backfill inserts.
-- One-click 2× speed toggle in Guardian demo for accelerated playback.
 
 ### Changed
 

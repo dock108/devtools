@@ -3,7 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Label } from "@/components/ui/label";
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -16,9 +16,9 @@ declare global {
 
 // Props for the reusable form
 interface WaitlistFormProps {
-  tableName: string; // Supabase table name (e.g., 'guardian_leads', 'notary_leads')
+  tableName: string;        // Supabase table name (e.g., 'guardian_leads', 'notary_leads')
   productIdentifier: string; // GA4 product identifier (e.g., 'guardian', 'notary')
-  accentColorVar: string; // CSS variable for accent color (e.g., 'var(--accent-guardian)')
+  accentColorVar: string;   // CSS variable for accent color (e.g., 'var(--accent-guardian)')
 }
 
 export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: WaitlistFormProps) {
@@ -46,20 +46,20 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
           tableName,
         }),
       });
-
+      
       const data = await response.json();
-
+      
       if (!response.ok) {
         throw new Error(data.error || 'Failed to join waitlist');
       }
 
       setState('sent');
       toast.success(data.message || "You're on the waitlist!");
-
+      
       if (typeof window.gtag === 'function') {
-        window.gtag('event', 'waitlist_submit', {
-          product: productIdentifier,
-          status: 'subscribed',
+        window.gtag('event', 'waitlist_submit', { 
+          product: productIdentifier, 
+          status: 'subscribed' 
         });
       } else {
         console.warn('gtag function not found for analytics.');
@@ -68,12 +68,7 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
       console.error('Waitlist submission error:', error);
       setState('error');
       let message = 'An unexpected error occurred. Please try again.';
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'message' in error &&
-        typeof error.message === 'string'
-      ) {
+      if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
         message = error.message;
       } else if (error instanceof Error) {
         message = error.message;
@@ -106,36 +101,32 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
         type="submit"
         disabled={state === 'sending' || state === 'sent'}
         className="flex-none rounded-md px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
-        style={
-          {
+        style={{
             backgroundColor: state !== 'sending' && state !== 'sent' ? accentColorVar : undefined,
             borderColor: accentColorVar, // Add border for consistency
             color: 'white',
             '--focus-outline-color': accentColorVar, // Custom property for focus outline
             cursor: state === 'sending' || state === 'sent' ? 'not-allowed' : 'pointer',
-            // Add hover effect using color-mix (needs Tailwind v3.2+ or PostCSS)
+             // Add hover effect using color-mix (needs Tailwind v3.2+ or PostCSS)
             // As inline style can be verbose, consider a CSS class if possible
-            background: `linear-gradient(${accentColorVar}, ${accentColorVar})`,
-            // Simple opacity fallback for hover
-            // '--hover-bg': `color-mix(in srgb, ${accentColorVar} 90%, black)`
-          } as React.CSSProperties
-        }
+             background: `linear-gradient(${accentColorVar}, ${accentColorVar})`,
+             // Simple opacity fallback for hover
+             // '--hover-bg': `color-mix(in srgb, ${accentColorVar} 90%, black)`
+        } as React.CSSProperties}
         // Add hover class if possible, e.g., hover:bg-[--hover-bg]
       >
         {state === 'sending' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {state === 'sending' ? 'Joining...' : state === 'sent' ? 'Joined!' : 'Join Waitlist'}
       </Button>
       {errorMessage && (
-        <p
-          id={`${productIdentifier}-error-message`}
-          className="mt-2 text-sm text-red-600"
-          role="alert"
-        >
+        <p id={`${productIdentifier}-error-message`} className="mt-2 text-sm text-red-600" role="alert">
           {errorMessage}
         </p>
       )}
       {state === 'sent' && (
-        <p className="mt-2 text-sm text-green-600">Thanks for joining! We&apos;ll be in touch.</p>
+         <p className="mt-2 text-sm text-green-600">
+           Thanks for joining! We&apos;ll be in touch.
+         </p>
       )}
     </form>
   );
@@ -152,4 +143,4 @@ button:focus-visible {
 button:hover:not(:disabled) {
    background-color: color-mix(in srgb, var(backgroundColor) 90%, black);
 }
-*/
+*/ 

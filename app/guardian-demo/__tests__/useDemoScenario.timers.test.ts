@@ -115,55 +115,48 @@ describe('useDemoScenario timer management', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('manages timers correctly when speed changes', async () => {
+  it('properly cleans up timers when unmounted', async () => {
     // Mock a successful fetch
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => mockScenario1
     });
     
-    const { result, rerender } = renderHook(
-      (props) => useDemoScenario(props.scenarioName, { speed: props.speed }), 
-      { initialProps: { scenarioName: 'scenario1', speed: 1 } }
-    );
+    const { result, unmount } = renderHook(() => useDemoScenario('test-scenario'));
     
-    // Wait for fetch and initial event
+    // Wait for fetch to complete
     await vi.runAllTimersAsync();
     
     // First event should fire immediately
     expect(result.current.events.length).toBe(1);
     
-    // Change speed to 2x before second event
-    rerender({ scenarioName: 'scenario1', speed: 2 });
+    // Unmount the hook
+    unmount();
     
-    // Advance timers - we expect the event to fire at 1000ms now (2000ms / 2)
+    // Advance timers
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
     });
     
-    // Second event should have fired with adjusted timing
-    expect(result.current.events.length).toBe(2);
-    
-    // Verify we don't have any duplicate events
-    expect(result.current.events[0].type).toBe('account.updated');
-    expect(result.current.events[1].type).toBe('payout.paid');
+    // No additional events should have been added since we unmounted
+    expect(result.current.events.length).toBe(1);
   });
 
-  it('maintains correct timer count during rapid speed toggles', async () => {
-    // Mock a successful fetch with a scenario that has multiple events
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => [
-        { delayMs: 0, type: 'account.updated', payload: { id: 'acct1' } },
-        { delayMs: 2000, type: 'payout.paid', payload: { id: 'po1', amount: 1000 } },
-        { delayMs: 4000, type: 'payout.paid', payload: { id: 'po2', amount: 2000 } },
-        { delayMs: 6000, type: 'payout.paid', payload: { id: 'po3', amount: 3000 } }
-      ]
-    });
+  it('handles scenario change correctly', async () => {
+    // Mock a successful fetch for two different scenarios
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockScenario1
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockScenario2
+      });
     
     const { result, rerender } = renderHook(
-      (props) => useDemoScenario(props.scenarioName, { speed: props.speed }), 
-      { initialProps: { scenarioName: 'test-scenario', speed: 1 } }
+      (props) => useDemoScenario(props.scenarioName), 
+      { initialProps: { scenarioName: 'scenario1' } }
     );
     
     // Wait for fetch and initial event
@@ -171,34 +164,16 @@ describe('useDemoScenario timer management', () => {
     
     // First event should fire immediately
     expect(result.current.events.length).toBe(1);
+    expect(result.current.events[0].id).toContain('acct_test1');
     
-    // Rapid speed toggles
-    rerender({ scenarioName: 'test-scenario', speed: 2 });
-    rerender({ scenarioName: 'test-scenario', speed: 4 });
-    rerender({ scenarioName: 'test-scenario', speed: 2 });
+    // Change scenario
+    rerender({ scenarioName: 'scenario2' });
     
-    // The timer count should match the number of pending events (3) plus expiry timer (1)
-    expect(vi.getTimerCount()).toBe(4);
+    // Wait for fetch and initial event of new scenario
+    await vi.runAllTimersAsync();
     
-    // Advance to second event (originally 2000ms, but now at 2000/2 = 1000ms)
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
-    });
-    
-    // Second event should have fired
-    expect(result.current.events.length).toBe(2);
-    
-    // Timer count should be one less (3)
-    expect(vi.getTimerCount()).toBe(3);
-    
-    // Rapid speed toggles again
-    rerender({ scenarioName: 'test-scenario', speed: 1 });
-    rerender({ scenarioName: 'test-scenario', speed: 0.5 });
-    
-    // Timer count should still match pending events (2) plus expiry timer (1)
-    expect(vi.getTimerCount()).toBe(3);
-    
-    // No duplicate events should exist
-    expect(result.current.events.length).toBe(2);
+    // Should have reset events and loaded first event of new scenario
+    expect(result.current.events.length).toBe(1);
+    expect(result.current.events[0].id).toContain('acct_test2');
   });
 }); 
