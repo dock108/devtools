@@ -40,51 +40,37 @@ async function velocityBreachRule(event: StripeEvent, ctx: RuleContext): Promise
 }
 
 async function bankSwapRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  const alerts: Alert[] = [];
+  // Log for all events
+  logger.info({ accountId: event.account }, 'Bank-swap rule evaluated');
   
-  // Apply to account.updated with external_accounts or external_account.created events
-  if (
-    !(event.type === 'account.updated' && 
-      event.data.previous_attributes?.external_accounts) && 
-    !(event.type === 'external_account.created')
-  ) {
-    return alerts;
-  }
-  
-  const accountId = event.account as string;
-  
-  // Get the external account ID
-  let externalAccountId = 'unknown';
-  if (event.type === 'external_account.created') {
-    externalAccountId = (event.data.object as any).id || '';
-  } else if (
-    event.data.previous_attributes?.external_accounts?.data?.[0]?.id
-  ) {
-    externalAccountId = event.data.previous_attributes.external_accounts.data[0].id;
-  }
-  
-  // Check for any high-value payouts within lookback window
-  const { lookbackMinutes, minPayoutUsd } = ctx.config.bankSwap;
-  const now = new Date().getTime();
-  const lookbackMs = lookbackMinutes * 60 * 1000;
-  const cutoff = now - lookbackMs;
-  
-  const recentPayouts = ctx.recentPayouts.filter(p => 
-    new Date(p.created_at).getTime() >= cutoff && 
-    (p.amount / 100) >= minPayoutUsd // Convert cents to dollars
+  // Only inspect payout events
+  if (!event.type.startsWith('payout.')) return [];
+
+  const payout = event.data.object as any;
+  const payoutUsd = payout.amount / 100;
+
+  if (payoutUsd < ctx.config.bankSwap.minPayoutUsd) return [];
+
+  // Find latest external_account.created in look-back window
+  const cutoff = Date.now() - ctx.config.bankSwap.lookbackMinutes * 60_000;
+  const recentBankChange = ctx.recentPayouts.find(
+    (e) =>
+      e.type === 'external_account.created' &&
+      new Date(e.created_at).getTime() >= cutoff,
   );
-  
-  // Always flag bank account changes
-  alerts.push({
-    type: 'BANK_SWAP',
-    severity: recentPayouts.length > 0 ? 'high' : 'medium',
-    message: `Bank account changed${recentPayouts.length > 0 ? ' after recent high-value payouts' : ''}`,
-    accountId,
-    chargeId: externalAccountId, // Using chargeId to store external account ID
-    createdAt: new Date().toISOString()
-  });
-  
-  return alerts;
+
+  if (!recentBankChange) return [];
+
+  return [
+    {
+      type: 'BANK_SWAP',
+      severity: 'high',
+      message: `Bank account swapped ${ctx.config.bankSwap.lookbackMinutes} min before $${payoutUsd} payout`,
+      payoutId: payout.id,
+      accountId: event.account!,
+      createdAt: new Date().toISOString(),
+    },
+  ];
 }
 
 async function geoMismatchRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
@@ -148,13 +134,20 @@ export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
     return [];
   }
   
+  // Calculate lookback period for events
+  // Max of 1 hour or double the bank swap lookback period
+  const bankSwapLookbackMs = defaultConfig.bankSwap.lookbackMinutes * 60_000 * 2;
+  const lookbackMs = Math.max(3600_000, bankSwapLookbackMs);
+  const lookbackDate = new Date(Date.now() - lookbackMs).toISOString();
+  
   // Fetch context data needed for all rules
   const ctx: RuleContext = {
     recentPayouts: (await supabaseAdmin
       .from('payout_events')
       .select('*')
       .eq('stripe_account_id', accountId)
-      .gte('created_at', new Date(Date.now() - 3600_000).toISOString()) // last hour
+      .or(`type.eq.payout.paid,type.eq.payout.created,type.eq.external_account.created`)
+      .gte('created_at', lookbackDate)
       .order('created_at', { ascending: false })).data || [],
       
     recentCharges: (await supabaseAdmin
@@ -162,7 +155,7 @@ export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
       .select('*')
       .eq('stripe_account_id', accountId)
       .like('type', 'charge.%')
-      .gte('created_at', new Date(Date.now() - 3600_000).toISOString())
+      .gte('created_at', lookbackDate)
       .order('created_at', { ascending: false })).data || [],
       
     config: defaultConfig,

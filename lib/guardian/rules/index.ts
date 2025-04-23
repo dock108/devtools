@@ -18,13 +18,20 @@ export async function evaluateRules(event: StripeEvent): Promise<Alert[]> {
     return [];
   }
   
+  // Calculate lookback period for events
+  // Max of 1 hour or double the bank swap lookback period
+  const bankSwapLookbackMs = ruleConfig.bankSwap.lookbackMinutes * 60_000 * 2;
+  const lookbackMs = Math.max(3600_000, bankSwapLookbackMs);
+  const lookbackDate = new Date(Date.now() - lookbackMs).toISOString();
+  
   // Fetch context data needed for all rules
   const ctx: RuleContext = {
     recentPayouts: (await supabaseAdmin
       .from('payout_events')
       .select('*')
       .eq('stripe_account_id', accountId)
-      .gte('created_at', new Date(Date.now() - 3600_000).toISOString()) // last hour
+      .or(`type.eq.payout.paid,type.eq.payout.created,type.eq.external_account.created`)
+      .gte('created_at', lookbackDate)
       .order('created_at', { ascending: false })).data || [],
       
     recentCharges: (await supabaseAdmin
@@ -32,7 +39,7 @@ export async function evaluateRules(event: StripeEvent): Promise<Alert[]> {
       .select('*')
       .eq('stripe_account_id', accountId)
       .like('type', 'charge.%')
-      .gte('created_at', new Date(Date.now() - 3600_000).toISOString())
+      .gte('created_at', lookbackDate)
       .order('created_at', { ascending: false })).data || [],
       
     config: ruleConfig,

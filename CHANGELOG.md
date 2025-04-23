@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Bank-swap rule alerts when large payout follows recent external-account change.
 - Velocity-breach rule alerts when > N payouts occur inside T-second window.
 - Modular rule engine core evaluates incoming Stripe events against configured rules and returns Alert objects.
 - Initial Guardian schema (connected_accounts, payout_events, alerts).

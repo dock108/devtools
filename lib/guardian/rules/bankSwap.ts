@@ -1,49 +1,36 @@
-import type { RuleFn, Alert } from '../types';
+import type { RuleFn } from '../types';
+import { logger } from '@/lib/logger';
 
-export const bankSwap: RuleFn = async (event, ctx) => {
-  const alerts: Alert[] = [];
+export const bankSwap: RuleFn = async (evt, ctx) => {
+  // Log for all events
+  logger.info({ accountId: evt.account }, 'Bank-swap rule evaluated');
   
-  // Apply to account.updated with external_accounts or external_account.created events
-  if (
-    !(event.type === 'account.updated' && 
-      event.data.previous_attributes?.external_accounts) && 
-    !(event.type === 'external_account.created')
-  ) {
-    return alerts;
-  }
-  
-  const accountId = event.account as string;
-  
-  // Get the external account ID
-  let externalAccountId = 'unknown';
-  if (event.type === 'external_account.created') {
-    externalAccountId = (event.data.object as any).id || '';
-  } else if (
-    event.data.previous_attributes?.external_accounts?.data?.[0]?.id
-  ) {
-    externalAccountId = event.data.previous_attributes.external_accounts.data[0].id;
-  }
-  
-  // Check for any high-value payouts within lookback window
-  const { lookbackMinutes, minPayoutUsd } = ctx.config.bankSwap;
-  const now = new Date().getTime();
-  const lookbackMs = lookbackMinutes * 60 * 1000;
-  const cutoff = now - lookbackMs;
-  
-  const recentPayouts = ctx.recentPayouts.filter(p => 
-    new Date(p.created_at).getTime() >= cutoff && 
-    (p.amount / 100) >= minPayoutUsd // Convert cents to dollars
+  // Only inspect payout events
+  if (!evt.type.startsWith('payout.')) return [];
+
+  const payout = evt.data.object as any;
+  const payoutUsd = payout.amount / 100;
+
+  if (payoutUsd < ctx.config.bankSwap.minPayoutUsd) return [];
+
+  // Find latest external_account.created in look-back window
+  const cutoff = Date.now() - ctx.config.bankSwap.lookbackMinutes * 60_000;
+  const recentBankChange = ctx.recentPayouts.find(
+    (e) =>
+      e.type === 'external_account.created' &&
+      new Date(e.created_at).getTime() >= cutoff,
   );
-  
-  // Always flag bank account changes
-  alerts.push({
-    type: 'BANK_SWAP',
-    severity: recentPayouts.length > 0 ? 'high' : 'medium',
-    message: `Bank account changed${recentPayouts.length > 0 ? ' after recent high-value payouts' : ''}`,
-    accountId,
-    chargeId: externalAccountId, // Using chargeId to store external account ID
-    createdAt: new Date().toISOString()
-  });
-  
-  return alerts;
+
+  if (!recentBankChange) return [];
+
+  return [
+    {
+      type: 'BANK_SWAP',
+      severity: 'high',
+      message: `Bank account swapped ${ctx.config.bankSwap.lookbackMinutes} min before $${payoutUsd} payout`,
+      payoutId: payout.id,
+      accountId: evt.account!,
+      createdAt: new Date().toISOString(),
+    },
+  ];
 }; 
