@@ -34,6 +34,59 @@ The rules engine uses a JSON configuration file to set thresholds for each rule.
 
 The configuration is validated against a JSON Schema to ensure all values are within acceptable ranges and required properties are present. This prevents misconfiguration that could lead to false positives or missed fraud cases.
 
+## How Rules Run
+
+The Guardian Rules Engine uses a modular architecture to evaluate incoming Stripe events:
+
+1. The webhook endpoint receives a Stripe event
+2. Event is stored in the database
+3. `evaluateRules()` is called with the event
+4. Context data is fetched once from the database:
+   - Recent payouts for the account
+   - Recent charges for the account
+   - Configuration settings
+5. Each rule module is executed in sequence:
+   - Velocity Breach rule
+   - Bank Swap rule
+   - Geo Mismatch rule
+6. Alerts from all rules are collected and returned
+7. Alerts are stored in the database
+8. (Future) Alerts are sent via Slack/email
+
+This modular approach allows:
+- Easy addition of new rules without changing the core engine
+- Single database query for context data shared across rules
+- Independent rule testing
+- Improved error handling (one rule failing won't block others)
+
+```
+┌─────────────┐     ┌───────────────┐     ┌─────────────────┐
+│ Stripe      │     │ Webhook       │     │ Database        │
+│ Event       │────▶│ Handler       │────▶│ (Events Table)  │
+└─────────────┘     └───────┬───────┘     └─────────────────┘
+                           │
+                           ▼
+┌─────────────┐     ┌───────────────┐     ┌─────────────────┐
+│ Alert       │     │ Rule Engine   │     │ Database        │
+│ Actions     │◀────│ (evaluateRules)│◀────│ (Context Data)  │
+└─────────────┘     └───────┬───────┘     └─────────────────┘
+                           │
+                           ▼
+                    ┌───────────────┐
+                    │ Rule Modules  │
+                    ├───────────────┤
+                    │ velocityBreach│
+                    │ bankSwap      │
+                    │ geoMismatch   │
+                    └───────┬───────┘
+                           │
+                           ▼
+┌─────────────┐     ┌───────────────┐
+│ Notification│     │ Database      │
+│ (Slack/Email)│◀────│ (Alerts Table)│
+└─────────────┘     └───────────────┘
+```
+
 ## Using the Rules Engine
 
 The Guardian Rules Engine exposes two main functions:

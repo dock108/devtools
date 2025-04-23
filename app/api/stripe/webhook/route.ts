@@ -3,6 +3,7 @@ import { stripe, Stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { logRequest } from '@/lib/logRequest';
+import { evaluateRules } from '@/lib/guardian/rules';
 
 export const runtime = 'edge';
 
@@ -76,6 +77,16 @@ export async function POST(req: NextRequest) {
         });
         
         if (error) throw error;
+        
+        // Evaluate rules and store alerts
+        const alerts = await evaluateRules(event);
+        if (alerts.length > 0) {
+          const { error: alertError } = await supabaseAdmin.from('alerts').insert(alerts);
+          if (alertError) {
+            logger.error({ alertError }, 'Failed to insert alerts into database');
+          }
+          // TODO send via Slack/email later
+        }
       }
     }
   } catch (err) {
