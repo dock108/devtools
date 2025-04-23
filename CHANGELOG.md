@@ -110,3 +110,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Public sign-up disabled; sign-in restricted to emails in `ALPHA_ALLOW_LIST` during closed alpha.
+
+### Changed
+- Connected accounts table now includes user_id, webhook_secret, live flag, and RLS policies restricting access to the owner.

@@ -2,10 +2,12 @@
 
 // Database tables
 export interface ConnectedAccount {
-  id: string;
+  user_id: string;
   stripe_account_id: string;
   business_name: string | null;
   status: string;
+  webhook_secret: string | null;
+  live: boolean;
   metadata: Record<string, any> | null;
   created_at: string;
 }
