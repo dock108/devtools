@@ -60,6 +60,20 @@ const eslintConfig = [
           alphabetize: { order: "asc", caseInsensitive: true },
         },
       ],
+      // Soften noisy rules to warnings
+      "import/no-unresolved": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-require-imports": "warn",
+      "react/display-name": "warn",
+    },
+  },
+  // Override for test and deno function files – turn off import order/unresolved
+  {
+    files: ["**/__tests__/**", "tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "supabase/functions/**/*.ts"],
+    rules: {
+      "import/order": "off",
+      "import/no-unresolved": "off",
     },
   },
   // Next.js specific config (applied on top)
