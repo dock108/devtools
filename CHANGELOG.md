@@ -94,5 +94,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Public GitHub link and badge removed from site until repo is open-sourced.
 - Loop-scenario option eliminated; scenarios now run once and can be restarted manually.
 - Velocity payout chart removed; Guardian demo now uses two-column layout (Event Table + Action Log).
