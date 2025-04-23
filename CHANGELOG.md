@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added targeted test for rule engine with demo scenarios at `tests/guardian/ruleEngine.demoScenarios.test.ts`.
 - Geo-mismatch rule alerts when foreign charge IPs exceed threshold versus payout bank country.
 - Bank-swap rule alerts when large payout follows recent external-account change.
 - Velocity-breach rule alerts when > N payouts occur inside T-second window.
