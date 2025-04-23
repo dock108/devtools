@@ -14,13 +14,29 @@ create index if not exists alert_channels_slack_idx on public.alert_channels(sla
 alter table public.alert_channels enable row level security;
 
 -- Helper: set_config('request.jwt.claim.sub', …) already populated by Supabase auth
-create policy "Account owner full access"
-  on public.alert_channels
-  for all
-  using (account_id = auth.jwt() ->> 'account_id');
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where policyname = 'Account owner full access' and tablename = 'alert_channels'
+  ) then
+    create policy "Account owner full access"
+      on public.alert_channels
+      for all
+      using (account_id = auth.jwt() ->> 'account_id');
+  end if;
+end
+$$;
 
 -- Create admin policy for service role
-create policy "Service role full access"
-  on public.alert_channels
-  for all
-  using (auth.role() = 'service_role'); 
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where policyname = 'Service role full access' and tablename = 'alert_channels'
+  ) then
+    create policy "Service role full access"
+      on public.alert_channels
+      for all
+      using (auth.role() = 'service_role');
+  end if;
+end
+$$; 

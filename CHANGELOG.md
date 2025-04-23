@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Pending_notifications queue table and trigger added; every new alert is automatically enqueued for async dispatch.
 - Alert_channels table with RLS; stores Slack, email, auto-pause settings per Stripe account.
 - Guardian demo now has branded Open-Graph image for rich social previews.
 - Added targeted test for rule engine with demo scenarios at `tests/guardian/ruleEngine.demoScenarios.test.ts`.
