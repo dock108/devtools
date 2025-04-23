@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Alert_channels table with RLS; stores Slack, email, auto-pause settings per Stripe account.
 - Guardian demo now has branded Open-Graph image for rich social previews.
 - Added targeted test for rule engine with demo scenarios at `tests/guardian/ruleEngine.demoScenarios.test.ts`.
 - Geo-mismatch rule alerts when foreign charge IPs exceed threshold versus payout bank country.

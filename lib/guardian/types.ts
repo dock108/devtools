@@ -8,6 +8,14 @@ export type Alert = {
   createdAt: string;
 };
 
+export type AlertChannel = {
+  account_id: string;
+  slack_webhook_url?: string;
+  email_to?: string;
+  auto_pause: boolean;
+  created_at: string;
+};
+
 export type StripeEvent = import('stripe/webhook').Event;
 
 export type RuleFn = (evt: StripeEvent, ctx: RuleContext) => Promise<Alert[]>;
