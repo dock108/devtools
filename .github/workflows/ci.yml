@@ -17,6 +17,7 @@ jobs:
       DEMO_API_KEY: test_demo_key
       NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_key
+      SUPABASE_SERVICE_ROLE: dummy_service_role
     strategy:
       matrix:
         node-version: [18.x, 20.x]
