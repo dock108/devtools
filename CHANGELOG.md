@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - VS Code workspace settings enable format-on-save; `extensions.json` recommends Prettier, ESLint, Tailwind IntelliSense, Jest, and Docker.
 - Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.
 - Memoised Intl DateTime & currency formatters via lib/formatters and refactored components to use them.
+- Composite index `(stripe_account_id, created_at)` on `payout_events` table to speed up velocity rule queries and backfill inserts.
 
 ### Changed
 
