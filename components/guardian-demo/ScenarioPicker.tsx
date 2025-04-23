@@ -98,7 +98,7 @@ export function ScenarioPicker({
         </div>
         
         {/* Speed toggle button */}
-        {onSpeedChange && (
+            {onSpeedChange && (
           <div className="flex justify-end">
             <Button 
               variant="secondary" 

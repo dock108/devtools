@@ -37,8 +37,8 @@ export function useDemoScenario(
   const clearAllTimers = () => {
     if (timersRef.current.length > 0) {
       logger.info({ count: timersRef.current.length }, 'Clearing all timers');
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
     }
     pendingEventsRef.current = [];
     setIsRunning(false);
