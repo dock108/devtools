@@ -5,17 +5,17 @@ import { DemoViewer } from './DemoViewer';
 
 export const metadata: Metadata = {
   title: 'Guardian Demo',
-  description: 'Replay Guardian's fraud scenarios in real time.',
+  description: 'Replay Guardian\'s fraud scenarios in real time.',
   robots: { index: false, follow: false },
   openGraph: {
     title: 'Guardian Demo',
-    description: 'Replay Guardian's fraud scenarios in real time.',
+    description: 'Replay Guardian\'s fraud scenarios in real time.',
     images: ['/og-guardian-demo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Guardian Demo',
-    description: 'Replay Guardian's fraud scenarios in real time.',
+    description: 'Replay Guardian\'s fraud scenarios in real time.',
     images: ['/og-guardian-demo.png'],
   },
 };
