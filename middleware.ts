@@ -5,7 +5,12 @@ const PROD_ORIGIN = 'https://www.dock108.ai';
 
 const securityHeaders: Record<string, string> = {
   'Content-Security-Policy':
-    "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.stripe.com;",
+    "default-src 'self';" +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
+    "font-src https://fonts.gstatic.com;" +
+    "script-src 'self' 'unsafe-inline';" +
+    "img-src 'self' data:;" +
+    "connect-src 'self' https://*.supabase.co https://api.stripe.com;",
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
