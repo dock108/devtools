@@ -159,13 +159,21 @@ export default function StripeGuardianPage() {
                 accentColorVar={accentColor} 
                 tableName={tableName} 
               />
-              {/* Live Demo CTA */}
-              <Link
-                href="/guardian-demo"
-                className="mt-6 inline-flex items-center rounded-lg bg-[var(--accent-guardian)] px-6 py-3 font-semibold text-white shadow-lg hover:opacity-90"
-              >
-                View Live Demo &rarr;
-              </Link>
+              {/* CTAs */}
+              <div className="flex flex-wrap gap-4 mt-6">
+                <Link
+                  href="/guardian-demo"
+                  className="inline-flex items-center rounded-lg bg-[var(--accent-guardian)] px-6 py-3 font-semibold text-white shadow-lg hover:opacity-90"
+                >
+                  View Live Demo &rarr;
+                </Link>
+                <Link
+                  href="/stripe-guardian/onboard"
+                  className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
+                >
+                  Connect Your Stripe Account
+                </Link>
+              </div>
             </div>
           </div>
           {/* Guardian Illustration */}
