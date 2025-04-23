@@ -6,6 +6,7 @@ import {
   createVelocityAlert,
 } from './alerts';
 import { ruleConfig } from './config';
+import { evaluateRules, evaluateRulesEdge } from './rules/index';
 
 export type GuardianDecision =
   | { flagged: false }
@@ -183,3 +184,6 @@ export function runRules(
       return null;
   }
 }
+
+// Re-export both implementations
+export { evaluateRules, evaluateRulesEdge };

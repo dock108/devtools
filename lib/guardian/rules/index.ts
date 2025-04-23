@@ -5,6 +5,7 @@ import { geoMismatch } from './geoMismatch';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import type { StripeEvent, Alert, RuleContext } from '../types';
+import { evaluateRulesEdge } from './edge';
 
 const rules = [velocityBreach, bankSwap, geoMismatch] as const;
 
@@ -50,4 +51,7 @@ export async function evaluateRules(event: StripeEvent): Promise<Alert[]> {
   
   logger.info({ id: event.id, alerts: alerts.length }, 'Rule engine executed');
   return alerts;
-} 
+}
+
+// Re-export the Edge-compatible version
+export { evaluateRulesEdge }; 

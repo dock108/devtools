@@ -3,7 +3,7 @@ import { stripe, Stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { logRequest } from '@/lib/logRequest';
-import { evaluateRules } from '@/lib/guardian/rules';
+import { evaluateRulesEdge } from '@/lib/guardian/rules/edge';
 
 export const runtime = 'edge';
 
@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
         
         if (error) throw error;
         
-        // Evaluate rules and store alerts
-        const alerts = await evaluateRules(event);
+        // Evaluate rules and store alerts using Edge-compatible implementation
+        const alerts = await evaluateRulesEdge(event);
         if (alerts.length > 0) {
           const { error: alertError } = await supabaseAdmin.from('alerts').insert(alerts);
           if (alertError) {
