@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import Stripe from 'stripe';
 import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createAccountWebhook } from '@/lib/stripe-webhook';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: Request) {
   try {
@@ -19,7 +21,7 @@ export async function GET(req: Request) {
 
     // Initialize Stripe client
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { 
-      apiVersion: '2023-10-16'
+      apiVersion: '2024-04-10'
     });
 
     // Exchange code for access token
@@ -36,6 +38,8 @@ export async function GET(req: Request) {
       return new Response('Unauthorized', { status: 401 });
     }
 
+    logger.info({ accountId: token.stripe_user_id }, 'Connected Stripe account via OAuth');
+
     // Store the tokens in the database
     await supabaseAdmin.from('connected_accounts').upsert({
       user_id: user.id,
@@ -51,13 +55,15 @@ export async function GET(req: Request) {
       email_to: user.email,
     });
 
-    // TODO: Set up webhook for the connected account
-    // This will be implemented in the next ticket
-    // stripe.webhookEndpoints.create({
-    //   url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/stripe/webhook`,
-    //   enabled_events: ['payout.*'],
-    //   connect: true,
-    // });
+    // Create the webhook endpoint for the connected account
+    const { id: wh_id, secret } = await createAccountWebhook(token.stripe_user_id);
+    
+    // Store the webhook secret in the database
+    await supabaseAdmin.from('connected_accounts')
+      .update({ webhook_secret: secret })
+      .eq('stripe_account_id', token.stripe_user_id);
+      
+    logger.info({ accountId: token.stripe_user_id, webhookId: wh_id }, 'Created webhook endpoint for connected account');
 
     // Clear the state cookie
     const response = new Response(
@@ -83,6 +89,7 @@ export async function GET(req: Request) {
     return response;
   } catch (error) {
     console.error('OAuth callback error:', error);
+    logger.error({ error }, 'OAuth callback error');
     return new Response('OAuth error', { status: 500 });
   }
 } 

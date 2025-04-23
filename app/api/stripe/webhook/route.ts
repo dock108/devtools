@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sig = req.headers.get('stripe-signature');
+  const accountId = req.headers.get('stripe-account');
   let rawBody: string;
 
   try {
@@ -24,15 +25,46 @@ export async function POST(req: NextRequest) {
   }
 
   let event: Stripe.Event;
+  
   try {
     if (!sig) throw new Error('Missing signature header');
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    
+    // If this is a connected account webhook, look up its secret
+    if (accountId) {
+      logger.info({ accountId }, 'Handling connected account webhook');
+      
+      // Look up the webhook secret for this account
+      const { data: account, error } = await supabaseAdmin
+        .from('connected_accounts')
+        .select('webhook_secret')
+        .eq('stripe_account_id', accountId)
+        .maybeSingle();
+      
+      if (error || !account || !account.webhook_secret) {
+        logger.error({ accountId, error }, 'Failed to find webhook secret for account');
+        throw new Error('Invalid account or missing webhook secret');
+      }
+      
+      // Verify signature using the account-specific webhook secret
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        sig,
+        account.webhook_secret
+      );
+      
+      logger.info({ accountId, eventType: event.type }, 'Connected account webhook verified');
+    } else {
+      // This is a platform webhook, use the platform webhook secret
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET!
+      );
+      
+      logger.info({ eventType: event.type }, 'Platform webhook verified');
+    }
   } catch (err) {
-    logger.error({ err }, 'Webhook signature verification failed');
+    logger.error({ err, accountId }, 'Webhook signature verification failed');
     return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
   }
 
@@ -59,7 +91,7 @@ export async function POST(req: NextRequest) {
       }
       
       // Use account ID from the payload or event
-      const stripeAccountId = account || 
+      const stripeAccountId = accountId || account || 
         (data.object && 'account' in data.object ? data.object.account : '');
       
       // Only proceed if we have valid account ID and either a payout ID or it's an account event

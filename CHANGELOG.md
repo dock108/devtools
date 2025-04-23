@@ -109,6 +109,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Loop-scenario option eliminated; scenarios now run once and can be restarted manually.
 - Velocity payout chart removed; Guardian demo now uses two-column layout (Event Table + Action Log).
 
+### Docs
+
+- Added comprehensive `.env.example` and local OAuth setup guide for Guardian onboarding.
+- Created detailed local-dev documentation for Stripe Connect OAuth flow and webhook handling.
+
 ## [Unreleased] - Connected Account Onboarding
 
 ### Security

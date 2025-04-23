@@ -23,15 +23,16 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
 ## Getting Started
 
 1.  **Environment Variables:**
-    Copy `.env.example` (if created) or create `.env.local` and add your Supabase and Resend keys:
+    Copy `.env.example` to `.env.local` and add your Supabase, Stripe, and Resend keys:
 
     ```
+    # See .env.example for all required variables
     NEXT_PUBLIC_SUPABASE_URL=...
     NEXT_PUBLIC_SUPABASE_ANON_KEY=...
     RESEND_API_KEY=...
-    FROM_EMAIL=...
-    # Optional: For local Supabase CLI function testing
-    # SUPABASE_SERVICE_ROLE_KEY=...
+    STRIPE_CLIENT_ID=...
+    STRIPE_SECRET_KEY=...
+    # Additional variables needed for specific features
     ```
 
 2.  **Install Dependencies:**
@@ -45,6 +46,9 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
     npm run dev
     ```
     Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+4.  **For Stripe Guardian Development:**
+    If you're working with Stripe Guardian features, see [Guardian Local Development](./docs/guardian/local-dev.md) for detailed instructions on setting up Stripe Connect OAuth and webhooks locally.
 
 ## Database Setup
 
