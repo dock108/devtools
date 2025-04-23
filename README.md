@@ -155,3 +155,7 @@ After building the production bundle, you can run Lighthouse CI against key rout
 pnpm build && pnpm lh-ci
 # Reports are saved in .lighthouseci/index.html
 ```
+
+## Accessibility
+
+All body text meets WCAG AA contrast (≥4.5:1) against white using slate‑700. Primary navigation uses `data-current` attribute to render a bold, underlined state for the active page without extra JavaScript.

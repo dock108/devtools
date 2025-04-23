@@ -71,3 +71,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Used shadcn `Label`
+- Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.

@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { Container } from './Container';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 export function Header() {
+  const pathname = usePathname();
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-700/60 bg-slate-900">
       <Container className="flex h-14 items-center">
@@ -20,13 +22,25 @@ export function Header() {
           </Link>
         </div>
         <nav className="flex items-center space-x-6 text-sm font-medium">
-          <Link href="/#products" className="text-slate-300 transition-colors hover:text-white">
+          <Link
+            href="/#products"
+            data-current={pathname === '/#products'}
+            className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
+          >
             Products
           </Link>
-          <Link href="/blog" className="text-slate-300 transition-colors hover:text-white">
+          <Link
+            href="/blog"
+            data-current={pathname.startsWith('/blog')}
+            className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
+          >
             Blog
           </Link>
-          <Link href="/docs" className="text-slate-300 transition-colors hover:text-white">
+          <Link
+            href="/docs"
+            data-current={pathname.startsWith('/docs')}
+            className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
+          >
             Docs
           </Link>
         </nav>
