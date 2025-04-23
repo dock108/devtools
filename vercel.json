@@ -6,5 +6,11 @@
     "NEXT_DISABLE_SOURCEMAPS": "1",
     "NEXT_TELEMETRY_DISABLED": "1",
     "NODE_OPTIONS": "--max-old-space-size=4096"
-  }
+  },
+  "crons": [
+    {
+      "path": "api/tasks/send-slack-alert",
+      "schedule": "*/1 * * * * *"
+    }
+  ]
 }

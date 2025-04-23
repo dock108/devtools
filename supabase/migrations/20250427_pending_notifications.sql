@@ -21,6 +21,23 @@ create trigger alert_enqueue
   after insert on public.alerts
   for each row execute procedure public.enqueue_notification();
 
+-- Queue pop helper function
+create or replace function pop_notification()
+returns table (alert_id bigint)
+language plpgsql as $$
+begin
+  delete from public.pending_notifications
+  where ctid in (
+    select ctid from public.pending_notifications
+    order by enqueued_at
+    limit 1
+    for update skip locked
+  )
+  returning alert_id into alert_id;
+  return;
+end;
+$$;
+
 -- Pending notifications are processed by service role functions only; set RLS to deny all
 alter table public.pending_notifications enable row level security;
 
