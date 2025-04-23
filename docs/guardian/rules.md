@@ -1,0 +1,71 @@
+# Guardian Rules Engine
+
+The Guardian Rules Engine is responsible for detecting potentially fraudulent activities in the Stripe payment ecosystem. It analyzes events and applies a set of predefined rules to determine if a payout or account update should be flagged for review.
+
+## Rule Types
+
+Guardian currently supports three types of fraud detection rules:
+
+1. **Velocity Breach**: Detects when too many payouts occur within a short time window, which may indicate fraudulent activity.
+2. **Bank Swap**: Identifies when a connected account changes its bank details, a common pattern in fraud.
+3. **Geo Mismatch**: Flags payouts initiated from unusual geographical locations.
+
+## Configuring Thresholds
+
+The rules engine uses a JSON configuration file to set thresholds for each rule. This allows customization of the fraud detection sensitivity without changing the underlying code.
+
+```json
+{
+  "velocityBreach": {
+    "maxPayouts": 3,     // Maximum number of payouts allowed
+    "windowSeconds": 60  // Time window to check (in seconds)
+  },
+  "bankSwap": {
+    "lookbackMinutes": 5,    // How far back to check for bank account changes
+    "minPayoutUsd": 1000     // Minimum payout amount to trigger the rule
+  },
+  "geoMismatch": {
+    "mismatchChargeCount": 2  // Number of mismatched locations to trigger
+  }
+}
+```
+
+### Schema Validation
+
+The configuration is validated against a JSON Schema to ensure all values are within acceptable ranges and required properties are present. This prevents misconfiguration that could lead to false positives or missed fraud cases.
+
+## Using the Rules Engine
+
+The Guardian Rules Engine exposes two main functions:
+
+- `evaluateEvent()`: Analyzes an event and returns a decision (flagged/not flagged with reason)
+- `runRules()`: Evaluates an event and creates an Alert if the event is flagged
+
+Here's a basic example of how to use the engine:
+
+```typescript
+import { evaluateEvent, runRules } from '@/lib/guardian/rules';
+import { ruleConfig } from '@/lib/guardian/config';
+
+// Custom configuration (optional)
+const customConfig = {
+  velocityLimit: 5,           // Override default
+  windowSec: 120              // Override default
+};
+
+// Evaluate a single event
+const decision = evaluateEvent(event, eventHistory, customConfig);
+
+// Or create an alert if flagged
+const alert = runRules(event, eventHistory, customConfig);
+```
+
+## Customizing Rules per Merchant
+
+The configuration system allows for future expansion to support merchant-specific rules. In a production environment, you could:
+
+1. Store merchant-specific configurations in a database
+2. Load the appropriate configuration based on merchant ID
+3. Pass custom thresholds to the rules engine
+
+This approach allows for flexible fraud detection without changing the underlying code. 

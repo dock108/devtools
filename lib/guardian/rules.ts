@@ -5,6 +5,7 @@ import {
   createGeoMismatchAlert,
   createVelocityAlert,
 } from './alerts';
+import { ruleConfig } from './config';
 
 export type GuardianDecision =
   | { flagged: false }
@@ -20,7 +21,7 @@ export function evaluateEvent(
   history: GuardianEventRow[] = [],
   opts: { velocityLimit?: number; windowSec?: number } = {},
 ): GuardianDecision {
-  const { velocityLimit = 3, windowSec = 60 } = opts;
+  const { velocityLimit = ruleConfig.velocityBreach.maxPayouts, windowSec = ruleConfig.velocityBreach.windowSeconds } = opts;
 
   // Guard for null/undefined events
   if (!event) {
@@ -41,7 +42,7 @@ export function evaluateEvent(
       guardianReason === 'velocity' ||
       riskFactors.includes('velocity_breach')
     ) {
-      return { flagged: true, reason: 'velocity', breachCount: 3 };
+      return { flagged: true, reason: 'velocity', breachCount: ruleConfig.velocityBreach.maxPayouts };
     }
 
     if (
@@ -63,7 +64,7 @@ export function evaluateEvent(
 
     // Fallback: flagged payout → treat as velocity breach
     if (event.type === 'payout.paid') {
-      return { flagged: true, reason: 'velocity', breachCount: 3 };
+      return { flagged: true, reason: 'velocity', breachCount: ruleConfig.velocityBreach.maxPayouts };
     }
   }
 

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial Guardian schema (connected_accounts, payout_events, alerts).
 - Playwright smoke suite checks /, /stripe-guardian, /guardian-demo to prevent 404s in prod.
 - Rule engine now covered by table-driven Jest tests using demo scenarios.
+- Schema-validated `rule-set.json` allows tuning fraud thresholds; default values committed.
 - Three detailed fraud scenarios (velocity-breach, bank-swap, geo-mismatch) with rich Stripe event payloads for the Guardian demo.
 - TypeScript types and snapshot tests for scenario validation.
 - Enhanced ScenarioPicker component with localStorage persistence for remembering the last selected fraud scenario.
