@@ -4,8 +4,20 @@ import type { Metadata } from 'next';
 import { DemoViewer } from './DemoViewer';
 
 export const metadata: Metadata = {
-  title: 'Stripe Guardian Live Demo | DOCK108',
+  title: 'Guardian Demo',
+  description: 'Replay Guardian's fraud scenarios in real time.',
   robots: { index: false, follow: false },
+  openGraph: {
+    title: 'Guardian Demo',
+    description: 'Replay Guardian's fraud scenarios in real time.',
+    images: ['/og-guardian-demo.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Guardian Demo',
+    description: 'Replay Guardian's fraud scenarios in real time.',
+    images: ['/og-guardian-demo.png'],
+  },
 };
 
 // Prevent static generation – demo will fetch live data in future

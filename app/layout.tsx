@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: "DOCK108 Home",
   description: "Developer-first tools that solve real dev pain.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  openGraph: {
+    images: ['/og-default.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-default.png'],
+  },
 };
 
 export default function RootLayout({

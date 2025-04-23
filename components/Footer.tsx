@@ -9,7 +9,7 @@ export function Footer() {
           © 2025 DOCK108
         </p>
         <div className="flex gap-4">
-          <Link href="https://twitter.com/dock108" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground">
+          <Link href="https://twitter.com/dock108dev" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground">
             Twitter
           </Link>
           <Link href="/rss.xml" className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground">

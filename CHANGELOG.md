@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Guardian demo now has branded Open-Graph image for rich social previews.
 - Added targeted test for rule engine with demo scenarios at `tests/guardian/ruleEngine.demoScenarios.test.ts`.
 - Geo-mismatch rule alerts when foreign charge IPs exceed threshold versus payout bank country.
 - Bank-swap rule alerts when large payout follows recent external-account change.
