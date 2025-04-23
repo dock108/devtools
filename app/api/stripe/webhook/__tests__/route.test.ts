@@ -27,6 +27,7 @@ describe('Stripe webhook handler', () => {
   const originalEnv = process.env;
   
   beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.resetModules();
     process.env = { ...originalEnv };
     process.env.STRIPE_SECRET_KEY = 'test_key';
@@ -37,6 +38,7 @@ describe('Stripe webhook handler', () => {
   });
 
   afterEach(() => {
+    (console.error as jest.Mock).mockRestore();
     process.env = originalEnv;
   });
 
