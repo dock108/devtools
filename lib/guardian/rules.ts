@@ -1,218 +1,184 @@
 import { GuardianEventRow } from '@/types/supabase';
-<<<<<<< HEAD
-import { Alert, AlertType, createBankSwapAlert, createGeoMismatchAlert, createVelocityAlert } from './alerts';
-=======
->>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
+import {
+  Alert,
+  createBankSwapAlert,
+  createGeoMismatchAlert,
+  createVelocityAlert,
+} from './alerts';
 
 export type GuardianDecision =
   | { flagged: false }
   | { flagged: true; reason: 'velocity'; breachCount: number }
-<<<<<<< HEAD
   | { flagged: true; reason: 'bank_swap' }
   | { flagged: true; reason: 'geo_mismatch' };
 
 /**
- * Evaluate an event against rules and return decision
+ * Evaluate a Guardian event against fraud rules and return the decision
  */
-=======
-  | { flagged: true; reason: 'bank_swap' };
-
->>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
 export function evaluateEvent(
   event: GuardianEventRow,
-  history: GuardianEventRow[],
-  opts: { velocityLimit?: number; windowSec?: number } = {}
+  history: GuardianEventRow[] = [],
+  opts: { velocityLimit?: number; windowSec?: number } = {},
 ): GuardianDecision {
   const { velocityLimit = 3, windowSec = 60 } = opts;
-<<<<<<< HEAD
-  
-  // Safely handle null/undefined event
+
+  // Guard for null/undefined events
   if (!event) {
     return { flagged: false };
   }
 
-  // For scenario detection, check if it's already flagged with a specific scenario
+  /**
+   * 1. Scenario overrides (pre‑flagged events used in tests/demo)
+   *    If Stripe webhook metadata already indicates a specific risk, respect it.
+   */
   if (event.flagged === true) {
-    // Check for flags in metadata
     const metadata = event.raw?.metadata || {};
-    const riskFactors = metadata.risk_factors?.split(',') || [];
-    const guardianReason = metadata.guardian_reason;
-    
-    if (guardianReason === 'velocity_breach' || 
-        guardianReason === 'velocity' || 
-        riskFactors.includes('velocity_breach')) {
+    const riskFactors: string[] = (metadata.risk_factors as string | undefined)?.split(',') || [];
+    const guardianReason = metadata.guardian_reason as string | undefined;
+
+    if (
+      guardianReason === 'velocity_breach' ||
+      guardianReason === 'velocity' ||
+      riskFactors.includes('velocity_breach')
+    ) {
       return { flagged: true, reason: 'velocity', breachCount: 3 };
     }
-    
-    if (guardianReason === 'bank_account_swap' || 
-        guardianReason === 'bank_swap' || 
-        riskFactors.includes('bank_account_swap') ||
-        riskFactors.includes('new_bank_account')) {
+
+    if (
+      guardianReason === 'bank_account_swap' ||
+      guardianReason === 'bank_swap' ||
+      riskFactors.includes('bank_account_swap') ||
+      riskFactors.includes('new_bank_account')
+    ) {
       return { flagged: true, reason: 'bank_swap' };
     }
-    
-    if (guardianReason === 'geo_mismatch' || 
-        riskFactors.includes('unusual_location') || 
-        riskFactors.includes('geo_mismatch')) {
+
+    if (
+      guardianReason === 'geo_mismatch' ||
+      riskFactors.includes('unusual_location') ||
+      riskFactors.includes('geo_mismatch')
+    ) {
       return { flagged: true, reason: 'geo_mismatch' };
     }
-    
-    // If the event is flagged but doesn't have a specific reason,
-    // and it's a payout event, treat it as a velocity breach
+
+    // Fallback: flagged payout → treat as velocity breach
     if (event.type === 'payout.paid') {
       return { flagged: true, reason: 'velocity', breachCount: 3 };
     }
   }
 
-  // --- Bank-swap rule ---
-  // Check if it's an account update and if the previous attributes included external_accounts
-  if (event.type === 'account.updated' && event.raw?.data?.previous_attributes?.external_accounts) {
-    return { flagged: true, reason: 'bank_swap' };
-  }
-
-  // For scenario testing: also check for external_account.created events
-  if (event.type === 'external_account.created') {
-    return { flagged: true, reason: 'bank_swap' };
-  }
-
-  // --- Geo-mismatch rule ---
-  // Check for geo-mismatch on payout events
-  if (event.type === 'payout.paid' || 
-      event.type === 'payout.created' || 
-      event.type === 'payout.updated') {
-    const metadata = event.raw?.metadata || {};
-    const riskFactors = metadata.risk_factors?.split(',') || [];
-    
-    // Check if flagged in metadata or has unusual_location or geo_mismatch risk factor
-    if (riskFactors.includes('unusual_location') || 
-        riskFactors.includes('geo_mismatch') ||
-        metadata.guardian_reason === 'geo_mismatch') {
-      return { flagged: true, reason: 'geo_mismatch' };
-    }
-  }
-
-  // --- Velocity rule ---
-  // Only apply to payout events
-  if (event.type === 'payout.paid') {
-    // Safety check for event_time
-    if (!event.event_time) {
-      return { flagged: false };
-    }
-    
-=======
-
-  // --- Bank-swap rule ---
-  // Check if it's an account update and if the previous attributes included external_accounts
-  // A simple check for existence implies a change for this basic rule.
-  // A more robust check would compare specific account IDs if available.
+  /**
+   * 2. Bank‑swap rule – account bank details changed.
+   *    a) `account.updated` with `previous_attributes.external_accounts`
+   *    b) `external_account.created`
+   */
   if (
-    event.type === 'account.updated' &&
-    event.raw?.data?.previous_attributes?.external_accounts
+    (event.type === 'account.updated' &&
+      event.raw?.data?.previous_attributes?.external_accounts) ||
+    event.type === 'external_account.created'
   ) {
     return { flagged: true, reason: 'bank_swap' };
   }
 
-  // --- Velocity rule ---
-  // Only apply to payout events
+  /**
+   * 3. Geo‑mismatch rule – payout initiated from unusual location.
+   *    Trigger on payout‑related events when risk metadata hints at mismatch.
+   */
+  if (
+    ['payout.paid', 'payout.created', 'payout.updated'].includes(event.type)
+  ) {
+    const metadata = event.raw?.metadata || {};
+    const riskFactors: string[] = (metadata.risk_factors as string | undefined)?.split(',') || [];
+    if (
+      riskFactors.includes('unusual_location') ||
+      riskFactors.includes('geo_mismatch') ||
+      metadata.guardian_reason === 'geo_mismatch'
+    ) {
+      return { flagged: true, reason: 'geo_mismatch' };
+    }
+  }
+
+  /**
+   * 4. Velocity rule – more than `velocityLimit` payouts in `windowSec` seconds
+   *    for the same connected account.
+   */
   if (event.type === 'payout.paid') {
->>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
+    if (!event.event_time) return { flagged: false };
+
     const now = new Date(event.event_time).getTime();
     const cutoff = now - windowSec * 1000;
 
-    // Count the current event + recent history within the window
-<<<<<<< HEAD
-    const recentPayouts = (history || []).filter(
-      (e) =>
-        e && e.type === 'payout.paid' &&
-        e.account === event.account && // Ensure same account
-        e.event_time && new Date(e.event_time).getTime() >= cutoff
-=======
     const recentPayouts = history.filter(
       (e) =>
         e.type === 'payout.paid' &&
-        e.account === event.account && // Ensure same account
-        new Date(e.event_time).getTime() >= cutoff
->>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
+        e.account === event.account &&
+        e.event_time &&
+        new Date(e.event_time).getTime() >= cutoff,
     );
 
-    const totalInWindow = recentPayouts.length + 1; // +1 for the current event
-
+    const totalInWindow = recentPayouts.length + 1; // include current
     if (totalInWindow > velocityLimit) {
       return { flagged: true, reason: 'velocity', breachCount: totalInWindow };
     }
   }
 
-  // If no rules matched, return not flagged
+  // Default – clean
   return { flagged: false };
-<<<<<<< HEAD
 }
 
 /**
- * Process an event and return any alerts that should be triggered
+ * Run rules and, if flagged, create an appropriate Alert instance.
  */
 export function runRules(
   event: GuardianEventRow,
   history: GuardianEventRow[] = [],
-  opts: { velocityLimit?: number; windowSec?: number } = {}
+  opts: { velocityLimit?: number; windowSec?: number } = {},
 ): Alert | null {
-  // Safety check for null event
   if (!event) return null;
-  
+
   const decision = evaluateEvent(event, history, opts);
-  
-  if (!decision.flagged) {
-    return null;
-  }
+  if (!decision.flagged) return null;
 
   const accountId = event.account || 'unknown';
-  
+
   switch (decision.reason) {
     case 'velocity':
       return createVelocityAlert(event.id, accountId, decision.breachCount);
-    
+
     case 'bank_swap': {
-      // Get the external account ID from the event, if available
+      // Attempt to derive external account id from various event shapes
       let externalAccountId = 'unknown';
-      
       if (event.type === 'external_account.created') {
         externalAccountId = event.id;
-      } else if (event.raw?.data?.previous_attributes?.external_accounts?.data?.[0]?.id) {
-        externalAccountId = event.raw.data.previous_attributes.external_accounts.data[0].id;
+      } else if (
+        event.raw?.data?.previous_attributes?.external_accounts?.data?.[0]?.id
+      ) {
+        externalAccountId =
+          event.raw.data.previous_attributes.external_accounts.data[0].id;
       } else if (event.raw?.metadata?.destination) {
-        externalAccountId = event.raw.metadata.destination;
+        externalAccountId = event.raw.metadata.destination as string;
       } else {
-        // Try to find the most recent external account in the history
-        const recentExternalAccounts = (history || [])
-          .filter(e => e && e.type === 'external_account.created');
-        
-        if (recentExternalAccounts.length > 0) {
-          const recentExternalAccount = recentExternalAccounts
-            .sort((a, b) => 
-              new Date(b.event_time || 0).getTime() - 
-              new Date(a.event_time || 0).getTime()
-            )[0];
-          
-          if (recentExternalAccount) {
-            externalAccountId = recentExternalAccount.id;
-          }
-        }
+        const recentExternal = history
+          .filter((e) => e.type === 'external_account.created')
+          .sort(
+            (a, b) =>
+              new Date(b.event_time || 0).getTime() -
+              new Date(a.event_time || 0).getTime(),
+          )[0];
+        if (recentExternal) externalAccountId = recentExternal.id;
       }
-      
       return createBankSwapAlert(externalAccountId, accountId);
     }
-    
+
     case 'geo_mismatch': {
-      const metadata = {
-        country: event.raw?.metadata?.ip_country || 'unknown',
-        ip: event.raw?.metadata?.ip_address || 'unknown'
+      const geoMeta = {
+        country: (event.raw?.metadata?.ip_country as string) || 'unknown',
+        ip: (event.raw?.metadata?.ip_address as string) || 'unknown',
       };
-      
-      return createGeoMismatchAlert(event.id, accountId, metadata);
+      return createGeoMismatchAlert(event.id, accountId, geoMeta);
     }
-    
+
     default:
       return null;
   }
-=======
->>>>>>> 705528cceed2fa0fdd405173881054a8aee832ba
-} 
+}
