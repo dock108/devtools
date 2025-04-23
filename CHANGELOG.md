@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.
 - Memoised Intl DateTime & currency formatters via lib/formatters and refactored components to use them.
 - Composite index `(stripe_account_id, created_at)` on `payout_events` table to speed up velocity rule queries and backfill inserts.
+- One-click 2× speed toggle in Guardian demo for accelerated playback.
 
 ### Changed
 
@@ -79,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Standardized builds on Node 20 + npm 10; removed pnpm artifacts; Vercel now runs npm ci, eliminating multi-compiler mismatch.
+- Wait-list sign-up now persists email addresses; duplicate submissions handled gracefully.
+- Removed legacy progress bar and speed dropdown from Guardian demo UI.
 - Renamed `SUPABASE_SERVICE_ROLE` → `SUPABASE_SERVICE_ROLE_KEY` across codebase, environment files, CI, and deployment scripts to prevent runtime errors when writing to Supabase.
 - Relaxed Content‑Security‑Policy to include Google Fonts and allow inline scripts for Next.js bootstrap, unblocking Vercel demo pages.
 - Duplicate timers and stale fetch race eliminated in `useDemoScenario`; rapid scenario changes no longer cause duplicated rows.
