@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Container } from "@/components/ui/container";
+import { Container } from "@/components/Container";
 
 export const metadata = {
   title: "Connect your Stripe account | Dock108 Guardian",

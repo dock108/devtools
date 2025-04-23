@@ -1,4 +1,4 @@
-import { Container } from "@/components/ui/container";
+import { Container } from "@/components/Container";
 import Link from "next/link";
 import { AuthGuard } from "@/components/AuthGuard";
 
