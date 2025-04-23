@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-const apiVersion: Stripe.LatestApiVersion = '2023-10-16';
+const apiVersion: Stripe.LatestApiVersion = '2024-04-10';
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('⛔️  STRIPE_SECRET_KEY env var is missing.');
@@ -11,7 +11,10 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 // Reuse across hot reloads in dev
-const globalForStripe = global as unknown as { stripe?: Stripe };
+const globalForStripe = global as unknown as { 
+  stripe?: Stripe;
+  stripeAdmin?: Stripe;
+};
 
 export const stripe =
   globalForStripe.stripe ??
@@ -20,7 +23,17 @@ export const stripe =
     appInfo: { name: 'Stripe Guardian', version: '0.1.0' },
   });
 
-if (process.env.NODE_ENV !== 'production') globalForStripe.stripe = stripe;
+export const stripeAdmin =
+  globalForStripe.stripeAdmin ??
+  new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion,
+    appInfo: { name: 'Stripe Guardian Admin', version: '0.1.0' },
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForStripe.stripe = stripe;
+  globalForStripe.stripeAdmin = stripeAdmin;
+}
 
 // Re-export Stripe types
 export type { Stripe }; 

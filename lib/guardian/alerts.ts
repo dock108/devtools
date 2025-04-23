@@ -18,6 +18,7 @@ export interface Alert {
   accountId: string;
   metadata?: Record<string, any>;
   timestamp: Date;
+  autoPause?: boolean;
 }
 
 export function createVelocityAlert(
@@ -32,6 +33,7 @@ export function createVelocityAlert(
     accountId,
     metadata: { breachCount },
     timestamp: new Date(),
+    autoPause: true,
   };
 }
 
@@ -45,6 +47,7 @@ export function createBankSwapAlert(
     externalAccountId,
     accountId,
     timestamp: new Date(),
+    autoPause: true,
   };
 }
 
@@ -60,5 +63,6 @@ export function createGeoMismatchAlert(
     accountId,
     metadata,
     timestamp: new Date(),
+    autoPause: false,
   };
 } 
