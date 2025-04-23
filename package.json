@@ -94,6 +94,7 @@
     "lint-staged": "^15.5.1",
     "pino-pretty": "^13.0.0",
     "prettier": "^3.5.3",
+    "supabase": "^1.150.0",
     "ts-jest": "^29.3.2",
     "wait-on": "^8.0.3"
   }
