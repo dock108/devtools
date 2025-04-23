@@ -9,7 +9,7 @@ const securityHeaders: Record<string, string> = {
   'Content-Security-Policy':
     "default-src 'self';" +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
-    "font-src https://fonts.gstatic.com;" +
+    'font-src https://fonts.gstatic.com;' +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval';" +
     "img-src 'self' data:;" +
     "connect-src 'self' https://*.supabase.co https://api.stripe.com;",
@@ -32,13 +32,16 @@ const publicPaths = [
   '/blog',
   '/docs',
   '/api/stripe/webhook',
-  '/api/webhooks'
+  '/api/webhooks',
+  '/stripe-guardian',
+  '/guardian-demo',
+  '/notary-ci',
+  '/crondeck',
+  '/api/waitlist',
 ];
 
 function isPublicPath(path: string): boolean {
-  return publicPaths.some(publicPath => 
-    path === publicPath || path.startsWith(`${publicPath}/`)
-  );
+  return publicPaths.some((publicPath) => path === publicPath || path.startsWith(`${publicPath}/`));
 }
 
 export async function middleware(request: NextRequest) {
@@ -53,39 +56,57 @@ export async function middleware(request: NextRequest) {
   // Get the pathname from the URL
   const { pathname } = request.nextUrl;
 
-  // Update the Supabase auth session
+  // Special case for settings and dedicated auth pages
+  if (
+    pathname.startsWith('/settings/') ||
+    pathname.startsWith('/stripe-guardian/settings/') ||
+    pathname.startsWith('/(auth)/')
+  ) {
+    // Update the Supabase auth session
+    const response = await updateSession(request);
+
+    // Check if user is authenticated
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          set() {}, // No-op as we're not setting cookies in middleware check
+          remove() {}, // No-op as we're not removing cookies in middleware check
+          setAll() {}, // No-op
+        },
+      },
+    );
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    // If the user is not authenticated and trying to access a settings path,
+    // redirect them to the login page
+    if (!session) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirectTo', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Add security headers
+    Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));
+    Object.entries(corsHeaders).forEach(([k, v]) => response.headers.set(k, v));
+
+    return response;
+  }
+
+  // Regular middleware for all other paths
   const response = await updateSession(request);
 
-  // Check if user is authenticated
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        set() {}, // No-op as we're not setting cookies in middleware check
-        remove() {}, // No-op as we're not removing cookies in middleware check
-        setAll() {}, // No-op
-      },
-    }
-  );
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  // If the user is not authenticated and trying to access a non-public path,
-  // redirect them to the login page
-  if (!session && !isPublicPath(pathname)) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-  
   // Add security headers
   Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));
   Object.entries(corsHeaders).forEach(([k, v]) => response.headers.set(k, v));
-  
+
   return response;
 }
 

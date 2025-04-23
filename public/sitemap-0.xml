@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url><loc>https://www.dock108.ai/login</loc><lastmod>2025-04-23T23:04:13.281Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/stripe-guardian/onboard</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/docs</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/blog</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/stripe-guardian</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/notary-ci</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/stripe-guardian/alerts</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/stripe-guardian/settings</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.dock108.ai/crondeck</loc><lastmod>2025-04-23T23:04:13.282Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai</loc><lastmod>2025-04-23T23:37:13.241Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/docs</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/blog</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/login</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/stripe-guardian/settings</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/stripe-guardian</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/settings</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/stripe-guardian/onboard</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/notary-ci</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/stripe-guardian/alerts</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.dock108.ai/crondeck</loc><lastmod>2025-04-23T23:37:13.242Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>
