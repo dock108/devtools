@@ -12,40 +12,31 @@ const defaultConfig = {
 
 // Individual rule functions with inline implementations for Edge compatibility
 async function velocityBreachRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  const alerts: Alert[] = [];
-  
-  // Only apply to payout.paid events
-  if (event.type !== 'payout.paid') {
-    return alerts;
-  }
-  
+  if (!event.type.startsWith('payout.')) return [];
+
   const accountId = event.account as string;
   const { maxPayouts, windowSeconds } = ctx.config.velocityBreach;
   
-  // Count recent payouts for this account
-  const now = new Date().getTime();
-  const cutoff = now - (windowSeconds * 1000);
-  
-  const recentPayouts = ctx.recentPayouts.filter(p => 
-    new Date(p.created_at).getTime() >= cutoff
+  const cutoff = Date.now() - windowSeconds * 1000;
+  const recent = ctx.recentPayouts.filter(
+    (p) => new Date(p.created_at).getTime() >= cutoff,
   );
-  
-  // Include current payout in the count
-  const totalInWindow = recentPayouts.length + 1;
-  
-  if (totalInWindow > maxPayouts) {
-    const payoutId = (event.data.object as any).id || '';
-    alerts.push({
-      type: 'VELOCITY',
-      severity: 'high',
-      message: `Velocity breach detected: ${totalInWindow} payouts in ${windowSeconds} seconds`,
-      payoutId,
-      accountId,
-      createdAt: new Date().toISOString()
-    });
+
+  logger.info({ accountId, count: recent.length }, 'Velocity rule executed');
+
+  if (recent.length >= maxPayouts) {
+    return [
+      {
+        type: 'VELOCITY',
+        severity: 'high',
+        message: `🚨 ${recent.length} payouts inside ${windowSeconds}s`,
+        payoutId: (event.data.object as any).id,
+        accountId: event.account!,
+        createdAt: new Date().toISOString(),
+      },
+    ];
   }
-  
-  return alerts;
+  return [];
 }
 
 async function bankSwapRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {

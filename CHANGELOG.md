@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Velocity-breach rule alerts when > N payouts occur inside T-second window.
 - Modular rule engine core evaluates incoming Stripe events against configured rules and returns Alert objects.
 - Initial Guardian schema (connected_accounts, payout_events, alerts).
 - Playwright smoke suite checks /, /stripe-guardian, /guardian-demo to prevent 404s in prod.
