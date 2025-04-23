@@ -1,6 +1,5 @@
 'use client';
 
-import { useFakeStripeEvents } from './useFakeStripeEvents';
 import { useDemoScenario } from './useDemoScenario';
 import { EventTable } from '../../components/guardian-demo/EventTable';
 import VelocityChart from '../../components/guardian-demo/VelocityChart';
@@ -9,6 +8,7 @@ import SlackAlert from '../../components/guardian-demo/SlackAlert';
 import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
 import { getScenarios } from './getScenarios';
 import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 // Get scenarios at build time
 const scenarioList = getScenarios();
@@ -21,12 +21,10 @@ const scenarioLabels = scenarioList.reduce<Record<string, string>>((acc, s) => {
 export function DemoViewer() {
   // Default to the first scenario instead of empty string
   const [scenario, setScenario] = useState<string>(scenarioIds.length > 0 ? scenarioIds[0] : '');
-  const [loop, setLoop] = useState(false);
   const [speed, setSpeed] = useState(1);
   
   // We don't need fallback events anymore since we always use scenarios
   const scenarioData = useDemoScenario(scenario, {
-    loop,
     speed,
     onExpire: () => handleReset(true)
   });
@@ -44,7 +42,7 @@ export function DemoViewer() {
   }
   
   function handleScenarioChange(newScenario: string) {
-    console.log("Changing scenario to:", newScenario); // Debug log
+    logger.info({ newScenario }, 'Changing scenario');
     setScenario(newScenario);
     handleReset(false);
   }
@@ -89,8 +87,6 @@ export function DemoViewer() {
           scenarioLabels={scenarioLabels}
           currentScenario={scenario}
           onChange={handleScenarioChange}
-          loopEnabled={loop}
-          onLoopToggle={setLoop}
           speedFactor={speed}
           onSpeedChange={setSpeed}
           currentIndex={scenarioData.currentIndex}

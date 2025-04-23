@@ -93,30 +93,6 @@ describe('useDemoScenario', () => {
     expect(result.current.currentIndex).toBe(3);
   });
 
-  it('handles looping scenario', async () => {
-    const { result } = renderHook(() => useDemoScenario('test-scenario', { loop: true }));
-
-    // Wait for fetch to complete
-    await vi.runAllTimersAsync();
-    
-    // Play through all events
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3001);
-    });
-    
-    expect(result.current.events.length).toBe(3);
-    expect(result.current.currentIndex).toBe(3);
-    
-    // After the last event, it should wait 3 seconds then restart
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3001);
-    });
-    
-    // After restart, only the first event (delayMs: 0) should be visible
-    expect(result.current.events.length).toBe(1);
-    expect(result.current.currentIndex).toBe(1);
-  });
-
   it('handles restart function', async () => {
     const { result } = renderHook(() => useDemoScenario('test-scenario'));
 

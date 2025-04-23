@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   Select,
   SelectContent,
@@ -14,8 +14,6 @@ export type ScenarioPickerProps = {
   scenarioLabels?: Record<string, string>; // Friendly labels for scenarios
   currentScenario: string;      // active key
   onChange: (name: string) => void;
-  onLoopToggle?: (enabled: boolean) => void;
-  loopEnabled?: boolean;
   speedFactor?: number;
   onSpeedChange?: (speed: number) => void;
   currentIndex?: number;
@@ -30,8 +28,6 @@ export function ScenarioPicker({
   scenarioLabels = {},
   currentScenario,
   onChange,
-  loopEnabled,
-  onLoopToggle,
   speedFactor = 1,
   onSpeedChange,
   currentIndex = 0,
@@ -104,39 +100,23 @@ export function ScenarioPicker({
           </Select>
         </div>
         
-        {onLoopToggle && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="loop-toggle"
-                checked={loopEnabled}
-                onChange={(e) => onLoopToggle(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-[var(--accent-guardian)] focus:ring-[var(--accent-guardian)]"
-              />
-              <label htmlFor="loop-toggle" className="ml-2 text-sm text-gray-600">
-                Loop Scenario
-              </label>
-            </div>
-            
-            {onSpeedChange && (
-              <div className="flex items-center space-x-2">
-                <label htmlFor="speed-select" className="text-sm text-gray-600">
-                  Speed:
-                </label>
-                <select
-                  id="speed-select"
-                  value={speedFactor}
-                  onChange={(e) => onSpeedChange(Number(e.target.value))}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-[var(--accent-guardian)] focus:ring-[var(--accent-guardian)]"
-                >
-                  <option value="0.5">0.5x</option>
-                  <option value="1">1x</option>
-                  <option value="2">2x</option>
-                  <option value="4">4x</option>
-                </select>
-              </div>
-            )}
+        {/* Speed selector */}
+        {onSpeedChange && (
+          <div className="flex items-center space-x-2">
+            <label htmlFor="speed-select" className="text-sm text-gray-600">
+              Speed:
+            </label>
+            <select
+              id="speed-select"
+              value={speedFactor}
+              onChange={(e) => onSpeedChange(Number(e.target.value))}
+              className="rounded-md border-gray-300 shadow-sm focus:border-[var(--accent-guardian)] focus:ring-[var(--accent-guardian)]"
+            >
+              <option value="0.5">0.5x</option>
+              <option value="1">1x</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+            </select>
           </div>
         )}
         

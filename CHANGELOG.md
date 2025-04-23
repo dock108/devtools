@@ -80,3 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Renamed `SUPABASE_SERVICE_ROLE` → `SUPABASE_SERVICE_ROLE_KEY` across codebase, environment files, CI, and deployment scripts to prevent runtime errors when writing to Supabase.
 - Relaxed Content‑Security‑Policy to include Google Fonts and allow inline scripts for Next.js bootstrap, unblocking Vercel demo pages.
+
+### Removed
+
+- Loop-scenario option eliminated; scenarios now run once and can be restarted manually.

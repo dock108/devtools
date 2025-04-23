@@ -10,7 +10,6 @@ export type ScenarioEvent = {
 };
 
 export type ScenarioOptions = {
-  loop?: boolean;
   speed?: number;
   onExpire?: () => void;
 };
@@ -19,7 +18,7 @@ export function useDemoScenario(
   scenarioName: string | null,
   options: ScenarioOptions = {}
 ) {
-  const { loop = false, speed = 1, onExpire } = options;
+  const { speed = 1, onExpire } = options;
   const [events, setEvents] = useState<DemoEvent[]>([]);
   const [scenarioEvents, setScenarioEvents] = useState<ScenarioEvent[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -101,13 +100,8 @@ export function useDemoScenario(
         setEvents(prev => [...prev.slice(-49), demoEvent]);
         setCurrentIndex(index + 1);
         
-        // If this is the last event and loop is enabled, restart
-        if (index === scenarioEvents.length - 1 && loop) {
-          setTimeout(() => restart(), 3000); // Wait 3 seconds before restarting
-        }
-        
-        // If this is the last event and we're not looping, expire after 5 minutes
-        if (index === scenarioEvents.length - 1 && !loop) {
+        // If this is the last event, expire after 5 minutes
+        if (index === scenarioEvents.length - 1) {
           const expireTimer = setTimeout(() => {
             reset();
             onExpire?.();
@@ -137,7 +131,7 @@ export function useDemoScenario(
     if (scenarioEvents.length > 0) {
       scheduleEvents();
     }
-  }, [scenarioEvents, loop, speed]);
+  }, [scenarioEvents, speed]);
 
   return {
     events,
