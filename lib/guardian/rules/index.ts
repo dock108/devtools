@@ -19,9 +19,10 @@ export async function evaluateRules(event: StripeEvent): Promise<Alert[]> {
   }
   
   // Calculate lookback period for events
-  // Max of 1 hour or double the bank swap lookback period
+  // Max of 1 hour, double the bank swap lookback period, or 24 hours for geo-mismatch
   const bankSwapLookbackMs = ruleConfig.bankSwap.lookbackMinutes * 60_000 * 2;
-  const lookbackMs = Math.max(3600_000, bankSwapLookbackMs);
+  const geoMismatchLookbackMs = 24 * 60 * 60 * 1000; // 24 hours
+  const lookbackMs = Math.max(3600_000, bankSwapLookbackMs, geoMismatchLookbackMs);
   const lookbackDate = new Date(Date.now() - lookbackMs).toISOString();
   
   // Fetch context data needed for all rules
