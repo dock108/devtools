@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Initial Guardian schema (connected_accounts, payout_events, alerts).
 - Playwright smoke suite checks /, /stripe-guardian, /guardian-demo to prevent 404s in prod.
 - Rule engine now covered by table-driven Jest tests using demo scenarios.
@@ -63,8 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase admin client using service role key.
 - Rule evaluator utility (`lib/guardian/rules.ts`) with velocity & bank-swap detection + unit tests.
 - Added contribution guidelines (`docs/CONTRIBUTING.md`) and PR template (`.github/PULL_REQUEST_TEMPLATE.md`).
+- Composite CI workflow now runs lint, type-check, Jest (coverage), and Playwright smoke tests across Node 18/20.
 
 ### Changed
+
 - Used shadcn `Label` component in GuardianWaitlistForm.
 - Home grid card for Stripe Guardian now links to /stripe-guardian (no change needed).
 - Updated Header component to use a dark background for better logo visibility.
@@ -81,4 +84,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
 - Webhook route now validates Stripe signatures; invalid sig returns 400.

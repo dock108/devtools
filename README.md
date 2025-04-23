@@ -1,5 +1,7 @@
 # DOCK108 Home
 
+![CI](https://github.com/dock108/devtools/actions/workflows/ci.yml/badge.svg)
+
 Umbrella site for DOCK108 developer tools.
 
 Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, and Resend.
@@ -22,6 +24,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
 
 1.  **Environment Variables:**
     Copy `.env.example` (if created) or create `.env.local` and add your Supabase and Resend keys:
+
     ```
     NEXT_PUBLIC_SUPABASE_URL=...
     NEXT_PUBLIC_SUPABASE_ANON_KEY=...
@@ -32,6 +35,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
     ```
 
 2.  **Install Dependencies:**
+
     ```bash
     npm install
     ```
@@ -47,6 +51,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
 If you're working with the Stripe Guardian component, you'll need to set up the database schema:
 
 1. **Start Supabase Local Development:**
+
    ```bash
    pnpm supabase start
    ```
@@ -60,13 +65,13 @@ This will create all required tables (connected_accounts, payout_events, alerts)
 
 ## Available Scripts
 
--   `npm run dev`: Starts the development server.
--   `npm run lint`: Lints the codebase using Next.js ESLint config.
--   `npm run format`: Formats code using Prettier.
--   `npm run build`: Creates an optimized production build.
--   `npm start`: Starts the production server (requires `npm run build` first).
--   `npm test`: Runs Jest unit tests.
--   `npm run test:e2e`: Runs Playwright smoke tests against key marketing pages.
+- `npm run dev`: Starts the development server.
+- `npm run lint`: Lints the codebase using Next.js ESLint config.
+- `npm run format`: Formats code using Prettier.
+- `npm run build`: Creates an optimized production build.
+- `npm start`: Starts the production server (requires `npm run build` first).
+- `npm test`: Runs Jest unit tests.
+- `npm run test:e2e`: Runs Playwright smoke tests against key marketing pages.
 
 ## Testing
 
@@ -121,5 +126,6 @@ The Stripe Guardian demo (/guardian-demo) showcases fraud detection in action:
 - **Real-time Visualization**: Watch events appear in the timeline and see fraud patterns emerge.
 
 To add custom scenarios:
+
 1. Add new JSON files in `app/guardian-demo/scenarios/` following the format in the existing files
 2. Update the list of scenarios in `app/guardian-demo/getScenarios.ts`

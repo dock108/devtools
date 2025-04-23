@@ -11,6 +11,12 @@ jobs:
   build-test:
     name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      STRIPE_SECRET_KEY: test_key
+      STRIPE_WEBHOOK_SECRET: test_secret
+      DEMO_API_KEY: test_demo_key
+      NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_key
     strategy:
       matrix:
         node-version: [18.x, 20.x]
