@@ -146,3 +146,12 @@ To add custom scenarios:
 
 1. Add new JSON files in `app/guardian-demo/scenarios/` following the format in the existing files
 2. Update the list of scenarios in `app/guardian-demo/getScenarios.ts`
+
+## Running Lighthouse locally
+
+After building the production bundle, you can run Lighthouse CI against key routes:
+
+```bash
+pnpm build && pnpm lh-ci
+# Reports are saved in .lighthouseci/index.html
+```

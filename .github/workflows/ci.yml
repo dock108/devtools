@@ -82,3 +82,15 @@ jobs:
         with:
           name: playwright-report-${{ matrix.node-version }}
           path: playwright-report/
+
+      - name: Build Next app
+        run: pnpm build
+
+      - name: Run Lighthouse CI
+        run: pnpm lh-ci
+
+      - name: Upload Lighthouse report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lhci-report
+          path: .lighthouseci
