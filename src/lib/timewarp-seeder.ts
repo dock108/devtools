@@ -74,16 +74,20 @@ export async function runSeeder(): Promise<{
       if (currentFetchedBalance < 10000) {
         const topUpAmount = 1000000; // $10,000
         console.log(
-          `[seed] Balance low. Adding $${(topUpAmount / 100).toFixed(2)} top-up to ${acct}...`,
+          `[seed] Balance low. Adding direct top-up of $${(topUpAmount / 100).toFixed(2)} to ${acct}...`,
         );
-        await stripe.charges.create({
-          amount: topUpAmount,
-          currency: 'usd',
-          source: 'tok_visa',
-          description: 'Sandbox Top-Up [$10k]',
-          transfer_data: { destination: acct },
-        });
-        console.log(`[seed] Top-up [$10k] charge created for ${acct}.`);
+        await stripe.topups.create(
+          {
+            amount: topUpAmount,
+            currency: 'usd',
+            description: 'Sandbox Balance Top-Up [$10k]',
+            source: 'tok_visa', // Use test token as the source for the top-up
+          },
+          {
+            stripeAccount: acct, // Specify the connected account ID here
+          },
+        );
+        console.log(`[seed] Direct top-up [$10k] created for ${acct}.`);
 
         // --- Add Delay and Re-fetch Balance ---
         console.log('[seed] Waiting 10 seconds for top-up to settle...');
