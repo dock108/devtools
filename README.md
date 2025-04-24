@@ -42,9 +42,11 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
     ```
 
 3.  **Run Development Server:**
+
     ```bash
     npm run dev
     ```
+
     Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 4.  **For Stripe Guardian Development:**
@@ -179,3 +181,22 @@ To add new testers:
 4. Share the login URL with your testers
 
 Users not on the allow list will be unable to sign up and will be prompted to contact `beta@dock108.ai` for access.
+
+## Deploy checklist
+
+When applying database migrations:
+
+1. **Apply migrations locally first**
+
+   ```bash
+   supabase db push            # run once on your machine
+   git add supabase/migrations
+   git commit -m "chore(db): new migration"
+   git push origin main       # Vercel build will skip db push
+   ```
+
+2. **Verify deployment**
+   - Confirm Vercel build log no longer mentions "Connecting to remote database…"
+   - Verify application functionality to ensure tables and triggers are working
+
+Note: Vercel builds no longer run `supabase db push`. All migrations must be applied locally or through Supabase Studio before pushing code.

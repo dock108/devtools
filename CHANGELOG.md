@@ -95,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Used shadcn `Label`
+- Supabase CLI removed from Vercel build; migrations now applied manually via supabase db push.
 
 ### Fixed
 
