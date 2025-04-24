@@ -1,10 +1,10 @@
-const { spawnSync } = require('child_process');
+import { spawnSync } from 'child_process';
 
 /**
  * @param {import('next').NextApiRequest} req
  * @param {import('next').NextApiResponse} res
  */
-module.exports = function handler(req, res) {
+export default function handler(req, res) {
   const out = spawnSync('npm', ['run', 'seed:prod'], { encoding: 'utf8', env: process.env });
 
   if (out.status === 0) {
