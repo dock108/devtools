@@ -1,17 +1,17 @@
 import nock from 'nock';
 import { runSeeder } from '../src/lib/timewarp-seeder';
-import * as childProcess from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 
 // Mock child_process module
 // Mock fs module
 const mockReadFileFn = jest.fn();
 jest.mock('node:child_process', () => ({
-  ...jest.requireActual('node:child_process'), // Keep original implementation for other functions
-  execFileSync: jest.fn(), // Define the mock function inside the factory
+  ...jest.requireActual('node:child_process'), // Restore keeping other functions
+  execFileSync: jest.fn(() => Buffer.from('ok')), // Mock implementation
 }));
 jest.mock('node:fs', () => ({
-  ...jest.requireActual('node:fs'), // Keep original implementation for other fs functions
+  ...jest.requireActual('node:fs'),
   readFileSync: jest.fn(), // Define the mock function inside the factory
 }));
 
@@ -20,21 +20,27 @@ const originalMathRandom = Math.random;
 
 // Reset all mocks before each test to ensure clean state
 beforeEach(() => {
-  jest.clearAllMocks();
-  // Also clear nock just in case
+  // Minimal env for the helper
+  process.env.STRIPE_SECRET_KEY = 'sk_test_smoke123'; // Use a distinct key
+  process.env.ACCOUNTS = 'acct_test_smoke';
+  process.env.GUARDIAN_ALPHA_SEED = '1';
+  process.env.SPEED_FACTOR = '168';
+
+  // Clear mocks before each test
+  (execFileSync as jest.Mock).mockClear();
   nock.cleanAll();
 });
 
 // Clean up nock and reset env vars after each test
 afterEach(() => {
   nock.cleanAll();
-  delete process.env.GUARDIAN_ALPHA_SEED;
+  // Clean up environment variables
   delete process.env.STRIPE_SECRET_KEY;
   delete process.env.ACCOUNTS;
+  delete process.env.GUARDIAN_ALPHA_SEED;
   delete process.env.SPEED_FACTOR;
   jest.restoreAllMocks(); // Restore mocks including fs and Math.random
   // Clear module mocks
-  (childProcess.execFileSync as jest.Mock).mockClear();
   (fs.readFileSync as jest.Mock).mockClear();
 });
 
@@ -168,7 +174,7 @@ it('injects fraud scenario via stripe fixtures when roll succeeds', async () => 
   await runSeeder();
 
   // Access the mock via the imported module
-  const mockExec = childProcess.execFileSync as jest.Mock;
+  const mockExec = execFileSync as jest.Mock;
   expect(chargeMock.isDone()).toBe(true); // Basic check
   expect(fs.readFileSync).toHaveBeenCalledWith(
     expect.stringContaining('fixtures/scenarios/'),
@@ -202,8 +208,35 @@ it('does NOT inject fraud scenario when roll fails', async () => {
   await runSeeder();
 
   // Access the mock via the imported module
-  const mockExec = childProcess.execFileSync as jest.Mock;
+  const mockExec = execFileSync as jest.Mock;
   expect(chargeMock.isDone()).toBe(true);
   expect(mockExec).not.toHaveBeenCalled();
   mockMathRandomNoInject.mockRestore(); // Restore Math.random
+});
+
+it('creates at least one charge without throwing', async () => {
+  // Mock Stripe balance endpoint (needed for top-up check)
+  nock('https://api.stripe.com')
+    .get('/v1/balance')
+    .reply(200, { available: [{ amount: 5000, currency: 'usd' }] }); // Assume $50 initial balance
+
+  // Mock Stripe charge endpoint (must be called)
+  const chargeScope = nock('https://api.stripe.com')
+    .post('/v1/charges') // Use exact path or regex if needed
+    .reply(200, { id: 'ch_smoke_123' });
+
+  // Mock payout endpoint (may or may not be called, make it persist)
+  nock('https://api.stripe.com')
+    .persist() // Keep this mock active even if not hit initially
+    .post('/v1/payouts') // Use exact path or regex
+    .reply(200, { id: 'po_smoke_123' });
+
+  await expect(runSeeder()).resolves.toBeDefined(); // Check it resolves, not just lack of throw
+
+  // Assert charge call happened
+  expect(chargeScope.isDone()).toBe(true);
+
+  // Optional: Check if execFileSync was called (if scenario injection happened)
+  // This depends on Math.random, so it's less reliable for a simple smoke test
+  // console.log('execFileSync calls:', (execFileSync as jest.Mock).mock.calls.length);
 });

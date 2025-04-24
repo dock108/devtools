@@ -14,7 +14,7 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx,yml}\"",
     "postbuild": "next-sitemap",
     "type-check": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest --detectOpenHandles",
     "test:e2e": "cross-env NODE_ENV=test playwright test",
     "test:e2e:oauth": "cross-env NODE_ENV=test playwright test tests/e2e/stripe-oauth.test.ts",
     "lint-staged": "lint-staged",

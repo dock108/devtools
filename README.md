@@ -200,3 +200,52 @@ When applying database migrations:
    - Verify application functionality to ensure tables and triggers are working
 
 Note: Vercel builds no longer run `supabase db push`. All migrations must be applied locally or through Supabase Studio before pushing code.
+
+## Local development
+
+1.  Install dependencies:
+    ```bash
+    npm install
+    ```
+2.  Copy `.env.example` to `.env.local` and fill in your API keys (Supabase, Stripe, Resend):
+    ```bash
+    cp .env.example .env.local
+    ```
+3.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+
+### Continuous Time-Warp seeding (1 h = 1 week)
+
+1.  Copy `.env.example` → `.env.local`, fill in your Stripe test key (`STRIPE_SECRET_KEY`) and at least one test Connect Account ID in `ACCOUNTS`.
+2.  Ensure the safety flag `GUARDIAN_ALPHA_SEED=1` is set in `.env.local`.
+3.  Start dev server:
+    ```bash
+    npm run dev
+    ```
+4.  Run one seeding tick manually by visiting the API route in your browser or using curl:
+    ```bash
+    curl http://localhost:3000/api/timewarp-seeder
+    ```
+    Check the `npm run dev` console logs for output similar to:
+    ```
+    [seed] ...
+    [seed] Injected fixtures/scenarios/bank-swap.json into acct_1RHSiGHca4FBH776
+    [seed] Preparing result...
+    runSeeder completed. Sending success response. { acct: ..., chargeId: ..., ... }
+    ```
+
+In production, the same route (`/api/timewarp-seeder`) is triggered by a Vercel cron job every 10 minutes (`*/10 * * * *`), so the Guardian dashboard always has fresh data. The cron job is configured in `vercel.json`; see [Vercel Cron documentation](https://vercel.com/docs/cron-jobs) for details.
+
+### Running tests
+
+```bash
+# Run in headless mode
+npm run test:e2e
+
+# Run in debug mode with browser UI
+PWDEBUG=1 npm run test:e2e
+```
+
+See `/tests/e2e/README.md` for more details on e2e tests.

@@ -73,5 +73,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every live sandbox session.
 - **Guardian Demo:** Add `ScenarioPicker` component to manually trigger scenarios.
 - **Auth:** Implement Sign Up with email/password, including confirmation email.
+- Jest smoke test for `runSeeder()` that mocks Stripe endpoints and ensures at
+  least one charge call occurs with no unhandled errors.
 
 ### Changed
+
+### Docs
+
+- Added seeder variables to `.env.example` and wrote README instructions for
+  running the Time-Warp seeder locally; noted the 10-minute Vercel cron.
+
+### Fixed
