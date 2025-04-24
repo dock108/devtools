@@ -12,20 +12,23 @@ export default function handler(_req: NextApiRequest, res: NextApiResponse) {
     // Run the script directly with Node.js
     const out = spawnSync('node', [scriptPath], {
       encoding: 'utf8',
-      env: {
-        ...process.env,
-        GUARDIAN_ALPHA_SEED: '1', // Ensure safety flag is set
-      },
-      stdio: 'inherit', // Display output in real-time in the function logs
+      env: process.env,
+      stdio: 'pipe', // Capture output instead of inheriting
     });
 
     if (out.status === 0) {
+      console.log('Seeder executed successfully');
+      console.log('stdout >>>\n', out.stdout);
       return res.status(200).json({ ok: true, message: 'Seeder executed successfully' });
     } else {
-      console.error('Seeder execution failed:', out.stderr);
+      console.error('Seeder exit code:', out.status);
+      console.error('stdout >>>\n', out.stdout);
+      console.error('stderr >>>\n', out.stderr);
       return res.status(500).json({
         ok: false,
         error: 'Seeder execution failed',
+        status: out.status,
+        stdout: out.stdout,
         stderr: out.stderr,
       });
     }

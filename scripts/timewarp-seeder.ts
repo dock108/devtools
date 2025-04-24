@@ -1,5 +1,4 @@
 #!/usr/bin/env ts-node
-import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import fs from 'fs/promises';
 import path from 'path';
@@ -28,10 +27,6 @@ const logger = {
     }
   },
 };
-
-// Load environment variables from .env and .env.local
-dotenv.config(); // First load .env
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') }); // Then override with .env.local
 
 // --- Configuration & Environment Variables ---
 
