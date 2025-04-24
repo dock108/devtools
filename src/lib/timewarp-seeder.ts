@@ -60,8 +60,49 @@ export async function runSeeder(): Promise<{
     const acct = accounts[randomInt(0, accounts.length)];
     console.log(`[seed] Selected account: ${acct}`);
 
-    // Initialize balance if not present
-    console.log('[seed] Initializing balance...');
+    // --- Check and Top-Up Balance ---
+    console.log(`[seed] Checking initial balance for ${acct}...`);
+    try {
+      const balance = await stripe.balance.retrieve({ stripeAccount: acct });
+      const usdBalance = balance.available.find((b) => b.currency === 'usd');
+      let currentBalance = usdBalance?.amount ?? 0;
+      console.log(
+        `[seed] Current fetched balance for ${acct}: $${(currentBalance / 100).toFixed(2)}`,
+      );
+
+      // If balance is less than $100, add $10,000 top-up
+      if (currentBalance < 10000) {
+        const topUpAmount = 1000000; // $10,000 (1,000,000 cents)
+        console.log(
+          `[seed] Balance low. Adding $${(topUpAmount / 100).toFixed(2)} top-up to ${acct}...`,
+        );
+        await stripe.charges.create({
+          amount: topUpAmount,
+          currency: 'usd',
+          source: 'tok_visa', // Standard test token
+          description: 'Sandbox Top-Up [$10k]',
+          transfer_data: {
+            destination: acct,
+          },
+        });
+        console.log(`[seed] Top-up [$10k] charge created for ${acct}.`);
+        // Update balance variable AFTER top-up charge creation
+        currentBalance += topUpAmount;
+      } else {
+        console.log(`[seed] Balance for ${acct} is sufficient.`);
+      }
+      // Update in-memory balance based on fetch + potential top-up
+      balances[acct] = currentBalance;
+    } catch (balanceError) {
+      console.error(`[seed] Failed to fetch or top-up balance for ${acct}:`, balanceError);
+      // Initialize balance to 0 in memory if fetch fails
+      balances[acct] = 0;
+    }
+    console.log(
+      `[seed] In-memory balance for ${acct} after check/top-up: $${(balances[acct] / 100).toFixed(2)}`,
+    );
+
+    // Initialize balance if not present (redundant after check, but safe)
     if (balances[acct] === undefined) {
       balances[acct] = 0;
     }
@@ -100,15 +141,15 @@ export async function runSeeder(): Promise<{
       // Don't update balance if charge fails
     }
 
-    // 4. Decide and create payout (60% chance if balance >= $3)
+    // 4. Decide and create payout (uses updated balance)
     console.log('[seed] Evaluating payout...');
-    const currentBalance = balances[acct] ?? 0;
-    const shouldPayout = currentBalance >= 300 && Math.random() < 0.6;
+    const currentBalanceForPayout = balances[acct] ?? 0;
+    const shouldPayout = currentBalanceForPayout >= 300 && Math.random() < 0.6;
     let payoutId: string | null = null;
 
     if (shouldPayout) {
       // Ensure payout amount is at least $3 and no more than the current balance
-      const maxPayout = currentBalance;
+      const maxPayout = currentBalanceForPayout;
       const minPayout = 300;
       const payoutCents = randomInt(minPayout, maxPayout + 1);
 
