@@ -51,7 +51,7 @@ export async function runSeeder(): Promise<{
   }
   console.log('[seed] Safety flag OK.');
 
-  const stripe = new Stripe(stripeKey, { apiVersion: '2024-04-10' });
+  const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
   console.log('[seed] Stripe client initialized.');
 
   try {
