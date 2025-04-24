@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Vercel cron job (*/10 min) triggers `/api/tasks/timewarp-seeder`, ensuring continuous sandbox activity.
+- Edge route `/api/tasks/timewarp-seeder` that runs `npm run seed:prod` (used by scheduled cron to keep sandbox traffic flowing).
+- npm script `seed:prod` runs the Time-Warp seeder.
+- `scripts/timewarp-seeder.ts` simulates Stripe activity (charges, payouts, scenario selection) for sandbox accounts.
 - End-to-end Playwright + Jest test covers Connect OAuth, webhook endpoint creation, and payout ingest under RLS.
 - Accounts can now override fraud-rule thresholds via JSON editor; values validated against rule-set.json schema.
 - Stripe Connect OAuth flow implemented: users can link their Stripe account, tokens stored in `connected_accounts`.
@@ -57,43 +61,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added initial README.
 - /notary-ci product page with hero, pain/solution, features, pricing, Supabase wait-list.
 - Added accent.notary color token (already present).
-- Added `notary_leads` Supabase table creation instructions.
-- /crondeck product page with hero, pain/solution, features, pricing, Supabase wait-list.
-- Added `crondeck_leads` Supabase table creation instructions.
-- Supabase Edge Function `send-welcome-email` triggered by new leads.
-- Supabase Edge Function `weekly-digest` (cron) to email recent leads.
-- Basic HTML email templates for welcome and digest emails.
-- SQL for Supabase DB triggers and helper function (`notify_welcome_email`).
-- Added `welcome_sent` column to lead tables.
-- MDX blog engine (/blog) using `@next/mdx` and `gray-matter`.
-- Blog lib helpers (`lib/blog.ts`) for reading/parsing posts.
-- Blog index and dynamic post page layouts.
-- Tailwind prose styling for blog markdown content.
-- JSON‑LD helper (`lib/jsonld.ts`) generating Product and BlogPosting schema.
-- Automatic injection of structured data:
-  - Product pages: /stripe-guardian, /notary-ci, /crondeck now export `generateMetadata` embedding Product schema.
-  - Blog posts dynamically embed BlogPosting schema.
-- /guardian-demo route skeleton with hero, placeholder stream panel, noindex meta.
-- "View Live Demo" CTA added to Stripe Guardian product page.
-- useFakeStripeEvents hook generating realistic Stripe test events.
-- Real‑time VelocityChart integrated into /guardian-demo.
-- ActionLog and SlackAlert components with auto‑pause narrative integrated into /guardian-demo.
-- Installed `stripe` SDK and `@types/stripe-event-types`; added .env.local.example placeholders.
-- Edge Stripe webhook endpoint `/api/stripe/webhook` with signature verification and Supabase insert.
-- Added `/api/stripe/mock` replay endpoint (auth via `x-demo-key`) for injecting synthetic events.
-- Supabase admin client using service role key.
-- Rule evaluator utility (`lib/guardian/rules.ts`) with velocity & bank-swap detection + unit tests.
-- Added contribution guidelines (`docs/CONTRIBUTING.md`) and PR template (`.github/PULL_REQUEST_TEMPLATE.md`).
-- Composite CI workflow now runs lint, type-check, Jest (coverage), and Playwright smoke tests across Node 18/20.
-- Script for syncing env vars to Vercel and docs; CI guard for missing secrets.
-- Lighthouse CI now runs in GitHub Actions after the production build, enforcing a <200 KB JS bundle and LCP <2.5 s budgets. HTML report uploaded as `lhci-report` artifact.
-- VS Code workspace settings enable format-on-save; `extensions.json` recommends Prettier, ESLint, Tailwind IntelliSense, Jest, and Docker.
-- Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.
-- Memoised Intl DateTime & currency formatters via lib/formatters and refactored components to use them.
-- Composite index `(stripe_account_id, created_at)` on `payout_events` table to speed up velocity rule queries and backfill inserts.
-- Avatar menu now includes Dashboard, Connect account, Settings, and Log out.
-
-### Changed
-
-- Users are now routed to **/stripe-guardian/alerts** immediately after login and after connecting their first Stripe account.
-- Used shadcn `Label`
+- Added `notary_leads`

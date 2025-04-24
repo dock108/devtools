@@ -78,7 +78,7 @@ export function useDemoScenario(
     
     try {
       logger.info({ scenarioId: name }, 'Loading scenario');
-      const response = await fetch(`/guardian-demo/scenarios/${name}.json`, { signal });
+      const response = await fetch(`/fixtures/scenarios/${name}.json`, { signal });
       if (!response.ok) {
         throw new Error(`Failed to load scenario: ${response.statusText}`);
       }
