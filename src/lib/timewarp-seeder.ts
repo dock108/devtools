@@ -14,55 +14,65 @@ export async function runSeeder(): Promise<{
   payoutId: string | null;
   balanceCents: number;
 } | void> {
-  console.log('[seed] Starting time-warp seed cycle...');
+  console.log('[seed] runSeeder invoked.');
 
   // 1. Load and validate environment variables
+  console.log('[seed] Loading environment variables...');
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const accountsRaw = process.env.ACCOUNTS;
-  const speedFactor = Number(process.env.SPEED_FACTOR ?? 168); // 1 h → 1 wk
+  const speedFactor = Number(process.env.SPEED_FACTOR ?? 168);
+  console.log(`[seed] SPEED_FACTOR: ${speedFactor}`);
 
   if (!stripeKey) {
-    console.error('[seed] STRIPE_SECRET_KEY environment variable is missing.');
+    console.error('[seed] STRIPE_SECRET_KEY missing.');
     throw new Error('STRIPE_SECRET_KEY environment variable is missing');
   }
   if (!accountsRaw) {
-    console.error('[seed] ACCOUNTS environment variable is missing.');
+    console.error('[seed] ACCOUNTS missing.');
     throw new Error('ACCOUNTS environment variable is missing');
   }
+  console.log('[seed] Required env vars present.');
 
   const accounts = accountsRaw
     .split(',')
     .map((acc) => acc.trim())
     .filter(Boolean);
   if (accounts.length === 0) {
-    console.error('[seed] ACCOUNTS environment variable contains no valid account IDs.');
+    console.error('[seed] No valid ACCOUNTS found.');
     throw new Error('ACCOUNTS environment variable contains no valid account IDs');
   }
+  console.log(`[seed] Found accounts: ${accounts.join(', ')}`);
 
-  // Check safety flag AFTER validating required env vars
+  // Check safety flag
+  console.log('[seed] Checking safety flag...');
   if (process.env.GUARDIAN_ALPHA_SEED !== '1') {
     console.log('[seed] GUARDIAN_ALPHA_SEED not set to "1". Aborting.');
-    return; // Return void if safety flag not set
+    return;
   }
+  console.log('[seed] Safety flag OK.');
 
   const stripe = new Stripe(stripeKey, { apiVersion: '2024-04-10' });
+  console.log('[seed] Stripe client initialized.');
 
   try {
     // 2. Select a random account
-    const acct = accounts[randomInt(0, accounts.length)]; // randomInt is exclusive of max
+    console.log('[seed] Selecting account...');
+    const acct = accounts[randomInt(0, accounts.length)];
     console.log(`[seed] Selected account: ${acct}`);
 
     // Initialize balance if not present
+    console.log('[seed] Initializing balance...');
     if (balances[acct] === undefined) {
       balances[acct] = 0;
     }
 
     // 3. Generate and create a random charge
+    console.log('[seed] Preparing charge...');
     const amountCents = randomInt(5, 50 + 1) * 100; // $5.00 - $50.00
     let chargeId: string = 'ch_failed'; // Default in case of failure
 
     try {
-      console.log(`[seed] Creating charge for ${acct}: $${(amountCents / 100).toFixed(2)}...`);
+      console.log(`[seed] Creating charge for ${acct}...`);
       const charge = await stripe.charges.create(
         {
           amount: amountCents,
@@ -80,17 +90,18 @@ export async function runSeeder(): Promise<{
         // { stripeAccount: acct } // Might not be needed if transfer_data is used
       );
       chargeId = charge.id;
-      console.log(`[seed] charge ${acct} $${(amountCents / 100).toFixed(2)} → ${chargeId}`);
+      console.log(`[seed] Charge successful: ${chargeId}`);
 
       // Update in-memory balance ONLY after successful charge
       balances[acct] = (balances[acct] ?? 0) + amountCents;
       console.log(`[seed] Balance after charge for ${acct}: $${(balances[acct] / 100).toFixed(2)}`);
     } catch (chargeError) {
-      console.error(`[seed] Failed to create charge for ${acct}:`, chargeError);
+      console.error(`[seed] Charge creation failed:`, chargeError);
       // Don't update balance if charge fails
     }
 
     // 4. Decide and create payout (60% chance if balance >= $3)
+    console.log('[seed] Evaluating payout...');
     const currentBalance = balances[acct] ?? 0;
     const shouldPayout = currentBalance >= 300 && Math.random() < 0.6;
     let payoutId: string | null = null;
@@ -101,7 +112,7 @@ export async function runSeeder(): Promise<{
       const minPayout = 300;
       const payoutCents = randomInt(minPayout, maxPayout + 1);
 
-      console.log(`[seed] Attempting payout for ${acct}: $${(payoutCents / 100).toFixed(2)}...`);
+      console.log(`[seed] Attempting payout for ${acct}...`);
       try {
         const payout = await stripe.payouts.create(
           {
@@ -113,26 +124,22 @@ export async function runSeeder(): Promise<{
         );
         payoutId = payout.id;
         balances[acct] -= payoutCents; // Update balance after successful payout
-        console.log(
-          `[seed] payout ${acct} $${(payoutCents / 100).toFixed(2)} → ${payoutId} ` +
-            `| new balance $${(balances[acct] / 100).toFixed(2)}`,
-        );
+        console.log(`[seed] Payout successful: ${payoutId}`);
       } catch (payoutError) {
-        console.error(`[seed] Failed to create payout for ${acct}:`, payoutError);
+        console.error(`[seed] Payout creation failed:`, payoutError);
         // Balance remains unchanged if payout fails
       }
     } else {
-      console.log(
-        `[seed] No payout for ${acct}. Balance: $${(currentBalance / 100).toFixed(2)}, Roll < 0.6: ${Math.random() < 0.6}`,
-      );
+      console.log(`[seed] Skipping payout for ${acct}.`);
     }
 
     // TODO: Implement scenario logic here later
 
     // 5. Return result
+    console.log('[seed] Preparing result...');
     return { acct, chargeId, payoutId, balanceCents: balances[acct] ?? 0 };
   } catch (error) {
-    console.error('[seed] Unhandled error during seed cycle:', error);
-    throw error; // Re-throw the error to be caught by the API handler
+    console.error('[seed] Unhandled error in runSeeder try block:', error);
+    throw error;
   }
 }

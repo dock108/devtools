@@ -68,3 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update to latest Stripe CLI binary (v1.19.1) to ensure availability in Vercel serverless functions
 - Create postinstall script to properly copy Stripe CLI binary to node_modules/.bin/
 - Update Stripe dependency to v14.7.0
+- Time-Warp seeder now randomly plays one of three fraud scenarios via
+  `stripe fixtures`, scaled to the `SPEED_FACTOR`, so Guardian fires alerts in
+  every live sandbox session.
+- **Guardian Demo:** Add `ScenarioPicker` component to manually trigger scenarios.
+- **Auth:** Implement Sign Up with email/password, including confirmation email.
+
+### Changed

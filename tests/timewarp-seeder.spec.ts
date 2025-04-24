@@ -1,16 +1,41 @@
 import nock from 'nock';
 import { runSeeder } from '../src/lib/timewarp-seeder';
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+
+// Mock child_process module
+// Mock fs module
+const mockReadFileFn = jest.fn();
+jest.mock('node:child_process', () => ({
+  ...jest.requireActual('node:child_process'), // Keep original implementation for other functions
+  execFileSync: jest.fn(), // Define the mock function inside the factory
+}));
+jest.mock('node:fs', () => ({
+  ...jest.requireActual('node:fs'), // Keep original implementation for other fs functions
+  readFileSync: jest.fn(), // Define the mock function inside the factory
+}));
 
 // Store original Math.random
 const originalMathRandom = Math.random;
 
-// Clean up nock and reset env vars and Math.random after each test
+// Reset all mocks before each test to ensure clean state
+beforeEach(() => {
+  jest.clearAllMocks();
+  // Also clear nock just in case
+  nock.cleanAll();
+});
+
+// Clean up nock and reset env vars after each test
 afterEach(() => {
   nock.cleanAll();
   delete process.env.GUARDIAN_ALPHA_SEED;
   delete process.env.STRIPE_SECRET_KEY;
   delete process.env.ACCOUNTS;
-  Math.random = originalMathRandom; // Restore original Math.random
+  delete process.env.SPEED_FACTOR;
+  jest.restoreAllMocks(); // Restore mocks including fs and Math.random
+  // Clear module mocks
+  (childProcess.execFileSync as jest.Mock).mockClear();
+  (fs.readFileSync as jest.Mock).mockClear();
 });
 
 it('should run without throwing if safety flag is off', async () => {
@@ -60,8 +85,8 @@ it('creates one charge successfully', async () => {
 });
 
 it('creates payout when balance high', async () => {
-  // Force random roll to trigger payout
-  Math.random = () => 0.1; // Ensure roll < 0.6
+  // Mock Math.random specifically for this test
+  const mockMathRandom = jest.spyOn(global.Math, 'random').mockReturnValue(0.1); // Ensure roll < 0.6
 
   process.env.GUARDIAN_ALPHA_SEED = '1';
   process.env.STRIPE_SECRET_KEY = 'sk_test_payout';
@@ -71,7 +96,7 @@ it('creates payout when balance high', async () => {
   const scope = nock('https://api.stripe.com')
     .post('/v1/charges')
     .reply(200, { id: 'ch_payout_charge', amount: 5000 }) // $50 charge
-    .post('/v1/payouts')
+    .post('/v1/payouts') // Mock payout
     .reply(200, { id: 'po_payout_test' });
 
   const result = await runSeeder();
@@ -81,6 +106,8 @@ it('creates payout when balance high', async () => {
   expect(result).toBeDefined();
   expect(result?.payoutId).toBe('po_payout_test'); // Verify payout ID
   expect(result?.balanceCents).toBeLessThan(5000); // Balance should decrease
+
+  mockMathRandom.mockRestore(); // Restore Math.random after this test
 });
 
 it('does not create payout when balance low or roll fails', async () => {
@@ -89,25 +116,22 @@ it('does not create payout when balance low or roll fails', async () => {
 
   // --- Test low balance case ---
   process.env.ACCOUNTS = 'acct_low_balance_only'; // Use a unique account ID
-
+  // No need to mock Math.random here, balance is the deciding factor
   const chargeMockLowBalance = nock('https://api.stripe.com')
     .post('/v1/charges')
     .reply(200, { id: 'ch_nopayout_charge_low', amount: 100 }); // Charge less than $3
   // Define the payout mock. We expect this NOT to be called.
   const payoutMockLowBalance = nock('https://api.stripe.com').post('/v1/payouts').reply(500);
 
-  const resultLowBalance = await runSeeder();
+  await runSeeder();
   expect(chargeMockLowBalance.isDone()).toBe(true);
-  // Check if the payout mock string is still in the active mocks list
   expect(nock.activeMocks()).toContain('POST https://api.stripe.com:443/v1/payouts');
-  expect(resultLowBalance?.payoutId).toBeNull();
-
-  // Clean mocks specifically for the next part of the test
-  nock.cleanAll();
+  expect((await runSeeder())?.payoutId).toBeNull(); // Re-run to check payoutId
+  nock.cleanAll(); // Clean specifically before next sub-test
 
   // --- Test roll fail case ---
   process.env.ACCOUNTS = 'acct_roll_fail_only'; // Use another unique account ID
-  Math.random = () => 0.9; // Force roll > 0.6
+  const mockMathRandomRollFail = jest.spyOn(global.Math, 'random').mockReturnValue(0.9); // Force roll > 0.6
 
   const chargeMockRollFail = nock('https://api.stripe.com')
     .post('/v1/charges')
@@ -115,11 +139,71 @@ it('does not create payout when balance low or roll fails', async () => {
   // Define the payout mock again.
   const payoutMockRollFail = nock('https://api.stripe.com').post('/v1/payouts').reply(500);
 
-  const resultRollFail = await runSeeder();
+  await runSeeder();
   expect(chargeMockRollFail.isDone()).toBe(true);
-  // Check if the payout mock string is still active
   expect(nock.activeMocks()).toContain('POST https://api.stripe.com:443/v1/payouts');
-  expect(resultRollFail?.payoutId).toBeNull();
+  expect((await runSeeder())?.payoutId).toBeNull(); // Re-run to check payoutId
 
-  Math.random = originalMathRandom; // Restore original Math.random
+  mockMathRandomRollFail.mockRestore(); // Restore Math.random
+});
+
+it('injects fraud scenario via stripe fixtures when roll succeeds', async () => {
+  // Mock Math.random to ensure scenario injection
+  const mockMathRandomInject = jest.spyOn(global.Math, 'random').mockReturnValue(0.1);
+  // Setup mock return value for readFileSync for this test
+  (fs.readFileSync as jest.Mock).mockReturnValue(
+    JSON.stringify([{ event: 'test', delayMs: 10000 }]),
+  );
+
+  process.env.GUARDIAN_ALPHA_SEED = '1';
+  process.env.STRIPE_SECRET_KEY = 'sk_test_inject';
+  process.env.ACCOUNTS = 'acct_inject_test';
+  process.env.SPEED_FACTOR = '10'; // For predictable scaling
+
+  // Mock charge (doesn't matter much for this test)
+  const chargeMock = nock('https://api.stripe.com')
+    .post('/v1/charges')
+    .reply(200, { id: 'ch_inject_charge', amount: 500 });
+
+  await runSeeder();
+
+  // Access the mock via the imported module
+  const mockExec = childProcess.execFileSync as jest.Mock;
+  expect(chargeMock.isDone()).toBe(true); // Basic check
+  expect(fs.readFileSync).toHaveBeenCalledWith(
+    expect.stringContaining('fixtures/scenarios/'),
+    'utf8',
+  );
+  expect(mockExec).toHaveBeenCalledTimes(1);
+  expect(mockExec).toHaveBeenCalledWith(
+    'stripe',
+    ['fixtures', '-', '--account', 'acct_inject_test', '--quiet'],
+    expect.objectContaining({
+      input: JSON.stringify([{ event: 'test', delayMs: 1000 }]), // 10000 / 10
+      stdio: ['pipe', 'inherit', 'inherit'],
+    }),
+  );
+  mockMathRandomInject.mockRestore(); // Restore Math.random
+});
+
+it('does NOT inject fraud scenario when roll fails', async () => {
+  // Mock Math.random to ensure scenario injection is skipped
+  const mockMathRandomNoInject = jest.spyOn(global.Math, 'random').mockReturnValue(0.9); // Ensures injectFraud is false (0.9 > 0.4)
+
+  process.env.GUARDIAN_ALPHA_SEED = '1';
+  process.env.STRIPE_SECRET_KEY = 'sk_test_no_inject';
+  process.env.ACCOUNTS = 'acct_no_inject_test';
+
+  // Mock charge
+  const chargeMock = nock('https://api.stripe.com')
+    .post('/v1/charges')
+    .reply(200, { id: 'ch_no_inject_charge', amount: 500 });
+
+  await runSeeder();
+
+  // Access the mock via the imported module
+  const mockExec = childProcess.execFileSync as jest.Mock;
+  expect(chargeMock.isDone()).toBe(true);
+  expect(mockExec).not.toHaveBeenCalled();
+  mockMathRandomNoInject.mockRestore(); // Restore Math.random
 });
