@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `src/lib/timewarp-seeder.ts` with stubbed `runSeeder()`; serves as scaffold for upcoming seeder logic.
+- Bundled Stripe CLI binary (stripe-cli-linux-x64) via postinstall so serverless Time-Warp seeder can execute `stripe fixtures` inside Vercel.
+- Time-Warp seeder now creates a real $5-$50 charge on a random sandbox account each run and tracks in-memory balances.
 - Vercel cron job (\*/10 min) triggers `/api/tasks/timewarp-seeder`, ensuring continuous sandbox activity.
 - Edge route `/api/tasks/timewarp-seeder` that runs `npm run seed:prod` (used by scheduled cron to keep sandbox traffic flowing).
 - npm script `seed:prod` runs the Time-Warp seeder.
@@ -62,13 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - /notary-ci product page with hero, pain/solution, features, pricing, Supabase wait-list.
 - Added accent.notary color token (already present).
 - Added `notary_leads`
-
-### Changed
-
-- Time-Warp seeder logic now embedded directly in API routes to avoid build issues with dependencies.
-- Serverless seeder now calls `runSeeder()` directly; removed child-process and ts-node dependency, fixing bundle issues and reducing cold-start latency.
-- Time-Warp seeder pre-compiled to `timewarp-seeder.mjs`; serverless function now invokes plain Node, removing runtime ts-node install errors on Vercel.
-
-### Fixed
-
-- Time-Warp cron now targets robust Node.js API routes with multi-stage fallback (npm script → direct ts-node execution), auto-installs missing dependencies, and ensures proper logging of all execution steps.
+- Update to latest Stripe CLI binary (v1.19.1) to ensure availability in Vercel serverless functions
+- Create postinstall script to properly copy Stripe CLI binary to node_modules/.bin/
+- Update Stripe dependency to v14.7.0

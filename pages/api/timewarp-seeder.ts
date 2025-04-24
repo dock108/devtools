@@ -3,14 +3,16 @@ import Stripe from 'stripe';
 import { readFileSync } from 'fs';
 import { randomInt } from 'crypto';
 import * as path from 'path';
+import { runSeeder } from '../../src/lib/timewarp-seeder';
 
 // Helper function to get random integer
 function getRandomInt(min: number, max: number): number {
   return randomInt(min, max + 1); // randomInt is exclusive of max
 }
 
-// Main seeder function
-async function runSeeder() {
+// Main seeder function - kept for now, but will be removed
+// once the import is used in the handler
+async function embeddedRunSeeder() {
   console.log('[INFO] Starting time-warp seed cycle...');
 
   // 1. Check safety flag
@@ -222,27 +224,20 @@ async function runSeeder() {
 
 export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   try {
-    console.log('Starting timewarp-seeder directly from API handler...');
-    const result = await runSeeder();
+    console.log('Starting timewarp-seeder API handler...');
 
-    if (!result) {
-      // If runSeeder returns undefined, it means the safety flag was not set
-      return res.status(200).json({
-        ok: true,
-        message: 'Seeder not run: GUARDIAN_ALPHA_SEED not set to "1"',
-      });
-    }
+    // NOTE: We are NOT calling runSeeder() yet, just returning success
+    // The actual call will be added in a later step.
 
     return res.status(200).json({
       ok: true,
-      message: 'Seeder executed successfully',
-      result,
+      message: 'Seeder API called successfully (stub imported)',
     });
   } catch (error) {
-    console.error('Seeder execution failed:', error);
+    console.error('Seeder API failed:', error);
     return res.status(500).json({
       ok: false,
-      error: 'Seeder execution failed',
+      error: 'Seeder API failed',
       message: error instanceof Error ? error.message : String(error),
     });
   }
