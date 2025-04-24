@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-seeder.js",
     "build": "node build.mjs",
     "start": "next start",
     "lint": "eslint .",
@@ -20,7 +21,7 @@
     "lint-staged": "lint-staged",
     "prepare": "husky install",
     "vercel:env": "ts-node scripts/set-vercel-env.ts",
-    "seed:prod": "node scripts/timewarp-seeder.mjs",
+    "seed:prod": "node scripts/timewarp-seeder.js",
     "pw-test": "playwright test",
     "start-preview": "next start -p 5555",
     "lh-ci": "lhci autorun"

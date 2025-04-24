@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Serverless seeder now calls `runSeeder()` directly; removed child-process and ts-node dependency, fixing bundle issues and reducing cold-start latency.
 - Time-Warp seeder pre-compiled to `timewarp-seeder.mjs`; serverless function now invokes plain Node, removing runtime ts-node install errors on Vercel.
 
 ### Fixed
