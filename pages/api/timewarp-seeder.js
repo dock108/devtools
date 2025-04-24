@@ -1,7 +1,10 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { spawnSync } from 'child_process';
+const { spawnSync } = require('child_process');
 
-export default function handler(_req: NextApiRequest, res: NextApiResponse) {
+/**
+ * @param {import('next').NextApiRequest} req
+ * @param {import('next').NextApiResponse} res
+ */
+module.exports = function handler(req, res) {
   const out = spawnSync('npm', ['run', 'seed:prod'], { encoding: 'utf8', env: process.env });
 
   if (out.status === 0) {
@@ -10,4 +13,4 @@ export default function handler(_req: NextApiRequest, res: NextApiResponse) {
     console.error(out.stderr);
     res.status(500).json({ ok: false, stderr: out.stderr });
   }
-}
+} 
