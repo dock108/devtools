@@ -226,19 +226,38 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
   try {
     console.log('Starting timewarp-seeder API handler...');
 
-    // NOTE: We are NOT calling runSeeder() yet, just returning success
-    // The actual call will be added in a later step.
+    // Call the imported runSeeder function
+    const result = await runSeeder();
 
+    // Check if runSeeder returned void (e.g., safety flag not set)
+    if (!result) {
+      console.log('runSeeder returned void (likely due to safety flag). Handler exiting.');
+      return res.status(200).json({
+        ok: true,
+        message: 'Seeder run aborted (safety flag or other condition).',
+      });
+    }
+
+    // If runSeeder completed successfully
+    console.log('runSeeder completed. Sending success response.', result);
     return res.status(200).json({
       ok: true,
-      message: 'Seeder API called successfully (stub imported)',
+      message: 'Seeder ran successfully.',
+      data: result,
     });
   } catch (error) {
-    console.error('Seeder API failed:', error);
+    console.error('Seeder API handler failed:', error);
+    // Log the stack trace if available
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error(`Error message: ${errorMessage}`);
+    if (stack) console.error(`Stack trace: ${stack}`);
+
     return res.status(500).json({
       ok: false,
       error: 'Seeder API failed',
-      message: error instanceof Error ? error.message : String(error),
+      message: errorMessage,
+      stack: stack, // Optionally include stack in dev environments
     });
   }
 }
