@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { RefreshCcw, Trash2, AlertCircle, LinkIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import AccountsClient from './accounts-client';
+import { ReloadButton } from '@/components/ReloadButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -28,9 +29,9 @@ export default async function AccountsPage() {
         <p className="text-slate-500 mb-6">
           There was an error loading your connected accounts. Please try refreshing the page.
         </p>
-        <Button onClick={() => window.location.reload()}>
+        <ReloadButton>
           Refresh
-        </Button>
+        </ReloadButton>
       </div>
     );
   }

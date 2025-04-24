@@ -42,47 +42,50 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // Update the Supabase session for all applicable requests
+  // Update the Supabase session first
   const response = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  // Create a Supabase client AFTER session update to check auth state
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          // Use request cookies because response cookies are not set yet
+          return request.cookies.getAll();
+        },
+        // No need for set/remove here
+      },
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // Redirect logged-in users from /login to the dashboard
+  if (session && pathname === '/login') {
+    const redirectUrl = new URL('/stripe-guardian/alerts', request.url);
+    return NextResponse.redirect(redirectUrl);
+  }
 
   // Check if the current path requires authentication
   const requiresAuth = protectedPaths.some((path) => pathname.startsWith(path));
 
-  if (requiresAuth) {
-    // Check if user is authenticated using a temporary client
-    // Note: updateSession already refreshed the cookie if needed
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          // Read-only operations, no need for set/remove
-        },
-      },
-    );
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    // If no session and path requires auth, redirect to login
-    if (!session) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirectTo', pathname);
-      console.log(`Redirecting unauthenticated user from ${pathname} to ${loginUrl.toString()}`); // Debug log
-      return NextResponse.redirect(loginUrl);
-    }
-    console.log(`User is authenticated for protected path: ${pathname}`); // Debug log
+  // If path requires auth and user is not logged in, redirect to login
+  if (requiresAuth && !session) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
+    console.log(`Redirecting unauthenticated user from ${pathname} to ${loginUrl.toString()}`);
+    // Return a new redirect response, not the one from updateSession
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Add security and CORS headers to all responses
+  // Add security and CORS headers to the response from updateSession (or the main response if no auth checks happened)
   Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));
   Object.entries(corsHeaders).forEach(([k, v]) => response.headers.set(k, v));
 
+  // Return the response (potentially modified by updateSession)
   return response;
 }
 

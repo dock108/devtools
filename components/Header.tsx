@@ -6,25 +6,58 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from './ui/button';
 import { useSession } from '@/hooks/useSession';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
+import { 
+  DropdownMenu, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser';
 import { md5 } from '@/utils/md5';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ShieldAlert, Plug, Cog, LogOut } from 'lucide-react';
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { session, loading } = useSession();
+  const [connectedAccounts, setConnectedAccounts] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      const fetchAccounts = async () => {
+        const { data, error } = await supabase
+          .from('connected_accounts')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .limit(1);
+
+        if (error) {
+          console.error('Error fetching connected accounts:', error);
+          setConnectedAccounts([]);
+        } else {
+          setConnectedAccounts(data || []);
+        }
+      };
+      fetchAccounts();
+    } else {
+      setConnectedAccounts(null);
+    }
+  }, [session]);
 
   useEffect(() => {
     console.log('Header session state:', session);
     console.log('Header loading state:', loading);
-  }, [session, loading]);
+    console.log('Header connected accounts:', connectedAccounts);
+  }, [session, loading, connectedAccounts]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/login');
   };
+
+  const showConnectLink = session && connectedAccounts !== null && connectedAccounts.length === 0;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-700/60 bg-slate-900">
@@ -65,8 +98,8 @@ export function Header() {
             Docs
           </Link>
           
-          {loading ? (
-            <div className="h-8 w-20 animate-pulse rounded bg-slate-700"></div>
+          {loading || (session && connectedAccounts === null) ? (
+            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-700"></div> 
           ) : session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -75,12 +108,35 @@ export function Header() {
                   <AvatarFallback>{(session.user.email || 'U')[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href="/settings/accounts">Settings</Link>
+                  <Link href="/stripe-guardian/alerts">
+                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Link>
                 </DropdownMenuItem>
+
+                {showConnectLink && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/stripe-guardian/onboard">
+                      <Plug className="mr-2 h-4 w-4" />
+                      <span>Connect account</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/accounts">
+                    <Cog className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
                 <DropdownMenuItem onSelect={handleSignOut}>
-                  Log out
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -93,6 +149,6 @@ export function Header() {
       </Container>
     </header>
   );
-} 
+}
  
  

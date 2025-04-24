@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { redirect, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
@@ -14,7 +14,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/stripe-guardian';
+  const redirectTo = searchParams.get('redirectTo');
+  const defaultRedirect = '/stripe-guardian/alerts';
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,16 +24,16 @@ function LoginForm() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Check if already logged in
+    // Check if already logged in and redirect to dashboard
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        redirect(redirectTo);
+        router.replace('/stripe-guardian/alerts');
       }
     };
     
     checkSession();
-  }, [redirectTo, supabase]);
+  }, [router, supabase]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +50,8 @@ function LoginForm() {
         throw error;
       }
 
-      router.push(redirectTo);
+      // Redirect after successful login
+      router.push(redirectTo || defaultRedirect);
       router.refresh();
     } catch (error: any) {
       setError(error.message || 'An error occurred during sign in');

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
@@ -33,13 +34,26 @@ type AlertChannels = {
   auto_pause: boolean;
 };
 
-export default function AlertsPage() {
+// Wrap the core logic in a component to use Suspense
+function AlertsPageContent() {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [autoPause, setAutoPause] = useState(false);
   const [updatingAutoPause, setUpdatingAutoPause] = useState(false);
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Show toast on first connect
+  useEffect(() => {
+    const firstConnect = searchParams.get('first');
+    if (firstConnect === '1') {
+      toast.success('✅ Account connected — Guardian is now monitoring payouts.');
+      // Remove the query param from URL without reloading
+      router.replace('/stripe-guardian/alerts', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // Fetch user's account and alerts
   useEffect(() => {
@@ -111,6 +125,7 @@ export default function AlertsPage() {
           filter: `stripe_account_id=eq.${accountId}`
         }, 
         (payload) => {
+          console.log('Realtime payload:', payload);
           if (payload.eventType === 'INSERT') {
             setAlerts(prev => [payload.new as Alert, ...prev]);
             toast.success('New alert received!');
@@ -194,83 +209,79 @@ export default function AlertsPage() {
       setAlerts(prev => 
         prev.map(alert => 
           alert.id === id 
-            ? { ...alert, resolved: false } 
+            ? { ...alert, resolved: false }
             : alert
         )
       );
     }
   };
 
-  // Filter alerts by resolved status
-  const unresolvedAlerts = alerts.filter(alert => !alert.resolved);
-  const resolvedAlerts = alerts.filter(alert => alert.resolved);
-
   if (loading) {
     return (
-      <Container>
-        <div className="flex justify-center items-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <Container className="py-10">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
         </div>
       </Container>
     );
   }
 
-  return (
-    <Container>
-      <div className="py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Stripe Guardian Alerts</h1>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Auto-pause payouts on critical alerts</span>
-            <Switch 
-              checked={autoPause} 
-              onCheckedChange={toggleAutoPause}
-              disabled={updatingAutoPause}
-            />
-          </div>
+  if (!accountId) {
+    return (
+      <Container className="py-10">
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <h3 className="font-medium text-lg mb-2">No account connected</h3>
+          <p className="text-slate-500 mb-6">
+            Connect your Stripe account to start monitoring payouts and receive alerts.
+          </p>
+          <Button asChild>
+            <a href="/stripe-guardian/onboard">Connect Stripe Account</a>
+          </Button>
         </div>
+      </Container>
+    );
+  }
 
-        <Tabs defaultValue="unresolved">
-          <TabsList className="mb-4">
-            <TabsTrigger value="unresolved">
-              Unresolved {unresolvedAlerts.length > 0 && `(${unresolvedAlerts.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="resolved">
-              Resolved {resolvedAlerts.length > 0 && `(${resolvedAlerts.length})`}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="unresolved">
-            {unresolvedAlerts.length === 0 ? (
-              <div className="text-center py-12 bg-slate-50 rounded-lg border">
-                <p className="text-lg">🎉 No open alerts – Guardian is happy.</p>
-              </div>
-            ) : (
-              <AlertsTable 
-                alerts={unresolvedAlerts} 
-                onResolve={markResolved}
-                showResolveAction
-              />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="resolved">
-            {resolvedAlerts.length === 0 ? (
-              <div className="text-center py-12 bg-slate-50 rounded-lg border">
-                <p className="text-lg">No resolved alerts yet.</p>
-              </div>
-            ) : (
-              <AlertsTable 
-                alerts={resolvedAlerts} 
-                onResolve={markResolved}
-                showResolveAction={false}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+  const activeAlerts = alerts.filter(alert => !alert.resolved);
+  const resolvedAlerts = alerts.filter(alert => alert.resolved);
+
+  return (
+    <Container className="py-10">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Payout Guardian Alerts</h1>
+        <div className="flex items-center space-x-2">
+          <span className='text-sm text-slate-600'>Auto-pause alerts</span>
+          <Switch
+            checked={autoPause}
+            onCheckedChange={toggleAutoPause}
+            disabled={updatingAutoPause}
+            aria-label="Toggle auto-pause for alerts"
+          />
+        </div>
       </div>
+
+      <Tabs defaultValue="active">
+        <TabsList className="mb-6">
+          <TabsTrigger value="active">Active ({activeAlerts.length})</TabsTrigger>
+          <TabsTrigger value="resolved">Resolved ({resolvedAlerts.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active">
+          <AlertsTable alerts={activeAlerts} onResolve={markResolved} showResolveAction={true} />
+        </TabsContent>
+        <TabsContent value="resolved">
+          <AlertsTable alerts={resolvedAlerts} onResolve={markResolved} showResolveAction={false} />
+        </TabsContent>
+      </Tabs>
     </Container>
+  );
+}
+
+// New top-level export that uses Suspense
+export default function AlertsPage() {
+  return (
+    <Suspense fallback={<div>Loading page...</div>}> 
+      <AlertsPageContent />
+    </Suspense>
   );
 }
 
@@ -281,48 +292,45 @@ type AlertsTableProps = {
 };
 
 function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps) {
+  if (alerts.length === 0) {
+    return <div className="text-center text-slate-500 py-10">No alerts here.</div>;
+  }
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'high': return 'destructive';
+      case 'medium': return 'warning';
+      default: return 'secondary';
+    }
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border rounded-md text-sm">
-        <thead>
-          <tr className="bg-slate-100">
-            <th className="px-4 py-2 text-left font-medium">Date</th>
-            <th className="px-4 py-2 text-left font-medium">Rule</th>
-            <th className="px-4 py-2 text-left font-medium">Severity</th>
-            <th className="px-4 py-2 text-left font-medium">Message</th>
-            <th className="px-4 py-2 text-left font-medium">Payout ID</th>
-            {showResolveAction && (
-              <th className="px-4 py-2 text-left font-medium">Actions</th>
-            )}
+    <div className="overflow-x-auto bg-white rounded-lg shadow">
+      <table className="min-w-full divide-y divide-slate-200">
+        <thead className="bg-slate-50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Severity</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Message</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Payout ID</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Time</th>
+            {showResolveAction && <th scope="col" className="relative px-6 py-3"><span className="sr-only">Resolve</span></th>}
           </tr>
         </thead>
-        <tbody>
-          {alerts.map((alert, index) => (
-            <tr 
-              key={alert.id} 
-              className={index % 2 === 0 ? '' : 'bg-slate-50'}
-            >
-              <td className="px-4 py-3 whitespace-nowrap">
-                {format(new Date(alert.created_at), 'MMM d, yyyy HH:mm:ss')}
+        <tbody className="bg-white divide-y divide-slate-200">
+          {alerts.map((alert) => (
+            <tr key={alert.id}>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <Badge variant={getSeverityBadge(alert.severity)} className="capitalize">{alert.severity}</Badge>
               </td>
-              <td className="px-4 py-3">{alert.alert_type}</td>
-              <td className="px-4 py-3">
-                <Badge variant={alert.severity as any}>
-                  {alert.severity.toUpperCase()}
-                </Badge>
-              </td>
-              <td className="px-4 py-3">{alert.message}</td>
-              <td className="px-4 py-3 font-mono text-xs">
-                {alert.stripe_payout_id || 'N/A'}
+              <td className="px-6 py-4 text-sm text-slate-700">{alert.message}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">{alert.stripe_payout_id || 'N/A'}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500" title={new Date(alert.created_at).toISOString()}>
+                {format(new Date(alert.created_at), 'PP pp')}
               </td>
               {showResolveAction && (
-                <td className="px-4 py-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => onResolve(alert.id)}
-                  >
-                    Resolve
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <Button variant="outline" size="sm" onClick={() => onResolve(alert.id)}>
+                    Mark Resolved
                   </Button>
                 </td>
               )}

@@ -91,41 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved text contrast to slate-700 body color and added active navigation highlight via data attributes.
 - Memoised Intl DateTime & currency formatters via lib/formatters and refactored components to use them.
 - Composite index `(stripe_account_id, created_at)` on `payout_events` table to speed up velocity rule queries and backfill inserts.
+- Avatar menu now includes Dashboard, Connect account, Settings, and Log out.
 
 ### Changed
 
+- Users are now routed to **/stripe-guardian/alerts** immediately after login and after connecting their first Stripe account.
 - Used shadcn `Label`
-- Supabase CLI removed from Vercel build; migrations now applied manually via supabase db push.
-
-### Fixed
-
-- Standardized builds on Node 20 + npm 10; removed pnpm artifacts; Vercel now runs npm ci, eliminating multi-compiler mismatch.
-- Wait-list sign-up now persists email addresses; duplicate submissions handled gracefully.
-- Removed legacy progress bar and speed dropdown from Guardian demo UI.
-- Renamed `SUPABASE_SERVICE_ROLE` → `SUPABASE_SERVICE_ROLE_KEY` across codebase, environment files, CI, and deployment scripts to prevent runtime errors when writing to Supabase.
-- Relaxed Content‑Security‑Policy to include Google Fonts and allow inline scripts for Next.js bootstrap, unblocking Vercel demo pages.
-- Duplicate timers and stale fetch race eliminated in `useDemoScenario`; rapid scenario changes no longer cause duplicated rows.
-- Global header now reflects authenticated state (avatar + logout) instead of always showing 'Log In'.
-- NULL email_change in auth.users caused 500 on password login; column default & NOT NULL restored.
-- Removed manual JSON parsing of `supabase-auth-token`; cookie is a JWT, not JSON, eliminating console error spam.
-
-### Removed
-
-- Public GitHub link and badge removed from site until repo is open-sourced.
-- Loop-scenario option eliminated; scenarios now run once and can be restarted manually.
-- Velocity payout chart removed; Guardian demo now uses two-column layout (Event Table + Action Log).
-
-### Docs
-
-- Added comprehensive `.env.example` and local OAuth setup guide for Guardian onboarding.
-- Created detailed local-dev documentation for Stripe Connect OAuth flow and webhook handling.
-
-## [Unreleased] - Connected Account Onboarding
-
-### Security
-
-- Public sign-up disabled; sign-in restricted to emails in `ALPHA_ALLOW_LIST` during closed alpha.
-
-### Changed
-
-- Connected accounts table now includes user_id, webhook_secret, live flag, and RLS policies restricting access to the owner.
