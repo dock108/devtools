@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added accent.notary color token (already present).
 - Added `notary_leads`
 
+### Changed
+
+- Time-Warp seeder pre-compiled to `timewarp-seeder.mjs`; serverless function now invokes plain Node, removing runtime ts-node install errors on Vercel.
+
 ### Fixed
 
 - Time-Warp cron now targets robust Node.js API routes with multi-stage fallback (npm script → direct ts-node execution), auto-installs missing dependencies, and ensures proper logging of all execution steps.

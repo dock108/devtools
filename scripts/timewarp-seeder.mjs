@@ -1,26 +1,31 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
-import fs from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Simple inline logger - no external dependencies
 const logger = {
-  info: (msgOrObj: any, msgOptional?: string) => {
+  info: (msgOrObj, msgOptional) => {
     if (msgOptional) {
       console.log(`[INFO] ${msgOptional}:`, msgOrObj);
     } else {
       console.log(`[INFO] ${msgOrObj}`);
     }
   },
-  warn: (msgOrObj: any, msgOptional?: string) => {
+  warn: (msgOrObj, msgOptional) => {
     if (msgOptional) {
       console.warn(`[WARN] ${msgOptional}:`, msgOrObj);
     } else {
       console.warn(`[WARN] ${msgOrObj}`);
     }
   },
-  error: (msgOrObj: any, msgOptional?: string) => {
+  error: (msgOrObj, msgOptional) => {
     if (msgOptional) {
       console.error(`[ERROR] ${msgOptional}:`, msgOrObj);
     } else {
@@ -43,31 +48,19 @@ const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/scenarios');
 
 // --- Helper Functions ---
 
-function getRandomInt(min: number, max: number): number {
+function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// --- Types for Scenario Processing ---
-
-interface ScenarioEvent {
-  delayMs: number;
-  type: string;
-  payload: {
-    id: string;
-    object: string;
-    [key: string]: any;
-  };
-}
-
 // --- Scenario Processing ---
 
-async function processScenario(acct: string, stripe: Stripe, scenarioPath: string): Promise<void> {
+async function processScenario(acct, stripe, scenarioPath) {
   try {
     // Read and parse the scenario file
-    const content = await fs.readFile(scenarioPath, 'utf-8');
-    const events = JSON.parse(content) as ScenarioEvent[];
+    const content = await readFile(scenarioPath, 'utf-8');
+    const events = JSON.parse(content);
 
     if (!Array.isArray(events) || events.length === 0) {
       logger.warn({ acct, scenarioPath }, 'Scenario file has invalid format or is empty');
@@ -227,7 +220,7 @@ async function runSeedCycle() {
     process.exit(1);
   }
 
-  const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' }); // Use the compatible API version
+  const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
   try {
     // 3. Choose random account
@@ -282,7 +275,7 @@ async function runSeedCycle() {
 
     // 4. Create Charge
     const chargeAmt = getRandomInt(500, 5000); // $5.00 - $50.00 in cents
-    let payoutAmt: number | undefined = undefined;
+    let payoutAmt = undefined;
 
     try {
       await stripe.charges.create({
@@ -327,7 +320,7 @@ async function runSeedCycle() {
       // Using >= 0.6 for the remaining 40%
       // 40% chance: Inject Scenario
       try {
-        const files = await fs.readdir(FIXTURES_DIR);
+        const files = await readdir(FIXTURES_DIR);
         const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
         if (jsonFiles.length > 0) {
