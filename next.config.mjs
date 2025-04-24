@@ -22,7 +22,7 @@ const nextConfig = {
     // Disable new CSS transforms on Vercel
     optimizeCss: false,
     // Disable Turbopack in production
-    turbo: false
+    turbo: undefined,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -42,4 +42,4 @@ const withMDX = createMDX({
   extension: /\.mdx?$/,
 });
 
-export default withMDX(nextConfig); 
+export default withMDX(nextConfig);

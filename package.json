@@ -82,6 +82,9 @@
     "typescript": "^5.4.0",
     "zod": "^3.23.6"
   },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "1.25.1"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@lhci/cli": "^0.14.0",
