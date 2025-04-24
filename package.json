@@ -8,7 +8,6 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/build-seeder.js",
     "build": "node build.mjs",
     "start": "next start",
     "lint": "eslint .",
@@ -21,7 +20,7 @@
     "lint-staged": "lint-staged",
     "prepare": "husky install",
     "vercel:env": "ts-node scripts/set-vercel-env.ts",
-    "seed:prod": "node scripts/timewarp-seeder.js",
+    "seed:prod": "curl -X GET http://localhost:3000/api/timewarp-seeder || echo 'Use via API endpoint only'",
     "pw-test": "playwright test",
     "start-preview": "next start -p 5555",
     "lh-ci": "lhci autorun"
@@ -75,7 +74,7 @@
     "recharts": "^2.8.0",
     "resend": "^4.4.0",
     "sonner": "^2.0.3",
-    "stripe": "^14.25.0",
+    "stripe": "^14.2.0",
     "stripe-event-types": "^3.0",
     "tailwind-merge": "^3.2.0",
     "tailwindcss": "^4.0.0",
