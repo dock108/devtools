@@ -65,4 +65,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Time-Warp cron now targets Node.js API routes (`pages/api/timewarp-seeder.*`) using multiple formats (TS, MJS) to ensure compatibility with serverless environments; Edge runtime removed to fix module and export issues.
+- Time-Warp cron now targets robust Node.js API routes with multi-stage fallback (npm script → direct ts-node execution), auto-installs missing dependencies, and ensures proper logging of all execution steps.
