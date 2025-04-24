@@ -21,7 +21,7 @@
       "schedule": "0 9 * * 1"
     },
     {
-      "path": "/api/tasks/timewarp-seeder",
+      "path": "/api/timewarp-seeder",
       "schedule": "*/10 * * * *"
     }
   ]

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Vercel cron job (*/10 min) triggers `/api/tasks/timewarp-seeder`, ensuring continuous sandbox activity.
+- Vercel cron job (\*/10 min) triggers `/api/tasks/timewarp-seeder`, ensuring continuous sandbox activity.
 - Edge route `/api/tasks/timewarp-seeder` that runs `npm run seed:prod` (used by scheduled cron to keep sandbox traffic flowing).
 - npm script `seed:prod` runs the Time-Warp seeder.
 - `scripts/timewarp-seeder.ts` simulates Stripe activity (charges, payouts, scenario selection) for sandbox accounts.
@@ -62,3 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - /notary-ci product page with hero, pain/solution, features, pricing, Supabase wait-list.
 - Added accent.notary color token (already present).
 - Added `notary_leads`
+
+### Fixed
+
+- Time-Warp cron now targets a Node serverless function (`api/timewarp-seeder`) that can spawn `npm run seed:prod`; Edge runtime removed.
