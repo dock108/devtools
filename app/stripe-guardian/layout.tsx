@@ -1,18 +1,8 @@
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { Toaster } from 'react-hot-toast';
+// Remove Header, Footer, Toaster, and wrapping div
+// The root layout now handles these
 
 export default function ProductLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-grow">
-        {children}
-      </main>
-      <Footer />
-      <Toaster position="bottom-right" />
-    </div>
-  );
+  return <>{children}</>; // Just pass children through
 } 
  
  
