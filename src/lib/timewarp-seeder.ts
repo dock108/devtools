@@ -63,46 +63,54 @@ export async function runSeeder(): Promise<{
     // --- Check and Top-Up Balance ---
     console.log(`[seed] Checking initial balance for ${acct}...`);
     try {
-      const balance = await stripe.balance.retrieve({ stripeAccount: acct });
-      const usdBalance = balance.available.find((b) => b.currency === 'usd');
-      let currentBalance = usdBalance?.amount ?? 0;
+      let balanceResponse = await stripe.balance.retrieve({ stripeAccount: acct });
+      let usdBalance = balanceResponse.available.find((b) => b.currency === 'usd');
+      let currentFetchedBalance = usdBalance?.amount ?? 0;
       console.log(
-        `[seed] Current fetched balance for ${acct}: $${(currentBalance / 100).toFixed(2)}`,
+        `[seed] Current fetched balance for ${acct}: $${(currentFetchedBalance / 100).toFixed(2)}`,
       );
 
       // If balance is less than $100, add $10,000 top-up
-      if (currentBalance < 10000) {
-        const topUpAmount = 1000000; // $10,000 (1,000,000 cents)
+      if (currentFetchedBalance < 10000) {
+        const topUpAmount = 1000000; // $10,000
         console.log(
           `[seed] Balance low. Adding $${(topUpAmount / 100).toFixed(2)} top-up to ${acct}...`,
         );
         await stripe.charges.create({
           amount: topUpAmount,
           currency: 'usd',
-          source: 'tok_visa', // Standard test token
+          source: 'tok_visa',
           description: 'Sandbox Top-Up [$10k]',
-          transfer_data: {
-            destination: acct,
-          },
+          transfer_data: { destination: acct },
         });
         console.log(`[seed] Top-up [$10k] charge created for ${acct}.`);
-        // Update balance variable AFTER top-up charge creation
-        currentBalance += topUpAmount;
+
+        // --- Add Delay and Re-fetch Balance ---
+        console.log('[seed] Waiting 10 seconds for top-up to settle...');
+        await new Promise((resolve) => setTimeout(resolve, 10000)); // 10-second delay
+
+        console.log(`[seed] Re-fetching balance for ${acct} after top-up...`);
+        balanceResponse = await stripe.balance.retrieve({ stripeAccount: acct });
+        usdBalance = balanceResponse.available.find((b) => b.currency === 'usd');
+        currentFetchedBalance = usdBalance?.amount ?? currentFetchedBalance; // Use new or old if fetch fails
+        console.log(
+          `[seed] Fetched balance after top-up for ${acct}: $${(currentFetchedBalance / 100).toFixed(2)}`,
+        );
+        // --- End Delay and Re-fetch ---
       } else {
         console.log(`[seed] Balance for ${acct} is sufficient.`);
       }
-      // Update in-memory balance based on fetch + potential top-up
-      balances[acct] = currentBalance;
+      // Update in-memory balance based on the LATEST fetched balance
+      balances[acct] = currentFetchedBalance;
     } catch (balanceError) {
       console.error(`[seed] Failed to fetch or top-up balance for ${acct}:`, balanceError);
-      // Initialize balance to 0 in memory if fetch fails
       balances[acct] = 0;
     }
     console.log(
-      `[seed] In-memory balance for ${acct} after check/top-up: $${(balances[acct] / 100).toFixed(2)}`,
+      `[seed] In-memory balance for ${acct} set to: $${(balances[acct] / 100).toFixed(2)}`,
     );
 
-    // Initialize balance if not present (redundant after check, but safe)
+    // Initialize balance if not present (safe check)
     if (balances[acct] === undefined) {
       balances[acct] = 0;
     }
@@ -141,7 +149,7 @@ export async function runSeeder(): Promise<{
       // Don't update balance if charge fails
     }
 
-    // 4. Decide and create payout (uses updated balance)
+    // 4. Decide and create payout (Uses balance AFTER fetch/top-up + charge)
     console.log('[seed] Evaluating payout...');
     const currentBalanceForPayout = balances[acct] ?? 0;
     const shouldPayout = currentBalanceForPayout >= 300 && Math.random() < 0.6;

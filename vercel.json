@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/timewarp-seeder",
-      "schedule": "*/10 * * * *"
+      "schedule": "*/2 * * * *"
     }
   ]
 }
