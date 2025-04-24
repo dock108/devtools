@@ -8,10 +8,10 @@ const PROD_ORIGIN = 'https://www.dock108.ai';
 const securityHeaders: Record<string, string> = {
   'Content-Security-Policy':
     "default-src 'self';" +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
-    'font-src https://fonts.gstatic.com;' +
+    "style-src 'self' 'unsafe-inline';" +
+    "font-src 'self' data:;" +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval';" +
-    "img-src 'self' data:;" +
+    "img-src 'self' data: https://www.gravatar.com;" +
     "connect-src 'self' https://*.supabase.co https://api.stripe.com;",
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
@@ -25,24 +25,13 @@ const corsHeaders: Record<string, string> = {
   'Access-Control-Max-Age': '86400',
 };
 
-// Public paths that don't require authentication
-const publicPaths = [
-  '/login',
-  '/',
-  '/blog',
-  '/docs',
-  '/api/stripe/webhook',
-  '/api/webhooks',
-  '/stripe-guardian',
-  '/guardian-demo',
-  '/notary-ci',
-  '/crondeck',
-  '/api/waitlist',
+// Define paths that require authentication
+const protectedPaths = [
+  '/settings/',
+  '/stripe-guardian/settings/',
+  '/(auth)/', // Assuming this is an auth-related group
+  '/stripe-guardian/onboard', // Add onboarding path
 ];
-
-function isPublicPath(path: string): boolean {
-  return publicPaths.some((publicPath) => path === publicPath || path.startsWith(`${publicPath}/`));
-}
 
 export async function middleware(request: NextRequest) {
   // Handle CORS pre-flight
@@ -53,19 +42,16 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // Get the pathname from the URL
+  // Update the Supabase session for all applicable requests
+  const response = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  // Special case for settings and dedicated auth pages
-  if (
-    pathname.startsWith('/settings/') ||
-    pathname.startsWith('/stripe-guardian/settings/') ||
-    pathname.startsWith('/(auth)/')
-  ) {
-    // Update the Supabase auth session
-    const response = await updateSession(request);
+  // Check if the current path requires authentication
+  const requiresAuth = protectedPaths.some((path) => pathname.startsWith(path));
 
-    // Check if user is authenticated
+  if (requiresAuth) {
+    // Check if user is authenticated using a temporary client
+    // Note: updateSession already refreshed the cookie if needed
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -74,9 +60,7 @@ export async function middleware(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          set() {}, // No-op as we're not setting cookies in middleware check
-          remove() {}, // No-op as we're not removing cookies in middleware check
-          setAll() {}, // No-op
+          // Read-only operations, no need for set/remove
         },
       },
     );
@@ -85,25 +69,17 @@ export async function middleware(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession();
 
-    // If the user is not authenticated and trying to access a settings path,
-    // redirect them to the login page
+    // If no session and path requires auth, redirect to login
     if (!session) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirectTo', pathname);
+      console.log(`Redirecting unauthenticated user from ${pathname} to ${loginUrl.toString()}`); // Debug log
       return NextResponse.redirect(loginUrl);
     }
-
-    // Add security headers
-    Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));
-    Object.entries(corsHeaders).forEach(([k, v]) => response.headers.set(k, v));
-
-    return response;
+    console.log(`User is authenticated for protected path: ${pathname}`); // Debug log
   }
 
-  // Regular middleware for all other paths
-  const response = await updateSession(request);
-
-  // Add security headers
+  // Add security and CORS headers to all responses
   Object.entries(securityHeaders).forEach(([k, v]) => response.headers.set(k, v));
   Object.entries(corsHeaders).forEach(([k, v]) => response.headers.set(k, v));
 

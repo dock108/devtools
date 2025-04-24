@@ -8,6 +8,7 @@ import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';
 import { productLD } from '@/lib/jsonld';
 import Link from 'next/link';
+import { StripeGuardianCTAs } from '@/components/StripeGuardianCTAs'; // Import the new component
 
 // Placeholder components
 const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
@@ -152,28 +153,15 @@ export default function StripeGuardianPage() {
             <p className="mt-6 text-lg leading-8 text-gray-600">
               Real-time velocity rules, bank-swap detection & instant auto-pause for Connect.
             </p>
-            {/* Waitlist Form prominently displayed in hero */}
+            {/* Waitlist Form */}
             <div className="mt-8">
               <WaitlistForm 
                 productIdentifier={productIdentifier} 
                 accentColorVar={accentColor} 
                 tableName={tableName} 
               />
-              {/* CTAs */}
-              <div className="flex flex-wrap gap-4 mt-6">
-                <Link
-                  href="/guardian-demo"
-                  className="inline-flex items-center rounded-lg bg-[var(--accent-guardian)] px-6 py-3 font-semibold text-white shadow-lg hover:opacity-90"
-                >
-                  View Live Demo &rarr;
-                </Link>
-                <Link
-                  href="/stripe-guardian/onboard"
-                  className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
-                >
-                  Connect Your Stripe Account
-                </Link>
-              </div>
+              {/* Use the new CTA component */}
+              <StripeGuardianCTAs />
             </div>
           </div>
           {/* Guardian Illustration */}
