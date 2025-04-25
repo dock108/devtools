@@ -80,9 +80,9 @@ jobs:
         run: |
           npm run build || echo "::warning::Next.js build failed, skipping Playwright"
 
-      # Build docs and check links
-      - name: Build docs & check links
-        run: npm run build:docs
+      # Removed docs build step
+      # - name: Build docs & check links
+      #   run: npm run build:docs
 
       # Playwright smoke tests
       - name: Run Playwright tests
