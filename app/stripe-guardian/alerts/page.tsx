@@ -1,16 +1,22 @@
 'use client';
 
-import React, { useEffect, useState, Suspense, useMemo } from 'react';
+import React, { useEffect, useState, Suspense, useMemo, useTransition } from 'react';
 import { format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from 'lucide-react';
+import {
+  resumePayoutsServerAction,
+  pausePayoutsServerAction
+} from 'app/(auth)/settings/connected-accounts/actions';
 
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -18,6 +24,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type ConnectedAccount = {
   stripe_account_id: string;
   business_name: string | null;
+  payouts_paused: boolean;
+  paused_by: string | null;
+  paused_reason: string | null;
 };
 
 // Alert type definition
@@ -50,9 +59,18 @@ function AlertsPageContent() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [autoPause, setAutoPause] = useState(false);
   const [updatingAutoPause, setUpdatingAutoPause] = useState(false);
+  
+  // Add state for selected account's payout status
+  const [isTogglingPayouts, startToggleTransition] = useTransition();
+
   const supabase = createClient();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Memoize the currently selected account's full data
+  const selectedAccountData = useMemo(() => {
+    return allAccounts.find(acc => acc.stripe_account_id === selectedAccountId) || null;
+  }, [allAccounts, selectedAccountId]);
 
   // Show toast on first connect (runs only once)
   useEffect(() => {
@@ -69,17 +87,17 @@ function AlertsPageContent() {
   useEffect(() => {
     let isMounted = true;
     async function fetchUserAccounts() {
-      console.log('Fetching user accounts...');
+      console.log('Fetching user accounts and payout status...');
       setInitialLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session || !isMounted) return;
         console.log('Session obtained, fetching accounts for user:', session.user.id);
 
-        // Fetch ALL connected accounts for the user, including business_name
+        // Fetch ALL connected accounts for the user, including business_name AND payout status
         const { data: accountsData, error: accountsError } = await supabase
           .from('connected_accounts')
-          .select('stripe_account_id, business_name') // Select needed fields
+          .select('stripe_account_id, business_name, payouts_paused, paused_by, paused_reason') // Select new fields
           .eq('user_id', session.user.id);
 
         if (accountsError) throw accountsError;
@@ -257,6 +275,39 @@ function AlertsPageContent() {
     }
   };
 
+  // --- Add handler for Payouts Toggle ---
+  const handleTogglePayouts = () => {
+    if (!selectedAccountData) return;
+
+    const account = selectedAccountData;
+    startToggleTransition(async () => {
+      const action = account.payouts_paused ? resumePayoutsServerAction : pausePayoutsServerAction;
+      const optimisticUpdate = !account.payouts_paused;
+      
+      // Optimistic UI Update - Modify the allAccounts state directly
+      setAllAccounts(prev => prev.map(acc => 
+        acc.stripe_account_id === account.stripe_account_id 
+          ? { ...acc, payouts_paused: optimisticUpdate } 
+          : acc
+      ));
+
+      try {
+        await action(account.stripe_account_id);
+        toast.success(`Payouts ${optimisticUpdate ? 'paused' : 'resumed'} successfully.`);
+        // Re-fetching/revalidation should handle the final state
+      } catch (error) {        
+        // Rollback optimistic update on error
+        setAllAccounts(prev => prev.map(acc => 
+          acc.stripe_account_id === account.stripe_account_id 
+            ? { ...acc, payouts_paused: account.payouts_paused } // Revert to original state
+            : acc
+        ));
+        toast.error(error instanceof Error ? error.message : 'Failed to update payout status.');
+      } 
+      // No finally block needed to reset loading state as useTransition handles it
+    });
+  };
+
   // Mark an alert as resolved (API call likely needs account context if not implicit)
   const markResolved = async (id: number) => {
     // If the API endpoint `/api/alerts/${id}` doesn't implicitly know the account,
@@ -283,6 +334,18 @@ function AlertsPageContent() {
           alert.id === id ? { ...alert, resolved: false } : alert
         )
       );
+    }
+  };
+
+  // --- Helper to get tooltip content ---
+  const getPauseTooltipContent = (account: ConnectedAccount | null): string => {
+    if (!account) return "";
+    if (account.payouts_paused) {
+      let reason = `Paused by ${account.paused_by || 'unknown'}`; 
+      if (account.paused_reason) reason += `: ${account.paused_reason.replace(/_/g, ' ')}`;
+      return reason;
+    } else {
+      return "Automatic payouts active.";
     }
   };
 
@@ -361,19 +424,57 @@ function AlertsPageContent() {
       </div>
 
       {/* Auto-pause and Tabs section - only show if an account is selected */} 
-      {selectedAccountId && (
+      {selectedAccountId && selectedAccountData && (
         <>
-          <div className="flex items-center justify-end mb-4">
-            <div className="flex items-center space-x-2">
-                <span className='text-sm text-slate-600'>Auto-pause alerts for this account</span>
-                <Switch
-                checked={autoPause}
-                onCheckedChange={toggleAutoPause}
-                disabled={updatingAutoPause}
-                aria-label="Toggle auto-pause for selected account"
-                />
+          <TooltipProvider delayDuration={300}> {/* Ensure TooltipProvider wraps the toggles */}
+            <div className="flex items-center justify-end space-x-6 mb-4"> {/* Use space-x for spacing */}
+              {/* Payout Pause Toggle */}
+              <div className="flex items-center space-x-2">
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className='text-sm font-medium text-slate-600 flex items-center'>
+                        Pause Payouts
+                        <Info className="h-3 w-3 ml-1 text-muted-foreground"/>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      Stops Stripe from automatically sending funds to your bank. Guardian may turn this off automatically when fraud is suspected. You can resume payouts once you've reviewed the transactions.
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {/* Wrap Switch in a div to attach tooltip trigger easily */}
+                      <div className="flex items-center">
+                        <Switch
+                          id={`payout-switch-dashboard-${selectedAccountData.stripe_account_id}`}
+                          checked={!selectedAccountData.payouts_paused} // ON when NOT paused
+                          onCheckedChange={handleTogglePayouts} // No need to pass value, handler uses state
+                          disabled={isTogglingPayouts}
+                          aria-label={selectedAccountData.payouts_paused ? 'Resume payouts' : 'Pause payouts'}
+                        />
+                         {isTogglingPayouts && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {getPauseTooltipContent(selectedAccountData)}
+                    </TooltipContent>
+                  </Tooltip>
+              </div>
+
+              {/* Existing Auto-pause Alerts Toggle */}
+              <div className="flex items-center space-x-2">
+                  <span className='text-sm font-medium text-slate-600'>Auto-pause alerts</span>
+                  <Switch
+                  id={`auto-pause-switch-${selectedAccountData.stripe_account_id}`}
+                  checked={autoPause}
+                  onCheckedChange={toggleAutoPause}
+                  disabled={updatingAutoPause}
+                  aria-label="Toggle auto-pause for selected account"
+                  />
+                   {updatingAutoPause && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+              </div>
             </div>
-          </div>
+          </TooltipProvider>
 
           <Tabs defaultValue="active" className="mt-6">
             <TabsList className="mb-6">

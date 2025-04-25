@@ -1,6 +1,5 @@
 import { AuthGuard } from "@/components/AuthGuard";
 // import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
 
 export default function AlertsLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +12,6 @@ export default function AlertsLayout({ children }: { children: React.ReactNode }
           {children}
         </AuthGuard>
       </main>
-      <Footer />
       <Toaster position="bottom-right" />
     </div>
   );

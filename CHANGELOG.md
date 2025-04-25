@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Refactored
+
+- refactor(layout): unify site header/footer; removed duplicates (2025-04-25)
+
 ### Security
 
 - **2025-04-25:** Upgraded `mjml` to `5.0.0-alpha.1` to resolve high-severity ReDoS vulnerability (GHSA-pfq8-rq6v-vf5m) in dependency `html-minifier` by replacing it with `htmlnano`. This resolves 31 high-severity audit issues. Low-severity issues related to `cookie` (via `@lhci/cli`) remain.
@@ -85,6 +89,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Provides theme selection (System, Light, Dark) using `next-themes`.
     - Enables API key generation (prefix + random bytes, shown once) and revocation.
     - Uses Supabase RLS, server actions, and shadcn/ui components.
+- feat(settings): add multi-Stripe connected accounts management (2025-04-25)
+- feat(guardian): auto-suspend payouts on fraud, manual resume toggle (2025-04-25)
+- feat(guardian): add fraud-handler edge function to auto-pause payouts and send alerts (2025-04-25)
+- feat(guardian): add alerts mute toggle with duration options (2025-04-25)
 
 ### Changed
 

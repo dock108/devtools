@@ -83,7 +83,7 @@ export async function GET(req: Request) {
       access_token: token.access_token,
       refresh_token: token.refresh_token,
       live: token.livemode,
-      business_name: businessName, // Add the retrieved business name
+      business_name: businessName, // Use the existing business_name column
     };
     console.log('Attempting to upsert connected_accounts record...', { accountData }); // Replaced logger.info
     const { error: upsertAccountError } = await supabaseAdmin.from('connected_accounts').upsert(accountData);
