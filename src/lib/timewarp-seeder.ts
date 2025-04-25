@@ -116,9 +116,22 @@ export async function runSeeder(): Promise<{
       }
       // Update in-memory balance based on the LATEST fetched balance
       balances[acct] = currentFetchedBalance;
-    } catch (balanceError) {
-      console.error(`[seed] Failed to fetch or top-up balance for ${acct}:`, balanceError);
-      balances[acct] = 0;
+    } catch (balanceError: any) {
+      console.error(`[seed] Failed during balance check/top-up for ${acct}:`, balanceError);
+      // Check if it's a permission error specifically
+      if (balanceError?.type === 'StripePermissionError') {
+        console.warn(
+          `[seed] PERMISSION ERROR accessing balance/topups for ${acct}. Skipping this account for the current cycle. Check OAuth scopes or account status.`,
+        );
+        // Throw a specific error to stop processing for this account in this run
+        throw new Error(`Permission denied for account ${acct}. Skipping run.`);
+      } else {
+        // For other errors (network issues, etc.), log and attempt to proceed with 0 balance
+        console.warn(
+          `[seed] Non-permission error during balance check/top-up for ${acct} (${balanceError.message}). Proceeding with assumed 0 balance.`,
+        );
+        balances[acct] = 0;
+      }
     }
     console.log(
       `[seed] In-memory balance for ${acct} set to: $${(balances[acct] / 100).toFixed(2)}`,
