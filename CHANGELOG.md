@@ -105,6 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- fix(settings): implement tabbed routes (/profile, /connected-accounts, /notifications)
 - Fix: Join Waitlist CTA functional on all pages.
 - Fix: Demo path break after scenario move.
 - **fix(settings):** add missing shadcn/ui components (form, radio-group, separator, alert-dialog, table) and fix syntax typo that broke Vercel build (2025-04-25)
