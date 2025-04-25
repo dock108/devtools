@@ -79,6 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auth:** Implement Sign Up with email/password, including confirmation email.
 - Jest smoke test for `runSeeder()` that mocks Stripe endpoints and ensures at
   least one charge call occurs with no unhandled errors.
+- **feat(settings):** add user settings page (profile, password, theme, API keys) (2025-04-25)
+    - Allows users to update display name, avatar URL.
+    - Implements password change functionality.
+    - Provides theme selection (System, Light, Dark) using `next-themes`.
+    - Enables API key generation (prefix + random bytes, shown once) and revocation.
+    - Uses Supabase RLS, server actions, and shadcn/ui components.
 
 ### Changed
 

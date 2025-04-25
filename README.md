@@ -225,3 +225,23 @@ PWDEBUG=1 npm run test:e2e
 ```
 
 See `/tests/e2e/README.md` for more details on e2e tests.
+
+## User Settings (/settings)
+
+Authenticated users can manage their account settings at the [/settings](/settings) page.
+
+<img width="800" alt="Screenshot of the user settings page showing profile, password, theme, and API key sections." src="https://via.placeholder.com/800x400.png?text=User+Settings+Page+Screenshot+Placeholder">
+
+### Features:
+- **Profile**: Update display name and avatar URL.
+- **Password**: Change account password (requires meeting complexity rules).
+- **Theme**: Choose between Light, Dark, or System default themes.
+- **API Keys**: Generate and revoke API keys for programmatic access.
+    - **Note**: Generated API keys are shown only **once** upon creation. Store them securely.
+
+### Development Notes:
+- **Route**: `app/(auth)/settings/page.tsx` (Server Component)
+- **UI Components**: Client components (`ProfileForm`, `PasswordForm`, etc.) located in the same directory.
+- **Data**: Fetched server-side via `getProfile` from `lib/supabase/user.ts`.
+- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`.
+- **Database**: Uses the `public.profiles` table (linked to `auth.users`). RLS policies restrict access to the owner.

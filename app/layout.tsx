@@ -6,6 +6,7 @@ import "./globals.css";
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "DOCK108 Home",
@@ -26,17 +27,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Google Font preconnects removed as we're using self-hosted Inter */}
       </head>
-      <body className="font-sans bg-white text-gray-900 antialiased flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
-        <Toaster position="bottom-right" />
+      <body>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+          <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+            <Toaster position="bottom-right" />
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

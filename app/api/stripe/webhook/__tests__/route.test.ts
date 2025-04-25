@@ -26,14 +26,14 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 // TODO: Re-enable after fixing test stabilization issues (Response undefined) in #<issue_number>
 describe.skip('Stripe webhook handler', () => {
   const originalEnv = process.env;
-
+  
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     jest.resetModules();
     process.env = { ...originalEnv };
     process.env.STRIPE_SECRET_KEY = 'test_key';
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
-
+    
     // Reset mock state
     jest.clearAllMocks();
   });
@@ -47,7 +47,7 @@ describe.skip('Stripe webhook handler', () => {
     const req = new NextRequest('https://example.com/api/stripe/webhook', {
       method: 'GET',
     });
-
+    
     const response = await GET();
     expect(response.status).toBe(405);
     const body = await response.json();
@@ -59,7 +59,7 @@ describe.skip('Stripe webhook handler', () => {
       method: 'POST',
       body: JSON.stringify({ id: 'evt_test' }),
     });
-
+    
     const response = await POST(req);
     expect(response.status).toBe(400);
     const body = await response.json();
@@ -75,12 +75,12 @@ describe.skip('Stripe webhook handler', () => {
         'stripe-signature': 'invalid_signature',
       },
     });
-
+    
     // Mock the signature verification to fail
     (stripe.webhooks.constructEvent as any).mockImplementation(() => {
       throw new Error('Invalid signature');
     });
-
+    
     const response = await POST(req);
     expect(response.status).toBe(400);
     const body = await response.json();
@@ -99,7 +99,7 @@ describe.skip('Stripe webhook handler', () => {
         },
       },
     };
-
+    
     const mockBody = JSON.stringify(mockEvent);
     const req = new NextRequest('https://example.com/api/stripe/webhook', {
       method: 'POST',
@@ -108,25 +108,25 @@ describe.skip('Stripe webhook handler', () => {
         'stripe-signature': 'valid_signature',
       },
     });
-
+    
     // Mock the signature verification to succeed
     (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
-
+    
     // Mock the Supabase insert success
     (supabaseAdmin.from('payout_events').insert as any).mockResolvedValue({ error: null });
-
+    
     const response = await POST(req);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.received).toBe(true);
-
+    
     // Verify that constructEvent was called with the right arguments
     expect(stripe.webhooks.constructEvent).toHaveBeenCalledWith(
       mockBody,
       'valid_signature',
       process.env.STRIPE_WEBHOOK_SECRET,
     );
-
+    
     // Verify that database insert was called
     expect(supabaseAdmin.from).toHaveBeenCalledWith('payout_events');
     expect(supabaseAdmin.from('payout_events').insert).toHaveBeenCalled();
@@ -144,7 +144,7 @@ describe.skip('Stripe webhook handler', () => {
         },
       },
     };
-
+    
     const mockBody = JSON.stringify(mockEvent);
     const req = new NextRequest('https://example.com/api/stripe/webhook', {
       method: 'POST',
@@ -153,18 +153,18 @@ describe.skip('Stripe webhook handler', () => {
         'stripe-signature': 'valid_signature',
       },
     });
-
+    
     // Mock the signature verification to succeed
     (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
-
+    
     // Mock the Supabase insert to fail
-    (supabaseAdmin.from('payout_events').insert as any).mockResolvedValue({
+    (supabaseAdmin.from('payout_events').insert as any).mockResolvedValue({ 
       error: new Error('Database error'),
     });
-
+    
     const response = await POST(req);
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error).toBe('Database error');
   });
-});
+}); 

@@ -1,0 +1,70 @@
+'use server';
+
+import {
+    updateProfile,
+    updatePassword,
+    generateApiKey,
+    revokeApiKey
+} from '@/lib/supabase/user';
+import { revalidatePath } from 'next/cache';
+
+export async function updateProfileServerAction(formData: FormData): Promise<{ success: boolean; error?: string }> {
+    const updates = {
+        display_name: formData.get('display_name') as string || undefined,
+        avatar_url: formData.get('avatar_url') as string || undefined,
+    };
+
+    // Filter out undefined values if needed, though updateProfile handles this
+    const result = await updateProfile(updates);
+    if (result.success) {
+        revalidatePath('/settings'); // Revalidate the page to show updated profile info
+    }
+    return result;
+}
+
+export async function updatePasswordServerAction(formData: FormData): Promise<{ success: boolean; error?: string }> {
+    const newPassword = formData.get('newPassword') as string;
+    if (!newPassword) return { success: false, error: 'New password missing' };
+
+    // Perform server-side validation again just in case
+    if (newPassword.length < 12 || !/[0-9]/.test(newPassword) || !/[^a-zA-Z0-9]/.test(newPassword)) {
+        return { success: false, error: 'Password does not meet requirements.' };
+    }
+
+    return await updatePassword(newPassword);
+}
+
+export async function updateThemeServerAction(formData: FormData): Promise<{ success: boolean; error?: string }> {
+     const theme = formData.get('theme') as string;
+     if (!theme || !['system', 'light', 'dark'].includes(theme)) {
+        return { success: false, error: 'Invalid theme value.' };
+    }
+    const result = await updateProfile({ theme }); // Update theme via updateProfile
+     if (result.success) {
+        revalidatePath('/settings'); // Revalidate potentially needed if layout changes based on theme initially
+    }
+    return result;
+}
+
+export async function generateApiKeyServerAction(formData: FormData): Promise<{ success: boolean; apiKey?: string; error?: string }> {
+    const name = formData.get('keyName') as string;
+    if (!name || name.trim().length === 0) {
+        return { success: false, error: 'API key name cannot be empty.' };
+    }
+    const result = await generateApiKey(name.trim());
+    if (result.success) {
+        revalidatePath('/settings'); // Revalidate to show the new key (minus full value)
+    }
+    return result;
+}
+
+export async function revokeApiKeyServerAction(formData: FormData): Promise<{ success: boolean; error?: string }> {
+    const keyId = formData.get('keyId') as string;
+    if (!keyId) return { success: false, error: 'Key ID missing' };
+
+    const result = await revokeApiKey(keyId);
+     if (result.success) {
+        revalidatePath('/settings'); // Revalidate to remove the key from the list
+    }
+    return result;
+} 
