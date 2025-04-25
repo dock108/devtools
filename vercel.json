@@ -19,10 +19,6 @@
     {
       "path": "/api/tasks/send-weekly-digest",
       "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/timewarp-seeder",
-      "schedule": "*/2 * * * *"
     }
   ]
 }

@@ -39,11 +39,11 @@ jobs:
           if [[ -z "${{ secrets.STRIPE_CLIENT_ID }}" ]]; then
             echo "::warning::STRIPE_CLIENT_ID is not set in repository secrets"
           fi
-          
+
           if [[ -z "${{ secrets.STRIPE_SECRET_KEY }}" ]]; then
             echo "::warning::STRIPE_SECRET_KEY is not set in repository secrets"
           fi
-          
+
           if [[ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]]; then
             echo "::warning::SUPABASE_SERVICE_ROLE_KEY is not set in repository secrets"
           fi
@@ -94,6 +94,9 @@ jobs:
 
       - name: Build Next app
         run: npm run build
+
+      - name: Bundle size guard
+        run: npm run size:check
 
       - name: Run Lighthouse CI
         run: npm run lh-ci

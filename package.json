@@ -20,10 +20,10 @@
     "lint-staged": "lint-staged",
     "prepare": "husky install",
     "vercel:env": "ts-node scripts/set-vercel-env.ts",
-    "seed:prod": "curl -X GET http://localhost:3000/api/timewarp-seeder || echo 'Use via API endpoint only'",
     "pw-test": "playwright test",
     "start-preview": "next start -p 5555",
-    "lh-ci": "lhci autorun"
+    "lh-ci": "lhci autorun",
+    "size:check": "node scripts/size-check.js"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,json,md,mdx,yml}": [

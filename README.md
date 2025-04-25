@@ -216,28 +216,6 @@ Note: Vercel builds no longer run `supabase db push`. All migrations must be app
     npm run dev
     ```
 
-### Continuous Time-Warp seeding (1 h = 1 week)
-
-1.  Copy `.env.example` → `.env.local`, fill in your Stripe test key (`STRIPE_SECRET_KEY`) and at least one test Connect Account ID in `ACCOUNTS`.
-2.  Ensure the safety flag `GUARDIAN_ALPHA_SEED=1` is set in `.env.local`.
-3.  Start dev server:
-    ```bash
-    npm run dev
-    ```
-4.  Run one seeding tick manually by visiting the API route in your browser or using curl:
-    ```bash
-    curl http://localhost:3000/api/timewarp-seeder
-    ```
-    Check the `npm run dev` console logs for output similar to:
-    ```
-    [seed] ...
-    [seed] Injected fixtures/scenarios/bank-swap.json into acct_1RHSiGHca4FBH776
-    [seed] Preparing result...
-    runSeeder completed. Sending success response. { acct: ..., chargeId: ..., ... }
-    ```
-
-In production, the same route (`/api/timewarp-seeder`) is triggered by a Vercel cron job every 10 minutes (`*/10 * * * *`), so the Guardian dashboard always has fresh data. The cron job is configured in `vercel.json`; see [Vercel Cron documentation](https://vercel.com/docs/cron-jobs) for details.
-
 ### Running tests
 
 ```bash

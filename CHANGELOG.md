@@ -78,9 +78,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Removed dangling imports and logs that referenced the deleted Time-Warp seeder.
+- CI now enforces a 15 MB maximum bundle size after seeder purge.
+
 ### Docs
 
 - Added seeder variables to `.env.example` and wrote README instructions for
   running the Time-Warp seeder locally; noted the 10-minute Vercel cron.
+- Removed all references to the deprecated Time-Warp seeder from README,
+  developer docs, and code comments.
 
 ### Fixed
+
+### Removed
+
+- Experimental Time-Warp seeder code, cron job, environment variables, and
+  related documentation/testing artifacts.
