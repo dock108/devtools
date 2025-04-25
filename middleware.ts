@@ -9,13 +9,14 @@ console.log('[Middleware] NODE_ENV:', process.env.NODE_ENV);
 const PROD_ORIGIN = 'https://www.dock108.ai';
 const DEV_ORIGIN = 'http://localhost:3000'; // Define dev origin
 
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [PROD_ORIGIN] 
-  : [PROD_ORIGIN, DEV_ORIGIN, 'https://connect.stripe.com']; // Allow dev and Stripe Connect in non-prod
+const allowedOrigins =
+  process.env.NODE_ENV === 'production'
+    ? [PROD_ORIGIN]
+    : [PROD_ORIGIN, DEV_ORIGIN, 'https://connect.stripe.com']; // Allow dev and Stripe Connect in non-prod
 
 const securityHeaders = (origin: string | null): Record<string, string> => {
   // Basic CSP, relax frame-ancestors to allow self and stripe connect
-  const csp = 
+  const csp =
     "default-src 'self';" +
     "style-src 'self' 'unsafe-inline';" +
     "font-src 'self' data:;" +
@@ -34,13 +35,15 @@ const securityHeaders = (origin: string | null): Record<string, string> => {
 
 const corsHeaders = (origin: string | null): Record<string, string> => {
   const effectiveOrigin = origin && allowedOrigins.includes(origin) ? origin : PROD_ORIGIN;
-  console.log(`[Middleware] Calculating CORS for origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}. Effective Origin: ${effectiveOrigin}`); // Log CORS calculation
+  console.log(
+    `[Middleware] Calculating CORS for origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}. Effective Origin: ${effectiveOrigin}`,
+  ); // Log CORS calculation
   return {
     'Access-Control-Allow-Origin': effectiveOrigin,
     'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
-    'Vary': 'Origin', // Important for caching based on origin
+    Vary: 'Origin', // Important for caching based on origin
   };
 };
 
@@ -57,7 +60,7 @@ export async function middleware(request: NextRequest) {
   console.log(`[Middleware] Handling request for: ${requestPath}`); // Log path
   const requestOrigin = request.headers.get('origin');
   console.log(`[Middleware] Request Origin header: ${requestOrigin}`); // Log origin header
-  
+
   const currentCorsHeaders = corsHeaders(requestOrigin);
   const currentSecurityHeaders = securityHeaders(requestOrigin);
   console.log('[Middleware] Calculated CORS Headers:', currentCorsHeaders); // Log calculated headers
@@ -76,7 +79,7 @@ export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
   const { pathname } = request.nextUrl; // pathname is already available from requestPath
 
-  // --- Authentication/Authorization Logic --- 
+  // --- Authentication/Authorization Logic ---
   let session = null;
   try {
     console.log('[Middleware] Creating Supabase client to check auth...');
@@ -89,11 +92,13 @@ export async function middleware(request: NextRequest) {
             return request.cookies.getAll();
           },
         },
-      }
+      },
     );
     const { data } = await supabase.auth.getSession();
     session = data.session; // Assign session data
-    console.log(`[Middleware] Session check complete. User is ${session ? 'logged in' : 'not logged in'}.`);
+    console.log(
+      `[Middleware] Session check complete. User is ${session ? 'logged in' : 'not logged in'}.`,
+    );
   } catch (e) {
     console.error('[Middleware] Error checking session:', e);
   }
@@ -125,7 +130,8 @@ export async function middleware(request: NextRequest) {
   Object.entries(currentSecurityHeaders).forEach(([k, v]) => response.headers.set(k, v));
   Object.entries(currentCorsHeaders).forEach(([k, v]) => response.headers.set(k, v));
 
-  console.log('[Middleware] Final Response Headers:', Object.fromEntries(response.headers.entries())); // Log final headers
+  // console.log('[Middleware] Final Response Headers:', Object.fromEntries(response.headers.entries())); // Log final headers
+  console.log('[Middleware] Applied security and CORS headers to response.'); // Quieter log
 
   // Return the response (potentially modified by updateSession)
   console.log('[Middleware] Returning main response.');

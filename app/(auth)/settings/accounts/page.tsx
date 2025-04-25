@@ -1,4 +1,11 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/utils/supabase/server';
@@ -13,13 +20,17 @@ export const revalidate = 0;
 
 export default async function AccountsPage() {
   const supabase = createClient();
-  
+
   // Fetch connected accounts with their alert settings
   const { data: accounts, error } = await supabase
     .from('connected_accounts')
-    .select('*, alert_channels(auto_pause)')
+    // Explicitly define relationship for select:
+    // Join alert_channels ON alert_channels.account_id = connected_accounts.stripe_account_id
+    .select(
+      '*,' + 'alert_channels!inner(auto_pause)', // Use !inner join to require a match
+    )
     .order('created_at');
-  
+
   if (error) {
     console.error('Error fetching accounts:', error);
     return (
@@ -29,9 +40,7 @@ export default async function AccountsPage() {
         <p className="text-slate-500 mb-6">
           There was an error loading your connected accounts. Please try refreshing the page.
         </p>
-        <ReloadButton>
-          Refresh
-        </ReloadButton>
+        <ReloadButton>Refresh</ReloadButton>
       </div>
     );
   }
@@ -47,7 +56,7 @@ export default async function AccountsPage() {
           </a>
         </Button>
       </div>
-      
+
       <Suspense fallback={<div>Loading accounts...</div>}>
         {accounts && accounts.length > 0 ? (
           <div className="grid gap-6">
@@ -67,4 +76,4 @@ export default async function AccountsPage() {
       </Suspense>
     </div>
   );
-} 
+}

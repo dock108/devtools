@@ -150,7 +150,7 @@ The Stripe Guardian demo (/guardian-demo) showcases fraud detection in action:
 
 To add custom scenarios:
 
-1. Add new JSON files in `app/guardian-demo/scenarios/` following the format in the existing files
+1. Add new JSON files in `public/guardian-demo/scenarios/` following the format in the existing files
 2. Update the list of scenarios in `app/guardian-demo/getScenarios.ts`
 
 ## Running Lighthouse locally
