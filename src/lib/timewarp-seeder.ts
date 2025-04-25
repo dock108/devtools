@@ -1,8 +1,18 @@
 import Stripe from 'stripe';
 import { randomInt } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { execFileSync, ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'; // Import type
+import * as path from 'path'; // Import path if needed for scenario paths
 
 // In-memory balance tracking (conceptual)
 const balances: Record<string, number> = {};
+
+// List of scenario files (use relative paths from project root)
+const SCENARIOS = [
+  'fixtures/scenarios/velocity-breach.json',
+  'fixtures/scenarios/bank-swap.json',
+  'fixtures/scenarios/geo-mismatch.json',
+];
 
 /**
  * Time-Warp Seeder
@@ -186,7 +196,122 @@ export async function runSeeder(): Promise<{
       console.log(`[seed] Skipping payout for ${acct}.`);
     }
 
-    // TODO: Implement scenario logic here later
+    // --- Inject Fraud Scenario ---
+    console.log('[seed] Evaluating fraud scenario injection...');
+    // const injectFraud = Math.random() < 0.4; // 40% chance
+    const injectFraud = Math.random() < 0.9; // TEMP: 90% chance for testing
+    let scenarioFile = 'N/A'; // Initialize scenarioFile
+
+    if (injectFraud) {
+      scenarioFile = SCENARIOS[randomInt(0, SCENARIOS.length)];
+      console.log(`[seed] Attempting to inject scenario: ${scenarioFile} into ${acct}...`);
+      let scaledEvents: any[] = []; // Define scaledEvents variable
+
+      try {
+        // Prepare scenario data
+        console.log('[seed] Reading scenario file...');
+        const scenarioContent = readFileSync(scenarioFile, 'utf8');
+        console.log('[seed] Parsing scenario content...');
+        const events = JSON.parse(scenarioContent);
+        console.log('[seed] Scaling scenario events...');
+        scaledEvents = events.map((e: any) => ({
+          ...e,
+          delayMs: Math.max(200, Math.floor(e.delayMs / speedFactor)),
+        }));
+
+        // Attempt injection via Stripe CLI
+        console.log('[seed] Executing stripe fixtures command...');
+        const execOptions: ExecFileSyncOptionsWithStringEncoding = {
+          input: JSON.stringify(scaledEvents),
+          encoding: 'utf8',
+          stdio: 'pipe', // Capture stdout/stderr
+          timeout: 30000, // Add a timeout (30 seconds)
+        };
+
+        // Wrap execFileSync in its own try/catch to handle non-zero exit
+        try {
+          execFileSync('stripe', ['fixtures', '-', '--account', acct, '--quiet'], execOptions);
+          console.log(
+            `[seed] Stripe CLI fixtures injected successfully for ${scenarioFile} into ${acct}`,
+          );
+        } catch (cliExecError: any) {
+          // execFileSync throws on non-zero exit code
+          // Extract status and stderr from the error object if they exist
+          const status = cliExecError.status ?? 'unknown';
+          const stderr = cliExecError.stderr?.toString().trim() || 'No stderr captured';
+          console.error(`[seed] stripe fixtures CLI failed with status ${status}`);
+          console.error(`[seed] stderr: ${stderr}`);
+          // Re-throw a more informative error to trigger the outer catch block (fallback logic)
+          throw new Error(`stripe fixtures failed (status ${status}): ${stderr}`);
+        }
+      } catch (scenarioProcessingError: any) {
+        // This outer catch now handles errors from file reading, JSON parsing,
+        // or the re-thrown error from execFileSync failure.
+        console.warn(
+          `[seed] Scenario processing/CLI failed for ${scenarioFile} (Account: ${acct}). Falling back to Test Helpers API. Error: ${scenarioProcessingError.message}`,
+        );
+
+        // Fallback using Stripe Test Helpers API
+        if (scaledEvents.length > 0) {
+          console.log(
+            `[seed] Attempting fallback injection for ${scaledEvents.length} events via Test Helpers API...`,
+          );
+          try {
+            console.log('[seed] Available Test Helpers:', Object.keys(stripe.testHelpers)); // Log available helpers
+            for (const [index, e] of scaledEvents.entries()) {
+              console.log(
+                `[seed] Fallback: Processing event ${index + 1}/${scaledEvents.length} - Type: ${e.type}`,
+              );
+              if (e.delayMs > 0) {
+                await new Promise((resolve) => setTimeout(resolve, e.delayMs));
+              }
+
+              switch (e.type) {
+                case 'payout.created':
+                  if (e.data?.object?.amount && e.data?.object?.currency) {
+                    // Explicitly cast testHelpers to any to bypass type check
+                    await (stripe.testHelpers as any).payouts.create(
+                      { amount: e.data.object.amount, currency: e.data.object.currency },
+                      { stripeAccount: acct },
+                    );
+                    console.log(`[seed] Fallback: Simulated payout.created for ${acct}`);
+                  } else {
+                    console.warn(
+                      `[seed] Fallback: Skipping payout.created due to missing data for ${acct}`,
+                    );
+                  }
+                  break;
+                // Add cases for other relevant event types from your scenarios
+                // Example: External Account creation (requires Test Clock potentially)
+                // case 'customer.created':
+                //   await stripe.testHelpers.customers.create(...) break;
+                // case 'charge.succeeded':
+                //   await stripe.testHelpers.charges.create(...) break;
+                default:
+                  console.log(
+                    `[seed] Fallback: No Test Helper implemented for event type: ${e.type}`,
+                  );
+              }
+            }
+            console.log(
+              `[seed] Fallback injection via Test Helpers API completed for ${scenarioFile} into ${acct}.`,
+            );
+          } catch (helperError: any) {
+            console.error(
+              `[seed] Fallback Test Helpers API injection failed for ${scenarioFile} (Account: ${acct}):`,
+              helperError,
+            );
+            // Decide if this error should be re-thrown or just logged
+          }
+        } else {
+          console.warn(
+            `[seed] Fallback skipped: No scaled events available after CLI failure for ${scenarioFile} (Account: ${acct}).`,
+          );
+        }
+      }
+    } else {
+      console.log('[seed] Skipping fraud scenario injection (roll failed).');
+    }
 
     // 5. Return result
     console.log('[seed] Preparing result...');
