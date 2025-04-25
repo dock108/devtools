@@ -2,15 +2,17 @@
 import Link from 'next/link';
 import { Container } from '@/components/Container';
 import type { Metadata } from 'next';
-import { getSortedPostsData } from '@/lib/blog'; // Import new helper
+// import { getSortedPostsData } from '@/lib/blog'; // Old helper
+import { getAllPostsSorted } from '@/lib/markdown'; // Import new helper
 
 export const metadata: Metadata = {
   title: 'Blog | DOCK108',
   description: 'Updates, articles, and insights from the DOCK108 team.',
 };
 
-export default function BlogIndex() {
-  const posts = getSortedPostsData(); // Use new helper
+// Change to async function to fetch data
+export default async function BlogIndex() {
+  const posts = await getAllPostsSorted(); // Use new async helper
 
   return (
     <Container>
@@ -33,9 +35,6 @@ export default function BlogIndex() {
                     month: 'long',
                     day: 'numeric',
                   })}
-                  {post.tags && post.tags.length > 0 && (
-                     <span className="ml-2">· {post.tags.join(', ')}</span>
-                  )}
                 </p>
                 <p className="mt-3 text-base text-gray-600">
                   {post.description}

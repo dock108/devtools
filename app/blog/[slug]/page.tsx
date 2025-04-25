@@ -2,24 +2,35 @@ import { notFound } from 'next/navigation';
 import { Container } from '@/components/Container';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getAllPostSlugs, getPostData } from '@/lib/blog';
-import dynamicImport from 'next/dynamic'; // Renamed to avoid collision
+// Remove MDX-specific imports
+// import { getAllPostSlugs, getPostData } from '@/lib/blog'; // Original MDX helper
+// import { MDXRemote } from 'next-mdx-remote/rsc';
+// import { useMDXComponents } from '@/mdx-components';
+// import * as CustomComponents from '@/mdx-components';
 import { blogLD } from '@/lib/jsonld';
 
+// Import necessary libraries for Markdown processing
+import fs from 'fs';
+import path from 'path';
+import matter from 'gray-matter';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { getAllPostSlugs, getPostData } from '@/lib/markdown'; // Switch to new Markdown helper
+
 // Disable static rendering – fallback to SSR to avoid build‑time MDX errors
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic'; // REMOVED - Attempting static generation
 
 // Helper to safely import MDX content, replacing with fallback if missing/broken
-const getMdxComponent = (slug: string) =>
-  dynamicImport(async () => {
-    try {
-      const mod = await import(`@/content/blog/${slug}.mdx`);
-      return mod.default;
-    } catch (err) {
-      console.error('Failed to load MDX for', slug, err);
-      return () => <p className="text-red-600">Post content unavailable.</p>;
-    }
-  });
+// const getMdxComponent = (slug: string) =>
+//   dynamicImport(async () => {
+//     try {
+//       const mod = await import(`@/content/blog/${slug}.mdx`);
+//       return mod.default;
+//     } catch (err) {
+//       console.error('Failed to load MDX for', slug, err);
+//       return () => <p className="text-red-600">Post content unavailable.</p>;
+//     }
+//   });
 
 // Generate segments for all blog posts at build time
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
@@ -74,20 +85,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 // Render the blog post page
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await getPostData(slug); // Fetch post metadata and content path
+  const post = await getPostData(slug); // Fetch post metadata and content string
 
-  if (!post) {
+  if (!post || !post.content) { // Check if content exists
     return notFound();
   }
 
-  // Dynamically load the MDX component
-  const MDXContent = getMdxComponent(slug);
+  // No custom components needed for basic react-markdown
+  // const componentsToUse = CustomComponents.useMDXComponents({});
 
   return (
     <Container className="mt-10">
       <article className="prose prose-slate mx-auto max-w-3xl dark:prose-invert lg:prose-lg">
-        {/* Post content follows directly without header or hero image */}
-        <MDXContent />
+         <h1>{post.title}</h1>
+         <p className="text-sm text-slate-500">Published on {new Date(post.date).toLocaleDateString()}</p>
+         {/* Render the markdown content */}
+         <ReactMarkdown remarkPlugins={[remarkGfm]}>
+           {post.content}
+         </ReactMarkdown>
       </article>
 
       {/* Back link */}

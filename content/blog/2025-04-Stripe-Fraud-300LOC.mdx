@@ -1,16 +1,84 @@
 ---
-title: "Stopping $150K Stripe Fraud in 300 LOC"
-description: "How we built Stripe Guardian to catch platform payout fraud missed by Radar."
+title: "Stopping $150K+ in Stripe Payout Fraud with <300 Lines of Code"
+description: "Radar wasn't enough. How DOCK108 Stripe Guardian uses focused rules to catch platform payout fraud missed by default tools."
 date: "2025-04-21"
-tags: ["Stripe", "Fraud", "SaaS"]
+tags: ["Stripe", "Fraud", "SaaS", "FinTech", "Security"]
 image: "/images/blog/stripe-fraud-og.png"
 ---
 
-## The Problem: Silent Payout Fraud
+## The Problem: Silent Payout Fraud on Stripe Connect
 
-Stripe Connect is powerful, but its default fraud tools (Radar) are primarily designed for card payments, not platform payouts.
+Stripe Connect is fantastic for building platforms and marketplaces. But relying *only* on Stripe Radar for fraud protection can leave a dangerous blind spot: **payout fraud**.
 
-This leaves a gap where bad actors can exploit Express accounts...
+We learned this the hard way. While building early versions of our tools, we saw sophisticated bad actors bypass standard card checks (Radar's focus) and exploit connected Express or Custom accounts. They'd link stolen bank accounts, trigger payouts, and disappear before anyone noticed. The potential losses scaled quickly—we projected over $150,000 in potential annual fraud losses if left unchecked on just a handful of platforms.
+
+Radar is great for *incoming* payments, but it offers limited visibility into the nuances of *outgoing* platform payouts.
+
+## The Gap: Why Radar Isn't Enough for Payouts
+
+-   **Focus:** Radar primarily analyzes card transactions and associated signals (IP, device, card history).
+-   **Context:** It lacks deep context about *your platform's* specific payout patterns, user behavior, or the history of connected accounts (like sudden bank changes).
+-   **Payout Signals:** Signals crucial for payout fraud (e.g., payout velocity changes, destination bank account reputation, geographic mismatches between user activity and payout destination) aren't Radar's core competency.
+
+This gap allows fraudsters to:
+
+1.  **Age Accounts:** Create seemingly legitimate connected accounts and wait.
+2.  **Swap Banks:** Suddenly change the linked bank account to one they control.
+3.  **Rapid Payouts:** Initiate large or rapid payouts before the bank swap is flagged manually.
+4.  **Disappear:** Cash out and abandon the account.
+
+## Our Solution: DOCK108 Stripe Guardian
+
+We needed a system laser-focused on payout risk signals. That's why we built Stripe Guardian. Instead of trying to replicate all of Radar, Guardian focuses on high-signal rules tailored to Connect payout patterns:
+
+-   **Payout Velocity Monitoring:** Detects sudden spikes in payout frequency or amount compared to the account's history.
+-   **Bank Account Swap Detection:** Flags payouts occurring shortly after changes to the connected external bank account.
+-   **Geo-Mismatch Analysis:** Compares the IP address country of recent platform activity/charges with the payout destination country.
+
+## The "300 Lines of Code" Core
+
+The core rule evaluation logic is surprisingly concise. By leveraging Stripe's webhooks and keeping a focused state for each connected account, we can evaluate these critical rules efficiently.
+
+Here's a conceptual snippet illustrating a simplified velocity check:
+
+```typescript
+// Simplified conceptual example
+import { PayoutEvent, AccountHistory } from './types';
+
+const VELOCITY_THRESHOLD = 3; // Max payouts allowed
+const VELOCITY_WINDOW_SECONDS = 60 * 60; // 1 hour
+
+function checkVelocityRule(event: PayoutEvent, history: AccountHistory): boolean {
+  if (event.type !== 'payout.paid') {
+    return false; // Only check successful payouts
+  }
+
+  const windowStart = new Date(event.created_at);
+  windowStart.setSeconds(windowStart.getSeconds() - VELOCITY_WINDOW_SECONDS);
+
+  // Filter recent payouts within the window
+  const recentPayouts = history.payouts
+    .filter(p => p.created_at >= windowStart && p.status === 'paid');
+
+  const payoutCount = recentPayouts.length + 1; // +1 for the current event
+
+  if (payoutCount > VELOCITY_THRESHOLD) {
+    console.log(`ALERT: Velocity breach for ${event.account_id}. Count: ${payoutCount}`);
+    return true; // Trigger alert
+  }
+
+  return false;
+}
+```
+
+## Catching Fraud in Real-Time
+
+By monitoring these specific payout signals, Stripe Guardian identifies suspicious activity *before* money leaves the platform. Combined with features like configurable alert channels (Slack, email) and **instant auto-pause** for critical alerts, it provides a powerful safety net against payout fraud.
+
+Ready to protect your platform?
+
+-   [See the Interactive Guardian Demo](/guardian-demo)
+-   [Learn more about Stripe Guardian](/stripe-guardian)
 
 ```typescript
 // Example code block

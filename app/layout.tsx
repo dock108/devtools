@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 // Using standard CSS import instead of next/font
 import "./globals.css";
+// Removed Prism theme CSS import as Prism is no longer used
+// import "prism-themes/themes/prism-vsc-dark-plus.css"; 
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';

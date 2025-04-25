@@ -1,6 +1,7 @@
-import createMDX from '@next/mdx';
 import { fileURLToPath } from 'url';
 import path from 'path';
+// Remove unused MDX/prism imports
+// import rehypePrism from 'rehype-prism-plus';
 
 // In ESM, __dirname is not defined by default – define it manually
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Remove mdx/md from page extensions
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
   // Explicitly configure webpack aliases
   webpack: (config) => {
     // Alias '@/' to project root
@@ -38,8 +41,4 @@ const nextConfig = {
   },
 };
 
-const withMDX = createMDX({
-  extension: /\.mdx?$/,
-});
-
-export default withMDX(nextConfig);
+export default nextConfig;
