@@ -79,6 +79,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auth:** Implement Sign Up with email/password, including confirmation email.
 - Jest smoke test for `runSeeder()` that mocks Stripe endpoints and ensures at
   least one charge call occurs with no unhandled errors.
+- **feat(docs):** add /docs with auto-built Markdown portal (2025-04-25)
+    - Scans `docs/**/*.md` and `docs/**/*.mdx` at build time.
+    - Generates static pages using Next.js App Router (`app/(docs)/docs/[...slug]/page.tsx`).
+    - Includes a responsive sidebar (`components/DocsSidebar.tsx`) for navigation, highlighting the active page.
+    - Renders content using `next-mdx-remote` with `remark-gfm` and `rehype-slug` plugins.
+    - Adds build-time check (`scripts/check-doc-links.ts`) to validate internal `/docs/...` links.
+    - Integrates link checker into CI (`npm run build:docs`) via `.github/workflows/ci.yml`.
 
 ### Changed
 

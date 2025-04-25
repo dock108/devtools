@@ -1,4 +1,9 @@
-# Security Model
+---
+title: Guardian Security Model
+description: Overview of the security considerations and Row-Level Security implementation for Stripe Guardian.
+---
+
+# Guardian Security
 
 ## Row-Level Security
 

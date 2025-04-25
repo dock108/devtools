@@ -1,4 +1,9 @@
-# Guardian Database Schema
+---
+title: Guardian Database Schema
+description: Overview of the database tables used by Stripe Guardian.
+---
+
+# Guardian Schema
 
 This document describes the database schema for the Stripe Guardian module.
 

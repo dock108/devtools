@@ -1,3 +1,8 @@
+---
+title: Guardian Onboarding
+description: Steps for users to connect their Stripe account and start using Stripe Guardian.
+---
+
 # Stripe Guardian Onboarding Guide
 
 ## Database Schema

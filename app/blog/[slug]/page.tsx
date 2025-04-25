@@ -16,6 +16,7 @@ import matter from 'gray-matter';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getAllPostSlugs, getPostData } from '@/lib/markdown'; // Switch to new Markdown helper
+import { markdownComponents } from '@/components/MarkdownComponents'; // Import custom components
 
 // Disable static rendering – fallback to SSR to avoid build‑time MDX errors
 // export const dynamic = 'force-dynamic'; // REMOVED - Attempting static generation
@@ -91,16 +92,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     return notFound();
   }
 
-  // No custom components needed for basic react-markdown
-  // const componentsToUse = CustomComponents.useMDXComponents({});
-
   return (
     <Container className="mt-10">
-      <article className="prose prose-slate mx-auto max-w-3xl dark:prose-invert lg:prose-lg">
-         <h1>{post.title}</h1>
+      <article className="mx-auto max-w-3xl">
+         <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
          <p className="text-sm text-slate-500">Published on {new Date(post.date).toLocaleDateString()}</p>
-         {/* Render the markdown content */}
-         <ReactMarkdown remarkPlugins={[remarkGfm]}>
+         {/* Render markdown with custom components */}
+         <ReactMarkdown 
+           remarkPlugins={[remarkGfm]}
+           components={markdownComponents} // Pass the custom components
+         >
            {post.content}
          </ReactMarkdown>
       </article>

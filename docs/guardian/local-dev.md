@@ -1,3 +1,8 @@
+---
+title: Guardian Local Development
+description: Setting up your local environment for developing Stripe Guardian features.
+---
+
 # Guardian Local Development
 
 This guide covers setting up your local environment for Stripe Guardian development,

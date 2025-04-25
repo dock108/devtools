@@ -1,3 +1,8 @@
+---
+title: Guardian Fraud Rules
+description: Detailed explanation of the fraud detection rules implemented in Stripe Guardian.
+---
+
 # Guardian Rules Engine
 
 The Guardian Rules Engine is responsible for detecting potentially fraudulent activities in the Stripe payment ecosystem. It analyzes events and applies a set of predefined rules to determine if a payout or account update should be flagged for review.

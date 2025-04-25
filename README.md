@@ -9,6 +9,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
 ## Included Products (v0.1.0)
 
 - **/ (Homepage)**: Overview and links to products.
+- **/docs**: Documentation Portal (auto-generated from Markdown).
 - **/stripe-guardian**: Stripe Connect payout fraud protection.
   - **/guardian-demo**: Interactive fraud detection demo with scenario selector.
 - **/notary-ci**: macOS codesigning & notarization as a service.
@@ -52,6 +53,27 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
 4.  **For Stripe Guardian Development:**
     If you're working with Stripe Guardian features, see [Guardian Local Development](./docs/guardian/local-dev.md) for detailed instructions on setting up Stripe Connect OAuth and webhooks locally.
 
+## Documentation
+
+The project documentation is automatically built from Markdown files located in the `/docs` directory and is available online at [/docs](/docs).
+
+### Authoring Docs
+
+- **Location**: Place all documentation files within the `docs/` directory at the project root.
+- **Format**: Use standard Markdown (`.md`) or MDX (`.mdx`).
+- **Frontmatter**: Each file **must** include YAML frontmatter with at least a `title`:
+  ```yaml
+  ---
+  title: My Document Title
+  description: A brief description of the document (optional).
+  ---
+  ```
+- **Linking**: 
+    - Use standard Markdown links `[link text](url)`.
+    - For internal links to other documents, use relative paths from the `/docs` root, like `[another doc](./section/another-doc.md)` or absolute paths like `[getting started](/docs/getting-started)`. 
+    - The build process (`npm run check-links`) validates all internal links starting with `/docs/`.
+- **Features**: Supports GitHub Flavored Markdown (GFM), including tables, footnotes, etc. Headings automatically get slugs for linking.
+
 ## Database Setup
 
 If you're working with the Stripe Guardian component, you'll need to set up the database schema:
@@ -75,6 +97,8 @@ This will create all required tables (connected_accounts, payout_events, alerts)
 - `npm run lint`: Lints the codebase using Next.js ESLint config.
 - `npm run format`: Formats code using Prettier.
 - `npm run build`: Creates an optimized production build.
+- `npm run build:docs`: Runs the production build and checks internal documentation links.
+- `npm run check-links`: Checks internal documentation links without running a full build.
 - `npm start`: Starts the production server (requires `npm run build` first).
 - `npm test`: Runs Jest unit tests.
 - `npm run test:e2e`: Runs Playwright smoke tests against key marketing pages.
@@ -135,7 +159,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines on how to get started, branch naming, commit formatting, and the PR process.
+Please see [CONTRIBUTING.md](/docs/CONTRIBUTING.md) for guidelines on how to get started, branch naming, commit formatting, and the PR process.
 
 ## Interactive Demos
 
