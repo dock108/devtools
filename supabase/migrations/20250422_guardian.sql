@@ -1,6 +1,27 @@
 -- Guardian Schema Migration
 -- Run with: supabase db reset && supabase db push
 
+-- Enable necessary extensions
+create extension if not exists "uuid-ossp" with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
+create extension if not exists net with schema extensions; -- Assumes pg_net enabled in Supabase Dashboard
+
+-- Enable pg_tle if not already enabled
+create extension if not exists pg_tle;
+
+-- Use pg_tle to install pg_net
+-- select
+--   net.http_post (
+--     url := 'http://localhost:54321/functions/v1/hello-world',
+--     body := '{ "name": "world" }'::jsonb,
+--     headers := '{"Content-Type": "application/json"}'::jsonb
+--   ) as request_id;
+
+-- Grant usage to postgres role if needed (often default)
+grant usage on schema net to postgres;
+-- Also grant execute on the specific function used by the trigger
+grant execute on function net.http_post(text,jsonb,jsonb,jsonb,integer) to postgres;
+
 -- Connected merchant accounts (Stripe Connect)
 create table public.connected_accounts (
   id uuid default gen_random_uuid() primary key,

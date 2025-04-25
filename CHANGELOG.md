@@ -84,6 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed dangling imports and logs that referenced the deleted Time-Warp seeder.
 - CI now enforces a 15 MB maximum bundle size after seeder purge.
+- Temporarily disabled welcome email trigger for waitlist signups.
 
 ### CI
 
@@ -98,6 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix: Join Waitlist CTA functional on all pages.
 - Fix: Demo path break after scenario move.
 
 ### Removed

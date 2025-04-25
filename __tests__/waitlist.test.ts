@@ -14,6 +14,7 @@ import { NextRequest } from 'next/server';
 global.fetch = jest.fn();
 
 // TODO: Re-enable after fixing test stabilization issues (Response undefined) in #<issue_number>
+// TODO: Confirm this test passes after fixing the waitlist CTA functionality.
 describe.skip('Waitlist API Route', () => {
   // Reset mocks between tests
   beforeEach(() => {
