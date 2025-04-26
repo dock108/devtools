@@ -3,12 +3,23 @@ import { stripe, Stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { logRequest } from '@/lib/logRequest';
-import { evaluateRulesEdge } from '@/lib/guardian/rules/edge';
+import { performance } from 'perf_hooks';
 
 export const runtime = 'edge';
+export const maxDuration = 5; // 5 seconds maximum for the webhook handler
 
+/**
+ * Handles Stripe webhook events
+ * - Verifies signature
+ * - Identifies source account
+ * - Stores raw event payload in event_buffer
+ * - Forwards to guardian-reactor
+ * - Returns 200 OK quickly
+ */
 export async function POST(req: NextRequest) {
+  const startTime = performance.now();
   logRequest(req);
+
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
   }
@@ -25,110 +36,175 @@ export async function POST(req: NextRequest) {
   }
 
   let event: Stripe.Event;
-  
+  let verifiedAccountId: string;
+
   try {
-    if (!sig) throw new Error('Missing signature header');
-    
-    // If this is a connected account webhook, look up its secret
-    if (accountId) {
-      logger.info({ accountId }, 'Handling connected account webhook');
-      
-      // Look up the webhook secret for this account
-      const { data: account, error } = await supabaseAdmin
-        .from('connected_accounts')
-        .select('webhook_secret')
-        .eq('stripe_account_id', accountId)
-        .maybeSingle();
-      
-      if (error || !account || !account.webhook_secret) {
-        logger.error({ accountId, error }, 'Failed to find webhook secret for account');
-        throw new Error('Invalid account or missing webhook secret');
-      }
-      
-      // Verify signature using the account-specific webhook secret
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        sig,
-        account.webhook_secret
-      );
-      
-      logger.info({ accountId, eventType: event.type }, 'Connected account webhook verified');
+    if (!sig) {
+      logger.error('Missing Stripe signature header');
+      return NextResponse.json({ error: 'Missing signature header' }, { status: 400 });
+    }
+
+    try {
+      // Always use the platform webhook secret for verification
+      event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    } catch (err) {
+      logger.error({ err }, 'Webhook signature verification failed');
+      return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
+    }
+
+    // Extract the account ID from header or event
+    verifiedAccountId = accountId || event.account || '';
+
+    if (!verifiedAccountId) {
+      logger.error({ eventType: event.type }, 'Missing account ID');
+      return NextResponse.json({ error: 'Missing account ID' }, { status: 400 });
+    }
+
+    logger.info(
+      {
+        accountId: verifiedAccountId,
+        eventType: event.type,
+        eventId: event.id,
+      },
+      'Webhook verified',
+    );
+  } catch (err) {
+    logger.error({ err }, 'Error processing webhook');
+    return NextResponse.json({ error: 'Webhook processing error' }, { status: 400 });
+  }
+
+  // Record verification time for performance monitoring
+  const verificationTime = performance.now() - startTime;
+
+  // Store the raw event in the buffer
+  try {
+    const { data: insertedEvent, error } = await supabaseAdmin
+      .from('event_buffer')
+      .upsert(
+        {
+          stripe_event_id: event.id,
+          stripe_account_id: verifiedAccountId,
+          type: event.type,
+          payload: event.data,
+          received_at: new Date().toISOString(),
+        },
+        { onConflict: 'stripe_event_id' },
+      )
+      .select('id')
+      .single();
+
+    if (error) {
+      logger.error({ error }, 'Failed to insert event into buffer');
+      // We don't want to return an error to Stripe, as we've verified the signature
+      // Continue to return 200 OK to prevent Stripe from retrying
     } else {
-      // This is a platform webhook, use the platform webhook secret
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET!
+      logger.info(
+        {
+          eventBufferId: insertedEvent.id,
+          eventType: event.type,
+          eventId: event.id,
+        },
+        'Event stored in buffer',
       );
-      
-      logger.info({ eventType: event.type }, 'Platform webhook verified');
-    }
-  } catch (err) {
-    logger.error({ err, accountId }, 'Webhook signature verification failed');
-    return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
-  }
 
-  try {
-    const { id: stripeEventId, type, created, data, account } = event;
-
-    // Only process the events we care about for Guardian
-    if (type.startsWith('payout.') || 
-        type === 'account.updated' || 
-        type === 'account.external_account.created') {
-      
-      // Extract payout ID for payout events
-      let stripePayoutId = '';
-      let amount: number | null = null;
-      let currency: string | null = null;
-      
-      if (data.object && 'object' in data.object) {
-        if (data.object.object === 'payout') {
-          const payoutObj = data.object as Stripe.Payout;
-          stripePayoutId = payoutObj.id;
-          amount = payoutObj.amount;
-          currency = payoutObj.currency;
-        }
-      }
-      
-      // Use account ID from the payload or event
-      const stripeAccountId = accountId || account || 
-        (data.object && 'account' in data.object ? data.object.account : '');
-      
-      // Only proceed if we have valid account ID and either a payout ID or it's an account event
-      if (stripeAccountId && (stripePayoutId || type === 'account.updated' || type === 'account.external_account.created')) {
-        // Insert into the payout_events table
-        const { error } = await supabaseAdmin.from('payout_events').insert({
-          stripe_event_id: stripeEventId,
-          stripe_payout_id: stripePayoutId || stripeEventId, // Use event ID as fallback for non-payout events
-          stripe_account_id: stripeAccountId,
-          type,
-          amount,
-          currency,
-          event_data: data.object,
-          created_at: new Date(created * 1000).toISOString()
+      // Fan out to guardian-reactor (asynchronously)
+      if (insertedEvent && insertedEvent.id) {
+        // We'll use Promise.race to ensure we respond quickly to Stripe
+        // even if the reactor call takes longer
+        const timeoutPromise = new Promise<Response>((resolve) => {
+          setTimeout(() => {
+            // Log that we're responding before the reactor call completes
+            logger.info(
+              { eventBufferId: insertedEvent.id },
+              'Responding to Stripe before reactor call completes',
+            );
+            resolve(new Response(null, { status: 200 }));
+          }, 500); // Give the reactor call 500ms to complete before responding
         });
-        
-        if (error) throw error;
-        
-        // Evaluate rules and store alerts using Edge-compatible implementation
-        const alerts = await evaluateRulesEdge(event);
-        if (alerts.length > 0) {
-          const { error: alertError } = await supabaseAdmin.from('alerts').insert(alerts);
-          if (alertError) {
-            logger.error({ alertError }, 'Failed to insert alerts into database');
-          }
-          // TODO send via Slack/email later
-        }
+
+        const reactorPromise = fetch(
+          `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/guardian-reactor`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event_buffer_id: insertedEvent.id,
+            }),
+          },
+        )
+          .then(async (response) => {
+            if (!response.ok) {
+              const responseText = await response.text();
+              logger.error(
+                {
+                  statusCode: response.status,
+                  statusText: response.statusText,
+                  response: responseText,
+                  eventBufferId: insertedEvent.id,
+                },
+                'Guardian reactor call failed',
+              );
+
+              // Record the failure for retry
+              await supabaseAdmin.from('failed_event_dispatch').insert({
+                event_buffer_id: insertedEvent.id,
+                endpoint: '/api/guardian-reactor',
+                status_code: response.status,
+                error_message: responseText,
+                request_payload: { event_buffer_id: insertedEvent.id },
+              });
+            } else {
+              logger.info({ eventBufferId: insertedEvent.id }, 'Guardian reactor call succeeded');
+            }
+
+            return new Response(null, { status: 200 });
+          })
+          .catch(async (err) => {
+            logger.error(
+              { err, eventBufferId: insertedEvent.id },
+              'Guardian reactor call threw exception',
+            );
+
+            // Record the failure for retry
+            await supabaseAdmin
+              .from('failed_event_dispatch')
+              .insert({
+                event_buffer_id: insertedEvent.id,
+                endpoint: '/api/guardian-reactor',
+                error_message: err.message,
+                request_payload: { event_buffer_id: insertedEvent.id },
+              })
+              .catch((insertErr) => {
+                logger.error({ insertErr }, 'Failed to record reactor failure');
+              });
+
+            return new Response(null, { status: 200 });
+          });
+
+        // Race the reactor call against the timeout
+        return Promise.race([reactorPromise, timeoutPromise]);
       }
     }
   } catch (err) {
-    logger.error({ err }, 'Failed to insert event into database');
-    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    logger.error({ err }, 'Failed to process webhook');
+    // Return 200 anyway to prevent Stripe retries - we've verified the signature
   }
 
+  // Calculate total processing time
+  const totalTime = performance.now() - startTime;
+  logger.info(
+    {
+      verificationTime: Math.round(verificationTime),
+      totalTime: Math.round(totalTime),
+      eventId: event.id,
+    },
+    'Webhook processing complete',
+  );
+
+  // Return 200 OK quickly to Stripe
   return NextResponse.json({ received: true });
 }
 
 export async function GET() {
   return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
-} 
+}

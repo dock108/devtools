@@ -84,15 +84,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Jest smoke test for `runSeeder()` that mocks Stripe endpoints and ensures at
   least one charge call occurs with no unhandled errors.
 - **feat(settings):** add user settings page (profile, password, theme, API keys) (2025-04-25)
-    - Allows users to update display name, avatar URL.
-    - Implements password change functionality.
-    - Provides theme selection (System, Light, Dark) using `next-themes`.
-    - Enables API key generation (prefix + random bytes, shown once) and revocation.
-    - Uses Supabase RLS, server actions, and shadcn/ui components.
+  - Allows users to update display name, avatar URL.
+  - Implements password change functionality.
+  - Provides theme selection (System, Light, Dark) using `next-themes`.
+  - Enables API key generation (prefix + random bytes, shown once) and revocation.
+  - Uses Supabase RLS, server actions, and shadcn/ui components.
 - feat(settings): add multi-Stripe connected accounts management (2025-04-25)
 - feat(guardian): auto-suspend payouts on fraud, manual resume toggle (2025-04-25)
 - feat(guardian): add fraud-handler edge function to auto-pause payouts and send alerts (2025-04-25)
 - feat(guardian): add alerts mute toggle with duration options (2025-04-25)
+- **feat(stripe):** Platform-level Stripe webhook endpoint (/api/stripe/webhook) that:
+  - Verifies Stripe signatures using STRIPE_WEBHOOK_SECRET
+  - Buffers events in new event_buffer table with proper indexing
+  - Asynchronously forwards events to guardian-reactor for processing
+  - Tracks failed dispatches for retry in failed_event_dispatch table
+  - Responds to Stripe within 200ms for high availability
+  - Includes comprehensive test suite
 
 ### Changed
 

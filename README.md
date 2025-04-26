@@ -32,6 +32,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
     RESEND_API_KEY=...
     STRIPE_CLIENT_ID=...
     STRIPE_SECRET_KEY=...
+    STRIPE_WEBHOOK_SECRET=... # Required for webhook endpoints
     # Additional variables needed for specific features
     ```
 
@@ -233,15 +234,57 @@ Authenticated users can manage their account settings at the [/settings](/settin
 <img width="800" alt="Screenshot of the user settings page showing profile, password, theme, and API key sections." src="https://via.placeholder.com/800x400.png?text=User+Settings+Page+Screenshot+Placeholder">
 
 ### Features:
+
 - **Profile**: Update display name and avatar URL.
 - **Password**: Change account password (requires meeting complexity rules).
 - **Theme**: Choose between Light, Dark, or System default themes.
 - **API Keys**: Generate and revoke API keys for programmatic access.
-    - **Note**: Generated API keys are shown only **once** upon creation. Store them securely.
+  - **Note**: Generated API keys are shown only **once** upon creation. Store them securely.
 
 ### Development Notes:
+
 - **Route**: `app/(auth)/settings/page.tsx` (Server Component)
 - **UI Components**: Client components (`ProfileForm`, `PasswordForm`, etc.) located in the same directory.
 - **Data**: Fetched server-side via `getProfile` from `lib/supabase/user.ts`.
 - **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`.
 - **Database**: Uses the `public.profiles` table (linked to `auth.users`). RLS policies restrict access to the owner.
+
+## For Stripe Guardian Development
+
+### Setting Up Stripe Webhooks
+
+Guardian processes Stripe events through a centralized webhook system:
+
+1. **Get a webhook secret:**
+
+   - Run `stripe listen` locally to get a webhook signing secret
+   - Or create a webhook endpoint in the Stripe Dashboard and copy the signing secret
+
+2. **Configure Environment:**
+
+   - Add the webhook secret to your `.env.local`:
+
+   ```
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+
+3. **Local Testing:**
+
+   ```bash
+   # Start your development server
+   npm run dev
+
+   # In a separate terminal, forward events to your local webhook
+   stripe listen --forward-to http://localhost:3000/api/stripe/webhook
+
+   # In a third terminal, trigger test events
+   stripe trigger charge.failed
+   stripe trigger payout.paid
+   ```
+
+4. **Event Flow:**
+   - Events flow into the `event_buffer` table with the full payload preserved
+   - The guardian-reactor processes events asynchronously
+   - Failed processing attempts are tracked in `failed_event_dispatch` for retries
+
+For more details on Guardian local development, see [Guardian Local Development](./docs/guardian/local-dev.md).
