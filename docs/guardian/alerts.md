@@ -23,6 +23,28 @@ The `alert_channels` table stores configuration for each Stripe account:
 | `auto_pause`        | `boolean`     | Whether to automatically pause suspicious payouts |
 | `created_at`        | `timestamptz` | Timestamp when record was created                 |
 
+## Idempotency and Duplicate Protection
+
+Guardian implements robust idempotency protection to ensure that each event is processed exactly once. This protects against:
+
+- Duplicate webhook deliveries from Stripe
+- Retries from network failures
+- Concurrent processing attempts
+
+This is implemented through:
+
+1. **Transactional Processing**: All database operations (event marking and alert creation) happen in a single Postgres transaction
+2. **Unique Constraint**: Primary key constraint on `processed_events.stripe_event_id` ensures only one record per event
+3. **Deduplication Constraint**: Unique composite constraint on alerts (`stripe_account_id`, `alert_type`, `event_id`) prevents duplicate alerts
+
+If Stripe sends the same webhook event multiple times (which happens occasionally), Guardian will:
+
+1. Detect that the event has already been processed
+2. Return a 204 No Content response
+3. Skip rule evaluation and alert creation
+
+This ensures consistent alert data and prevents notification spam.
+
 ## Security
 
 The table is protected by row-level security policies to ensure each account can only access its own settings:

@@ -73,39 +73,9 @@ serve(async (req: Request) => {
     const stripeEventId = stripeEvent.id;
     const stripeAccountId = stripeEvent.account || 'acct_unknown';
 
-    // Check if the event has already been processed using stripe_event_id
-    const { data: processedEvent } = await supabase
-      .from('processed_events')
-      .select('id')
-      .eq('stripe_event_id', stripeEventId)
-      .maybeSingle();
-
-    if (processedEvent) {
-      return new Response(
-        JSON.stringify({
-          message: 'Event already processed',
-          skipped: true,
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
     // Validate the Stripe event
     const validationResult = validateStripeEvent(stripeEvent);
     if (!validationResult.valid) {
-      // Record the failure in processed_events
-      const { data: failedProcessed } = await supabase
-        .from('processed_events')
-        .insert({
-          stripe_event_id: stripeEventId,
-          stripe_account_id: stripeAccountId,
-          processed_at: new Date().toISOString(),
-          process_duration_ms: Math.round(performance.now() - startTime),
-          alerts_created: 0,
-        })
-        .select('id')
-        .single();
-
       return new Response(
         JSON.stringify({
           error: 'Event validation failed',
@@ -115,65 +85,82 @@ serve(async (req: Request) => {
       );
     }
 
-    // Evaluate rules
-    let createdAlerts = [];
-    try {
-      const ruleResult = await evaluateRulesEdge(stripeEvent, supabase);
-      createdAlerts = ruleResult.alerts || [];
-    } catch (ruleError) {
-      // Record the rule evaluation failure
-      const { data: failedProcessed } = await supabase
+    // Process the event in a transaction to ensure atomicity and idempotency
+    const { data: txResult, error: txError } = await supabase.transaction(async (tx) => {
+      // Check if the event has already been processed (idempotency guard)
+      const { error: dupError } = await tx
         .from('processed_events')
-        .insert({
-          stripe_event_id: stripeEventId,
-          stripe_account_id: stripeAccountId,
-          processed_at: new Date().toISOString(),
-          process_duration_ms: Math.round(performance.now() - startTime),
-          alerts_created: 0,
-        })
-        .select('id')
-        .single();
+        .insert({ stripe_event_id: stripeEventId })
+        .select();
 
+      // If we got a unique violation error, this event was already processed
+      if (dupError?.code === '23505') {
+        // unique_violation
+        return { skipped: true };
+      }
+
+      // Evaluate rules
+      let alerts = [];
+      try {
+        alerts = await evaluateRulesEdge(stripeEvent, supabase);
+      } catch (ruleError) {
+        throw new Error(`Rule evaluation failed: ${ruleError.message || String(ruleError)}`);
+      }
+
+      // Insert alerts (if any) with conflict handling
+      if (alerts.length > 0) {
+        const { error: alertError } = await tx.from('alerts').insert(
+          alerts.map((alert) => ({
+            alert_type: alert.type,
+            severity: alert.severity,
+            message: alert.message,
+            stripe_payout_id: alert.payoutId,
+            stripe_account_id: stripeAccountId,
+            event_id: stripeEventId,
+            resolved: false,
+            created_at: new Date().toISOString(),
+          })),
+          { onConflict: 'stripe_account_id, alert_type, event_id' },
+        );
+
+        if (alertError) {
+          throw new Error(`Failed to insert alerts: ${alertError.message}`);
+        }
+      }
+
+      return {
+        processed: true,
+        alertCount: alerts.length,
+      };
+    });
+
+    if (txError) {
       return new Response(
         JSON.stringify({
-          error: 'Rule evaluation failed',
-          details: ruleError.message || String(ruleError),
+          error: `Transaction failed: ${txError.message}`,
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    // Record successful processing
-    const processingDuration = Math.round(performance.now() - startTime);
-    const { data: processedRecord, error: processedError } = await supabase
-      .from('processed_events')
-      .insert({
-        stripe_event_id: stripeEventId,
-        stripe_account_id: stripeAccountId,
-        processed_at: new Date().toISOString(),
-        process_duration_ms: processingDuration,
-        alerts_created: createdAlerts.length,
-      })
-      .select('id')
-      .single();
-
-    if (processedError) {
+    // If the event was already processed
+    if (txResult?.skipped) {
       return new Response(
         JSON.stringify({
-          error: 'Failed to record processed event',
-          details: processedError.message,
+          message: 'Event already processed',
+          skipped: true,
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 204, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
     // Return success response
+    const processingDuration = Math.round(performance.now() - startTime);
     return new Response(
       JSON.stringify({
         message: 'Event processed successfully',
-        processed_event_id: processedRecord.id,
         processing_duration_ms: processingDuration,
-        alerts_created: createdAlerts.length,
+        alerts_created: txResult?.alertCount || 0,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

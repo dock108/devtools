@@ -3,6 +3,70 @@ title: Guardian Fraud Rules
 description: Detailed explanation of the fraud detection rules implemented in Stripe Guardian.
 ---
 
+# Guardian Rules
+
+Guardian is our fraud detection system that evaluates a series of rules against Stripe events.
+
+## Supported Scenarios
+
+### Velocity Breach
+
+**Type**: `VELOCITY`  
+**Severity**: High  
+**Trigger**: 3+ payouts in 60 seconds for the same connected account.  
+**Alert Text**: `🚨 {count} payouts inside {windowSeconds}s`
+
+Velocity breach indicates a potential system exploitation or fraudulent payout behavior.
+
+### Bank Account Swap
+
+**Type**: `BANK_SWAP`  
+**Severity**: High  
+**Trigger**: Bank account changed within 5 minutes before a large payout (≥ $1,000).  
+**Alert Text**: `Bank account swapped {lookbackMinutes} min before ${payoutUsd} payout`
+
+Bank account swaps immediately before large payouts can indicate an account takeover.
+
+### Geographic Mismatch
+
+**Type**: `GEO_MISMATCH`  
+**Severity**: Medium  
+**Trigger**: 2+ charges from countries different than the bank account country.  
+**Alert Text**: `Detected {count} charges from foreign IPs vs bank country {bankCountry}`
+
+Geographic mismatches between charge location and bank location can indicate fraud.
+
+### Failed Charge Burst
+
+**Type**: `FAILED_CHARGE_BURST`  
+**Severity**: High  
+**Trigger**: 3+ failed charges or payment attempts in 5 minutes for the same account.  
+**Alert Text**: `Spike in failed payments for {account} – {count} in the last 5 min.`
+
+Multiple failed charge attempts in a short period often indicate card testing or fraudulent activity.
+
+### Sudden Payout Disable
+
+**Type**: `SUDDEN_PAYOUT_DISABLE`  
+**Severity**: Medium  
+**Trigger**: Account update where payouts_enabled changes from true to false.  
+**Alert Text**: `Payouts disabled for {account}.`
+
+When Stripe disables payouts for an account, it often indicates a compliance issue or risk factor.
+
+### High Risk Review
+
+**Type**: `HIGH_RISK_REVIEW`  
+**Severity**: High  
+**Trigger**: Review opened with reason="rule" (Stripe's high-risk flag).  
+**Alert Text**: `Stripe flagged a high-risk charge on {account}.`
+
+Stripe's internal rules have identified a transaction as high-risk, requiring immediate review.
+
+## Configuration
+
+Rules can be configured globally or per account. See the `rule_set` field in the `connected_accounts` table.
+
 # Guardian Rules Engine
 
 The Guardian Rules Engine is responsible for detecting potentially fraudulent activities in the Stripe payment ecosystem. It analyzes events and applies a set of predefined rules to determine if a payout or account update should be flagged for review.
@@ -22,15 +86,15 @@ The rules engine uses a JSON configuration file to set thresholds for each rule.
 ```json
 {
   "velocityBreach": {
-    "maxPayouts": 3,     // Maximum number of payouts allowed
-    "windowSeconds": 60  // Time window to check (in seconds)
+    "maxPayouts": 3, // Maximum number of payouts allowed
+    "windowSeconds": 60 // Time window to check (in seconds)
   },
   "bankSwap": {
-    "lookbackMinutes": 5,    // How far back to check for bank account changes
-    "minPayoutUsd": 1000     // Minimum payout amount to trigger the rule
+    "lookbackMinutes": 5, // How far back to check for bank account changes
+    "minPayoutUsd": 1000 // Minimum payout amount to trigger the rule
   },
   "geoMismatch": {
-    "mismatchChargeCount": 2  // Number of mismatched locations to trigger
+    "mismatchChargeCount": 2 // Number of mismatched locations to trigger
   }
 }
 ```
@@ -52,15 +116,15 @@ For example, to increase velocity breach detection sensitivity for a high-risk a
 ```json
 {
   "velocityBreach": {
-    "maxPayouts": 2,     // More strict than default (3)
-    "windowSeconds": 30  // Shorter window than default (60)
+    "maxPayouts": 2, // More strict than default (3)
+    "windowSeconds": 30 // Shorter window than default (60)
   },
   "bankSwap": {
-    "lookbackMinutes": 10,   // Longer window than default (5)
-    "minPayoutUsd": 500      // Lower threshold than default (1000)
+    "lookbackMinutes": 10, // Longer window than default (5)
+    "minPayoutUsd": 500 // Lower threshold than default (1000)
   },
   "geoMismatch": {
-    "mismatchChargeCount": 1  // More strict than default (2)
+    "mismatchChargeCount": 1 // More strict than default (2)
   }
 }
 ```
@@ -93,6 +157,7 @@ The Guardian Rules Engine uses a modular architecture to evaluate incoming Strip
 8. (Future) Alerts are sent via Slack/email
 
 This modular approach allows:
+
 - Easy addition of new rules without changing the core engine
 - Single database query for context data shared across rules
 - Independent rule testing
@@ -141,8 +206,8 @@ import { ruleConfig } from '@/lib/guardian/config';
 
 // Custom configuration (optional)
 const customConfig = {
-  velocityLimit: 5,           // Override default
-  windowSec: 120              // Override default
+  velocityLimit: 5, // Override default
+  windowSec: 120, // Override default
 };
 
 // Evaluate a single event
@@ -160,4 +225,4 @@ The configuration system allows for future expansion to support merchant-specifi
 2. Load the appropriate configuration based on merchant ID
 3. Pass custom thresholds to the rules engine
 
-This approach allows for flexible fraud detection without changing the underlying code. 
+This approach allows for flexible fraud detection without changing the underlying code.

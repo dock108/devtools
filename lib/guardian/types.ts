@@ -1,5 +1,11 @@
 export type Alert = {
-  type: 'VELOCITY' | 'BANK_SWAP' | 'GEO_MISMATCH';
+  type:
+    | 'VELOCITY'
+    | 'BANK_SWAP'
+    | 'GEO_MISMATCH'
+    | 'FAILED_CHARGE_BURST'
+    | 'SUDDEN_PAYOUT_DISABLE'
+    | 'HIGH_RISK_REVIEW';
   severity: 'low' | 'medium' | 'high';
   message: string;
   payoutId?: string;
@@ -24,4 +30,4 @@ export type RuleContext = {
   recentPayouts: any[];
   recentCharges: any[];
   config: import('./config').RuleSet;
-}; 
+};

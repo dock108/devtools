@@ -123,6 +123,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Add comprehensive unit tests for valid and invalid schemas
   - Update documentation with validation details and development mode toggle
   - Log environment variable hint on webhook startup
+- **feat(guardian):** Transactional alert insert with idempotency constraint (G-08):
+  - Added processed_events table with stripe_event_id primary key for idempotency tracking
+  - Added unique composite constraint on alerts to prevent duplicate entries
+  - Refactored guardian-reactor to use transactions for atomic event processing
+  - Improved response codes: 204 for already processed events
+  - Created transactional unit tests to verify proper behavior
+  - Updated documentation to explain idempotency guarantees
+  - Ensured robust handling of duplicate Stripe webhook deliveries
+- **feat(guardian):** Add three new fraud detection scenarios (G-07):
+  - FAILED_CHARGE_BURST: Alerts on 3+ failed charges within 5 minutes
+  - SUDDEN_PAYOUT_DISABLE: Detects when Stripe disables payouts for an account
+  - HIGH_RISK_REVIEW: Identifies high-risk transactions flagged by Stripe
+  - Added SQL migration (20250426_failed_charge_burst.sql) with optimized query function
+  - Created unit tests to validate all scenarios with test fixtures
+  - Updated documentation to include new scenarios in rules.md and README
 
 ### Changed
 
