@@ -138,6 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added SQL migration (20250426_failed_charge_burst.sql) with optimized query function
   - Created unit tests to validate all scenarios with test fixtures
   - Updated documentation to include new scenarios in rules.md and README
+- **Feat(Guardian)**: Implement data retention policy (scrubbing/purging) for `event_buffer` to enhance GDPR/PCI compliance (G-13).
 
 ### Changed
 

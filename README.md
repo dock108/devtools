@@ -347,3 +347,9 @@ Guardian implements strict schema validation for all Stripe events:
    - All validation errors are logged for debugging
 
 For more details on Guardian local development, see [Guardian Local Development](./docs/guardian/local-dev.md).
+
+## Operations
+
+Operational tasks and monitoring for the DOCK108 platform:
+
+- **Guardian Data Retention**: A nightly job (`guardian-retention-job`) automatically scrubs sensitive data from `event_buffer` payloads after 30 days (configurable via `EVENT_BUFFER_TTL_DAYS`) and purges the records entirely after 37 days. See `docs/guardian/retention.md` for details.
