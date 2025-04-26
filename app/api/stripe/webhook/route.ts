@@ -5,7 +5,6 @@ import { log, generateRequestId } from '@/lib/logger';
 import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
 import { validateStripeEvent, isStrictValidationEnabled } from '@/lib/guardian/validateStripeEvent';
 import { ZodError } from 'zod';
-import { registry, webhookRequests, webhookDuration } from '@/lib/metrics'; // Import metrics
 
 export const runtime = 'edge';
 export const maxDuration = 5; // 5 seconds maximum for the webhook handler
@@ -56,14 +55,10 @@ export async function POST(req: NextRequest) {
   let status = 500; // Default to internal error
   let eventTypeLabel = 'unknown'; // Default label for metrics
 
-  const endTimer = webhookDuration.startTimer(); // Start histogram timer
-
   try {
     if (!sig) {
       log.error({ ...baseLogData, status: 400 }, 'Missing Stripe signature header');
       status = 400;
-      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
-      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'Missing signature header' }, { status: 400 });
     }
 
@@ -76,8 +71,6 @@ export async function POST(req: NextRequest) {
         'Webhook signature verification failed',
       );
       status = 400;
-      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
-      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
     }
 
@@ -89,8 +82,6 @@ export async function POST(req: NextRequest) {
     if (!isGuardianSupportedEvent(eventType)) {
       log.warn({ ...eventLogData, status: 400 }, 'Unsupported event type received');
       status = 400;
-      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
-      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'unsupported_event_type' }, { status: 400 });
     }
 
@@ -104,8 +95,6 @@ export async function POST(req: NextRequest) {
             { ...eventLogData, zodErrors: err.errors, status: 400 },
             'Event validation failed',
           );
-          webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
-          endTimer({ status: '400', event_type: eventTypeLabel });
           return NextResponse.json({ error: 'unsupported_event_shape' }, { status: 400 });
         }
         if (err instanceof Error && err.message.includes('Unsupported event type')) {
@@ -113,13 +102,9 @@ export async function POST(req: NextRequest) {
             { ...eventLogData, status: 400 },
             'Unsupported event type received (validation)',
           );
-          webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
-          endTimer({ status: '400', event_type: eventTypeLabel });
           return NextResponse.json({ error: 'unsupported_event_type' }, { status: 400 });
         }
         log.error({ ...eventLogData, err, status: 500 }, 'Unknown validation error');
-        webhookRequests.inc({ status: '500', event_type: eventTypeLabel });
-        endTimer({ status: '500', event_type: eventTypeLabel });
         throw err; // Re-throw unknown errors for outer catch
       }
     }
@@ -129,8 +114,6 @@ export async function POST(req: NextRequest) {
     if (!verifiedAccountId) {
       log.error({ ...eventLogData, status: 400 }, 'Missing account ID in header or event');
       status = 400;
-      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
-      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'Missing account ID' }, { status: 400 });
     }
 
@@ -166,7 +149,6 @@ export async function POST(req: NextRequest) {
       );
       // Acknowledge receipt to Stripe, but log the error internally
       status = 200; // Treat as success for Stripe
-      webhookRequests.inc({ status: '200', event_type: eventTypeLabel });
     } else if (insertedEvent?.id) {
       log.info({ ...finalLogData, event_buffer_id: insertedEvent.id }, 'Event stored in buffer');
 
@@ -214,11 +196,9 @@ export async function POST(req: NextRequest) {
         });
 
       status = 200; // Success from webhook perspective
-      webhookRequests.inc({ status: '200', event_type: eventTypeLabel });
     } else {
       log.error({ ...finalLogData }, 'Failed to get inserted event buffer ID after upsert');
       status = 200; // Still success for Stripe
-      webhookRequests.inc({ status: '200', event_type: eventTypeLabel });
     }
   } catch (err: any) {
     status = status === 500 ? 500 : status; // Keep 400 if already set
@@ -235,14 +215,11 @@ export async function POST(req: NextRequest) {
     // Return specific error if status is 400, otherwise generic 500
     const errorResponse =
       status === 400 ? { error: err.message || 'Bad Request' } : { error: 'Internal Server Error' };
-    webhookRequests.inc({ status: status.toString(), event_type: eventTypeLabel });
-    endTimer({ status: status.toString(), event_type: eventTypeLabel });
     return NextResponse.json(errorResponse, { status });
   }
 
   // Calculate total processing time and record histogram
   const durationMs = Math.round(performance.now() - startTime);
-  endTimer({ status: status.toString(), event_type: eventTypeLabel }); // Stop histogram timer with final status
   log.info(
     {
       ...baseLogData,
@@ -268,11 +245,18 @@ export async function GET(req: NextRequest) {
       //     return new Response('Unauthorized', { status: 401 });
       // }
 
-      const metrics = await registry.metrics();
-      return new Response(metrics, {
-        headers: { 'Content-Type': registry.contentType },
-      });
-    } catch (error) {
+      // This needs to be adjusted or removed as registry is no longer imported here
+      // For now, returning an empty response or an error
+      // const metrics = await registry.metrics();
+      // return new Response(metrics, {
+      //   headers: { 'Content-Type': registry.contentType },
+      // });
+      log.warn(
+        { service: 'metrics-api', path: '/api/stripe/webhook' },
+        'Metrics endpoint accessed but metrics disabled for Edge route.',
+      );
+      return new Response('Metrics not available on this path', { status: 404 });
+    } catch (error: any) {
       log.error({ service: 'metrics-api', err: error.message }, 'Failed to generate metrics');
       return new Response('Internal Server Error', { status: 500 });
     }
