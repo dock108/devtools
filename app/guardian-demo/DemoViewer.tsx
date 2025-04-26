@@ -7,12 +7,12 @@ import SlackAlert from '../../components/guardian-demo/SlackAlert';
 import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
 import { getScenarios } from './getScenarios';
 import { useState, useEffect } from 'react';
-import { logger } from '@/lib/logger';
+import { log } from '@/lib/logger';
 import toast from 'react-hot-toast';
 
 // Get scenarios at build time
 const scenarioList = getScenarios();
-const scenarioIds = scenarioList.map(s => s.id);
+const scenarioIds = scenarioList.map((s) => s.id);
 const scenarioLabels = scenarioList.reduce<Record<string, string>>((acc, s) => {
   acc[s.id] = s.label;
   return acc;
@@ -22,19 +22,19 @@ export function DemoViewer() {
   // Default to the first scenario instead of empty string
   const [scenario, setScenario] = useState<string>(scenarioIds.length > 0 ? scenarioIds[0] : '');
   const [speed, setSpeed] = useState(1);
-  
+
   // We don't need fallback events anymore since we always use scenarios
   const scenarioData = useDemoScenario(scenario, {
     onExpire: () => handleReset(true),
-    speed
+    speed,
   });
-  
+
   // Use scenario events
   const { events, isRunning, totalDelayMs } = scenarioData;
-  
+
   const [log, setLog] = useState<string[]>(['Monitoring started…']);
   const [alert, setAlert] = useState<{ text: string }>();
-  
+
   // Check for scenario completion
   useEffect(() => {
     // If the scenario was running but now stopped and has played all events
@@ -48,9 +48,9 @@ export function DemoViewer() {
     setLog([auto ? 'Demo auto‑restarted after 5 min idle.' : 'Monitoring restarted…']);
     setAlert(undefined);
   }
-  
+
   function handleScenarioChange(newScenario: string) {
-    logger.info({ newScenario }, 'Changing scenario');
+    log.info({ newScenario }, 'Changing scenario');
     setScenario(newScenario);
     handleReset(false);
   }
@@ -59,11 +59,11 @@ export function DemoViewer() {
   useEffect(() => {
     const latest = events[events.length - 1];
     if (!latest?.flagged) return;
-    
+
     const amt = (latest.amount ?? 0) / 100;
     let logMessage = `⚠️ Fraud detected in payout ${latest.id.slice(0, 8)}…`;
     let alertMessage = `🚨 Payout auto‑paused: $${amt.toFixed(2)} (${latest.id.slice(0, 8)}…)`;
-    
+
     // Different messages based on scenario type
     if (scenario === 'velocity-breach') {
       logMessage = `⚠️ Velocity breach detected — 3 payouts in under 60s.`;
@@ -75,13 +75,14 @@ export function DemoViewer() {
       logMessage = `⚠️ Geo-location mismatch detected — payout from unusual location.`;
       alertMessage += ` – unusual location`;
     }
-    
-    setLog((l) => [
-      logMessage,
-      `⏸ Auto-pause triggered for payout ${latest.id.slice(0, 8)}…`,
-      ...l
-    ].slice(0, 20));
-    
+
+    setLog((l) =>
+      [logMessage, `⏸ Auto-pause triggered for payout ${latest.id.slice(0, 8)}…`, ...l].slice(
+        0,
+        20,
+      ),
+    );
+
     setAlert({
       text: alertMessage,
     });
@@ -110,4 +111,4 @@ export function DemoViewer() {
       </section>
     </>
   );
-} 
+}
