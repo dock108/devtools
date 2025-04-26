@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **feat(guardian):** Implement email + Slack notifications for new alerts (G-20):
+  - Added `settings` table for notification preferences (tier, email, Slack webhook).
+  - Added `notify_new_alert` Postgres trigger function (using `pg_net`) to call edge function on new alerts.
+  - Created `guardian-notify` edge function to handle notification logic, including free tier limit (50 alerts).
+  - Integrated SendGrid for email and direct webhook calls for Slack.
+  - Added unit tests (`tests/notify.spec.ts`) with mocks for external services.
+  - Included documentation (`docs/guardian/notifications.md`) and README update.
+  - Logs required env vars (`SENDGRID_API_KEY`, `FROM_EMAIL`) on cold start.
 - `src/lib/timewarp-seeder.ts` with stubbed `runSeeder()`; serves as scaffold for upcoming seeder logic.
 - Bundled Stripe CLI binary (stripe-cli-linux-x64) via postinstall so serverless Time-Warp seeder can execute `stripe fixtures` inside Vercel.
 - **feat(event-buffer):** Add event_buffer table with 30-day TTL purge:
