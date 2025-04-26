@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, Stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { logger } from '@/lib/logger';
-import { logRequest } from '@/lib/logRequest';
+import { log, generateRequestId } from '@/lib/logger';
 import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
 import { validateStripeEvent, isStrictValidationEnabled } from '@/lib/guardian/validateStripeEvent';
 import { ZodError } from 'zod';
+import { registry, webhookRequests, webhookDuration } from '@/lib/metrics'; // Import metrics
 
 export const runtime = 'edge';
 export const maxDuration = 5; // 5 seconds maximum for the webhook handler
 
-// Print environment variable hint on startup
+// Print environment variable hint on startup using the logger
 if (isStrictValidationEnabled()) {
-  console.log('Stripe event validation is ENABLED (default)');
-  console.log('Add to .env if you need to disable validation locally:');
-  console.log('STRICT_STRIPE_VALIDATION=false');
+  log.info('Stripe event validation is ENABLED (default)');
+  log.info('Add to .env if you need to disable validation locally: STRICT_STRIPE_VALIDATION=false');
 } else {
-  console.log('⚠️ Warning: Stripe event validation is DISABLED');
-  console.log('This should only be used for development');
+  log.warn('Stripe event validation is DISABLED - This should only be used for development');
 }
 
 /**
@@ -32,105 +30,128 @@ if (isStrictValidationEnabled()) {
  */
 export async function POST(req: NextRequest) {
   const startTime = performance.now();
-  logRequest(req);
+  const reqId = generateRequestId();
+  const baseLogData = { req_id: reqId, service: 'webhook-handler' }; // Base data for logs
+
+  log.info({ ...baseLogData, method: req.method, url: req.url }, 'Incoming webhook request');
 
   if (req.method !== 'POST') {
+    log.warn({ ...baseLogData, status: 405 }, 'Method not allowed');
     return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
   }
 
   const sig = req.headers.get('stripe-signature');
-  const accountId = req.headers.get('stripe-account');
+  const accountIdHeader = req.headers.get('stripe-account'); // Renamed for clarity
   let rawBody: string;
 
   try {
     rawBody = await req.text();
-  } catch (err) {
-    logger.error({ err }, 'Failed to read request body');
+  } catch (err: any) {
+    log.error({ ...baseLogData, err: err.message, status: 400 }, 'Failed to read request body');
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  let event: Stripe.Event;
-  let verifiedAccountId: string;
+  let event: Stripe.Event | null = null; // Initialize as null
+  let verifiedAccountId: string | null = null; // Initialize as null
+  let status = 500; // Default to internal error
+  let eventTypeLabel = 'unknown'; // Default label for metrics
+
+  const endTimer = webhookDuration.startTimer(); // Start histogram timer
 
   try {
     if (!sig) {
-      logger.error('Missing Stripe signature header');
+      log.error({ ...baseLogData, status: 400 }, 'Missing Stripe signature header');
+      status = 400;
+      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
+      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'Missing signature header' }, { status: 400 });
     }
 
     try {
-      // Always use the platform webhook secret for verification
       event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-    } catch (err) {
-      logger.error({ err }, 'Webhook signature verification failed');
+      eventTypeLabel = event.type || 'unknown'; // Set label once event is parsed
+    } catch (err: any) {
+      log.error(
+        { ...baseLogData, err: err.message, status: 400 },
+        'Webhook signature verification failed',
+      );
+      status = 400;
+      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
+      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
     }
 
-    // Check if this event type is supported by Guardian
-    if (!isGuardianSupportedEvent(event.type)) {
-      logger.warn({ eventType: event.type }, 'Unsupported event type received');
+    const eventId = event.id;
+    const eventType = event.type;
+    eventTypeLabel = eventType; // Update label
+    const eventLogData = { ...baseLogData, stripe_event_id: eventId, event_type: eventType };
+
+    if (!isGuardianSupportedEvent(eventType)) {
+      log.warn({ ...eventLogData, status: 400 }, 'Unsupported event type received');
+      status = 400;
+      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
+      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'unsupported_event_type' }, { status: 400 });
     }
 
-    // Validate event shape against schema
     if (isStrictValidationEnabled()) {
       try {
         validateStripeEvent(event);
       } catch (err) {
+        status = 400;
         if (err instanceof ZodError) {
-          logger.error(
-            {
-              eventId: event.id,
-              eventType: event.type,
-              zodErrors: err.errors,
-            },
+          log.error(
+            { ...eventLogData, zodErrors: err.errors, status: 400 },
             'Event validation failed',
           );
+          webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
+          endTimer({ status: '400', event_type: eventTypeLabel });
           return NextResponse.json({ error: 'unsupported_event_shape' }, { status: 400 });
         }
         if (err instanceof Error && err.message.includes('Unsupported event type')) {
-          logger.warn({ eventType: event.type }, 'Unsupported event type received');
+          log.warn(
+            { ...eventLogData, status: 400 },
+            'Unsupported event type received (validation)',
+          );
+          webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
+          endTimer({ status: '400', event_type: eventTypeLabel });
           return NextResponse.json({ error: 'unsupported_event_type' }, { status: 400 });
         }
-        throw err; // Re-throw unknown errors
+        log.error({ ...eventLogData, err, status: 500 }, 'Unknown validation error');
+        webhookRequests.inc({ status: '500', event_type: eventTypeLabel });
+        endTimer({ status: '500', event_type: eventTypeLabel });
+        throw err; // Re-throw unknown errors for outer catch
       }
     }
 
-    // Extract the account ID from header or event
-    verifiedAccountId = accountId || event.account || '';
+    verifiedAccountId = accountIdHeader || event.account || null;
 
     if (!verifiedAccountId) {
-      logger.error({ eventType: event.type }, 'Missing account ID');
+      log.error({ ...eventLogData, status: 400 }, 'Missing account ID in header or event');
+      status = 400;
+      webhookRequests.inc({ status: '400', event_type: eventTypeLabel });
+      endTimer({ status: '400', event_type: eventTypeLabel });
       return NextResponse.json({ error: 'Missing account ID' }, { status: 400 });
     }
 
-    logger.info(
-      {
-        accountId: verifiedAccountId,
-        eventType: event.type,
-        eventId: event.id,
-        validationEnabled: isStrictValidationEnabled(),
-      },
-      'Webhook verified',
+    const finalLogData = { ...eventLogData, stripe_account_id: verifiedAccountId };
+    log.info(
+      { ...finalLogData, validation_enabled: isStrictValidationEnabled() },
+      'Webhook signature and payload verified',
     );
-  } catch (err) {
-    logger.error({ err }, 'Error processing webhook');
-    return NextResponse.json({ error: 'Webhook processing error' }, { status: 400 });
-  }
 
-  // Record verification time for performance monitoring
-  const verificationTime = performance.now() - startTime;
+    // Record verification time
+    const verificationTime = performance.now() - startTime;
 
-  // Store the raw event in the buffer
-  try {
-    const { data: insertedEvent, error } = await supabaseAdmin
+    // Store the raw event in the buffer
+    const { data: insertedEvent, error: insertError } = await supabaseAdmin
       .from('event_buffer')
       .upsert(
         {
-          stripe_event_id: event.id,
+          stripe_event_id: eventId,
           stripe_account_id: verifiedAccountId,
-          type: event.type,
-          payload: event.data,
+          type: eventType,
+          payload: event.data, // Store original data part
           received_at: new Date().toISOString(),
         },
         { onConflict: 'stripe_event_id' },
@@ -138,118 +159,124 @@ export async function POST(req: NextRequest) {
       .select('id')
       .single();
 
-    if (error) {
-      logger.error({ error }, 'Failed to insert event into buffer');
-      // We don't want to return an error to Stripe, as we've verified the signature
-      // Continue to return 200 OK to prevent Stripe from retrying
-    } else {
-      logger.info(
-        {
-          eventBufferId: insertedEvent.id,
-          eventType: event.type,
-          eventId: event.id,
-        },
-        'Event stored in buffer',
+    if (insertError) {
+      log.error(
+        { ...finalLogData, err: insertError.message },
+        'Failed to insert event into buffer',
       );
+      // Acknowledge receipt to Stripe, but log the error internally
+      status = 200; // Treat as success for Stripe
+      webhookRequests.inc({ status: '200', event_type: eventTypeLabel });
+    } else if (insertedEvent?.id) {
+      log.info({ ...finalLogData, event_buffer_id: insertedEvent.id }, 'Event stored in buffer');
 
-      // Fan out to guardian-reactor (asynchronously)
-      if (insertedEvent && insertedEvent.id) {
-        // We'll use Promise.race to ensure we respond quickly to Stripe
-        // even if the reactor call takes longer
-        const timeoutPromise = new Promise<Response>((resolve) => {
-          setTimeout(() => {
-            // Log that we're responding before the reactor call completes
-            logger.info(
-              { eventBufferId: insertedEvent.id },
-              'Responding to Stripe before reactor call completes',
+      // Async dispatch to reactor - Don't await, respond to Stripe quickly
+      fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/guardian-reactor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // Pass anon key if needed by function
+        },
+        body: JSON.stringify({ event_buffer_id: insertedEvent.id }),
+      })
+        .then(async (response) => {
+          if (!response.ok && response.status !== 204) {
+            // Allow 204 (already processed)
+            const responseText = await response.text();
+            log.error(
+              {
+                ...finalLogData,
+                event_buffer_id: insertedEvent.id,
+                reactor_status: response.status,
+                reactor_response: responseText,
+              },
+              'Guardian reactor async dispatch failed',
             );
-            resolve(new Response(null, { status: 200 }));
-          }, 500); // Give the reactor call 500ms to complete before responding
+            // DLQ insertion happens within the reactor now
+          } else {
+            log.info(
+              {
+                ...finalLogData,
+                event_buffer_id: insertedEvent.id,
+                reactor_status: response.status,
+              },
+              'Guardian reactor async dispatch initiated',
+            );
+          }
+        })
+        .catch((err: any) => {
+          log.error(
+            { ...finalLogData, event_buffer_id: insertedEvent.id, err: err.message },
+            'Guardian reactor async dispatch exception',
+          );
+          // DLQ insertion happens within the reactor now
         });
 
-        const reactorPromise = fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/guardian-reactor`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              event_buffer_id: insertedEvent.id,
-            }),
-          },
-        )
-          .then(async (response) => {
-            if (!response.ok) {
-              const responseText = await response.text();
-              logger.error(
-                {
-                  statusCode: response.status,
-                  statusText: response.statusText,
-                  response: responseText,
-                  eventBufferId: insertedEvent.id,
-                },
-                'Guardian reactor call failed',
-              );
-
-              // Record the failure for retry
-              await supabaseAdmin.from('failed_event_dispatch').insert({
-                event_buffer_id: insertedEvent.id,
-                endpoint: '/api/guardian-reactor',
-                status_code: response.status,
-                error_message: responseText,
-                request_payload: { event_buffer_id: insertedEvent.id },
-              });
-            } else {
-              logger.info({ eventBufferId: insertedEvent.id }, 'Guardian reactor call succeeded');
-            }
-
-            return new Response(null, { status: 200 });
-          })
-          .catch(async (err) => {
-            logger.error(
-              { err, eventBufferId: insertedEvent.id },
-              'Guardian reactor call threw exception',
-            );
-
-            // Record the failure for retry
-            await supabaseAdmin
-              .from('failed_event_dispatch')
-              .insert({
-                event_buffer_id: insertedEvent.id,
-                endpoint: '/api/guardian-reactor',
-                error_message: err.message,
-                request_payload: { event_buffer_id: insertedEvent.id },
-              })
-              .catch((insertErr) => {
-                logger.error({ insertErr }, 'Failed to record reactor failure');
-              });
-
-            return new Response(null, { status: 200 });
-          });
-
-        // Race the reactor call against the timeout
-        return Promise.race([reactorPromise, timeoutPromise]);
-      }
+      status = 200; // Success from webhook perspective
+      webhookRequests.inc({ status: '200', event_type: eventTypeLabel });
+    } else {
+      log.error({ ...finalLogData }, 'Failed to get inserted event buffer ID after upsert');
+      status = 200; // Still success for Stripe
+      webhookRequests.inc({ status: '200', event_type: eventTypeLabel });
     }
-  } catch (err) {
-    logger.error({ err }, 'Failed to process webhook');
-    // Return 200 anyway to prevent Stripe retries - we've verified the signature
+  } catch (err: any) {
+    status = status === 500 ? 500 : status; // Keep 400 if already set
+    log.error(
+      {
+        ...baseLogData,
+        stripe_event_id: event?.id,
+        stripe_account_id: verifiedAccountId,
+        err: err.message,
+        status,
+      },
+      'Unhandled webhook processing error',
+    );
+    // Return specific error if status is 400, otherwise generic 500
+    const errorResponse =
+      status === 400 ? { error: err.message || 'Bad Request' } : { error: 'Internal Server Error' };
+    webhookRequests.inc({ status: status.toString(), event_type: eventTypeLabel });
+    endTimer({ status: status.toString(), event_type: eventTypeLabel });
+    return NextResponse.json(errorResponse, { status });
   }
 
-  // Calculate total processing time
-  const totalTime = performance.now() - startTime;
-  logger.info(
+  // Calculate total processing time and record histogram
+  const durationMs = Math.round(performance.now() - startTime);
+  endTimer({ status: status.toString(), event_type: eventTypeLabel }); // Stop histogram timer with final status
+  log.info(
     {
-      verificationTime: Math.round(verificationTime),
-      totalTime: Math.round(totalTime),
-      eventId: event.id,
+      ...baseLogData,
+      stripe_event_id: event?.id,
+      stripe_account_id: verifiedAccountId,
+      duration_ms: durationMs,
+      status,
     },
     'Webhook processing complete',
   );
 
   // Return 200 OK quickly to Stripe
-  return NextResponse.json({ received: true });
+  return NextResponse.json({ received: true }, { status });
 }
 
-export async function GET() {
-  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+// Expose metrics endpoint for Next.js app
+export async function GET(req: NextRequest) {
+  if (req.nextUrl.pathname === '/api/metrics') {
+    try {
+      // Optional: Add auth check here if needed for the Next.js endpoint
+      // const authToken = req.headers.get('authorization')?.split(' ')[1];
+      // if (authToken !== process.env.METRICS_AUTH_TOKEN) {
+      //     return new Response('Unauthorized', { status: 401 });
+      // }
+
+      const metrics = await registry.metrics();
+      return new Response(metrics, {
+        headers: { 'Content-Type': registry.contentType },
+      });
+    } catch (error) {
+      log.error({ service: 'metrics-api', err: error.message }, 'Failed to generate metrics');
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  }
+  // Fallback for other GET requests to /api/stripe/webhook
+  return NextResponse.json({ status: 'ok' });
 }

@@ -353,3 +353,15 @@ For more details on Guardian local development, see [Guardian Local Development]
 Operational tasks and monitoring for the DOCK108 platform:
 
 - **Guardian Data Retention**: A nightly job (`guardian-retention-job`) automatically scrubs sensitive data from `event_buffer` payloads after 30 days (configurable via `EVENT_BUFFER_TTL_DAYS`) and purges the records entirely after 37 days. See `docs/guardian/retention.md` for details.
+
+## Observability
+
+Guardian provides structured logging and Prometheus metrics for monitoring and debugging.
+
+- **Structured Logging**: All components emit JSON logs with consistent fields (`req_id`, `service`, etc.). See `docs/guardian/logging.md` for format details and configuration (`LOG_LEVEL`).
+- **Prometheus Metrics**: Key operational metrics are exposed:
+  - Next.js Webhook: Scrape `/api/metrics`.
+  - Supabase Edge Functions: Use log-based metrics derived from structured logs.
+  - Requires `METRICS_AUTH_TOKEN` for the Supabase `/guardian-metrics` endpoint (placeholder).
+  - See `docs/guardian/metrics.md` for metric details and scraping instructions.
+  - A starter Grafana dashboard is available at `docs/guardian/grafana.json`.

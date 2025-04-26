@@ -139,6 +139,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created unit tests to validate all scenarios with test fixtures
   - Updated documentation to include new scenarios in rules.md and README
 - **Feat(Guardian)**: Implement data retention policy (scrubbing/purging) for `event_buffer` to enhance GDPR/PCI compliance (G-13).
+- **Feat(Guardian)**: Implement structured JSON logging across components (Webhook, Reactor, DLQ Retry, Retention) using Pino (G-14).
+- **Feat(Guardian)**: Add Prometheus metrics exposition via `/api/metrics` (Webhook) and log-based metrics for Edge Functions (Reactor, DLQ Retry) (G-14).
 
 ### Changed
 
@@ -168,3 +170,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Experimental Time-Warp seeder code, cron job, environment variables, and
   related documentation/testing artifacts.
+
+## 0.1.0 (Initial Release)
