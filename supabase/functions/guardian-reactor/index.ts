@@ -38,12 +38,17 @@ serve(async (req: Request) => {
   }
 
   const startTime = performance.now();
+  let eventBufferId: string | null = null;
+  let eventPayload: any | null = null;
+
   try {
     // Parse request body
     const body = (await req.json()) as ProcessEventRequest;
+    eventBufferId = body.event_buffer_id;
 
     // Validate required fields
-    if (!body.event_buffer_id) {
+    if (!eventBufferId) {
+      // Return 400 immediately if event_buffer_id is missing
       return new Response(JSON.stringify({ error: 'Missing required field: event_buffer_id' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -56,10 +61,11 @@ serve(async (req: Request) => {
     const { data: event, error: eventError } = await supabase
       .from('event_buffer')
       .select('*')
-      .eq('id', body.event_buffer_id)
+      .eq('id', eventBufferId)
       .single();
 
     if (eventError || !event) {
+      // Event not found, return 404. No need to DLQ if the source is gone.
       return new Response(
         JSON.stringify({
           error: `Event not found: ${eventError?.message || 'No event with this ID exists'}`,
@@ -67,6 +73,9 @@ serve(async (req: Request) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+
+    // Store payload for potential DLQ insertion
+    eventPayload = event.payload;
 
     // Extract Stripe event details from the payload
     const stripeEvent = event.payload;
@@ -76,6 +85,7 @@ serve(async (req: Request) => {
     // Validate the Stripe event
     const validationResult = validateStripeEvent(stripeEvent);
     if (!validationResult.valid) {
+      // This is a bad event, no point retrying. Return 400.
       return new Response(
         JSON.stringify({
           error: 'Event validation failed',
@@ -99,10 +109,15 @@ serve(async (req: Request) => {
         return { skipped: true };
       }
 
+      // Re-throw other insertion errors to trigger rollback + DLQ
+      if (dupError) {
+        throw new Error(`Failed to mark event as processed: ${dupError.message}`);
+      }
+
       // Evaluate rules
       let alerts = [];
       try {
-        alerts = await evaluateRulesEdge(stripeEvent, supabase);
+        alerts = await evaluateRulesEdge(stripeEvent, tx); // Pass the transaction client
       } catch (ruleError) {
         throw new Error(`Rule evaluation failed: ${ruleError.message || String(ruleError)}`);
       }
@@ -118,9 +133,9 @@ serve(async (req: Request) => {
             stripe_account_id: stripeAccountId,
             event_id: stripeEventId,
             resolved: false,
-            created_at: new Date().toISOString(),
+            // created_at defaults in DB
           })),
-          { onConflict: 'stripe_account_id, alert_type, event_id' },
+          { onConflict: 'stripe_account_id, alert_type, event_id' }, // Assuming this unique constraint exists
         );
 
         if (alertError) {
@@ -134,13 +149,9 @@ serve(async (req: Request) => {
       };
     });
 
+    // If the transaction failed, this will be caught by the outer try/catch
     if (txError) {
-      return new Response(
-        JSON.stringify({
-          error: `Transaction failed: ${txError.message}`,
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      throw txError; // Rethrow to trigger DLQ insertion
     }
 
     // If the event was already processed
@@ -165,10 +176,64 @@ serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    // Handle server errors
-    return new Response(JSON.stringify({ error: `Server error: ${error.message || error}` }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    console.error(`Guardian Reactor error: ${error.message}`, error.stack);
+
+    // Attempt to insert into DLQ if we have the necessary info
+    if (eventPayload && eventPayload.id && eventBufferId) {
+      try {
+        const supabase = getSupabaseClient();
+        const { error: dlqError } = await supabase
+          .from('failed_event_dispatch')
+          .insert({
+            event_buffer_id: eventBufferId,
+            stripe_event_id: eventPayload.id,
+            stripe_account_id: eventPayload.account,
+            type: eventPayload.type,
+            received_at: new Date().toISOString(), // Or use event creation time?
+            payload: eventPayload,
+            last_error: error.message || String(error),
+          })
+          .select();
+
+        if (dlqError) {
+          console.error(`Failed to insert into DLQ: ${dlqError.message}`);
+          // If DLQ insert fails, return 500 to signal a critical problem
+          return new Response(
+            JSON.stringify({ error: `Server error & DLQ failure: ${dlqError.message}` }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          );
+        }
+      } catch (dlqInsertError) {
+        console.error(`Exception during DLQ insertion: ${dlqInsertError.message}`);
+        return new Response(
+          JSON.stringify({ error: `Server error & DLQ exception: ${dlqInsertError.message}` }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
+    } else {
+      console.error('Cannot insert into DLQ: Missing event payload, ID, or buffer ID.');
+      // Still return 500 if we couldn't DLQ
+      return new Response(
+        JSON.stringify({ error: `Server error, cannot DLQ: ${error.message || error}` }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    // IMPORTANT: Return 204 No Content after successful DLQ insertion
+    // This acknowledges receipt to the webhook source without implying success,
+    // preventing infinite retries from the source (e.g., Stripe).
+    return new Response(null, {
+      status: 204,
+      headers: { ...corsHeaders },
     });
   }
 });

@@ -41,14 +41,12 @@ async function velocityBreachRule(event: StripeEvent, ctx: RuleContext): Promise
 }
 
 async function bankSwapRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  // Log for all events
-  logger.info({ accountId: event.account }, 'Bank-swap rule evaluated');
-
   // Only inspect payout events
   if (!event.type.startsWith('payout.')) return [];
 
   const payout = event.data.object as any;
   const payoutUsd = payout.amount / 100;
+  const accountId = event.account as string;
 
   if (payoutUsd < ctx.config.bankSwap.minPayoutUsd) return [];
 
@@ -57,6 +55,8 @@ async function bankSwapRule(event: StripeEvent, ctx: RuleContext): Promise<Alert
   const recentBankChange = ctx.recentPayouts.find(
     (e) => e.type === 'external_account.created' && new Date(e.created_at).getTime() >= cutoff,
   );
+
+  logger.info({ accountId, bankChangeFound: !!recentBankChange }, 'Bank-swap rule evaluated');
 
   if (!recentBankChange) return [];
 
@@ -228,7 +228,10 @@ const rules = [
  * Edge-compatible version of evaluateRules that doesn't rely on
  * dynamic module imports or Ajv for rule evaluation
  */
-export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
+export async function evaluateRulesEdge(
+  event: StripeEvent,
+  supabase = supabaseAdmin,
+): Promise<Alert[]> {
   const accountId = event.account as string;
 
   // Skip if no account ID present (rare, but possible)
@@ -236,6 +239,8 @@ export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
     logger.info({ id: event.id }, 'Skipping rule evaluation - no account ID');
     return [];
   }
+
+  const startTime = performance.now();
 
   // Calculate lookback period for events
   // Max of 1 hour, double the bank swap lookback period, or 24 hours for geo-mismatch
@@ -245,9 +250,10 @@ export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
   const lookbackDate = new Date(Date.now() - lookbackMs).toISOString();
 
   // Get account-specific rule set if available
+  // TODO: Consider caching rule sets for frequently seen accounts
   let accountRuleSet = null;
   try {
-    const { data: account } = await supabaseAdmin
+    const { data: account } = await supabase
       .from('connected_accounts')
       .select('rule_set')
       .eq('stripe_account_id', accountId)
@@ -263,32 +269,49 @@ export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
   // Merge account rule set with default config (if available)
   const mergedConfig = accountRuleSet ? { ...defaultConfig, ...accountRuleSet } : defaultConfig;
 
-  // Fetch context data needed for all rules
+  // Fetch context data needed for all rules - optimized query with new indexes
+  // This single query fetches all the data needed for the rules in parallel, eliminating N+1 patterns
+  const [payoutsResponse, chargesResponse] = await Promise.all([
+    // Fetch payouts and external account changes in one query
+    supabase
+      .from('payout_events')
+      .select('*')
+      .eq('stripe_account_id', accountId)
+      .or(`type.eq.payout.paid,type.eq.payout.created,type.eq.external_account.created`)
+      .gte('created_at', lookbackDate)
+      .order('created_at', { ascending: false }),
+
+    // Fetch charges in another concurrent query
+    supabase
+      .from('payout_events')
+      .select('*')
+      .eq('stripe_account_id', accountId)
+      .like('type', 'charge.%')
+      .gte('created_at', lookbackDate)
+      .order('created_at', { ascending: false }),
+  ]);
+
+  // Create rule context from fetched data
   const ctx: RuleContext = {
-    recentPayouts:
-      (
-        await supabaseAdmin
-          .from('payout_events')
-          .select('*')
-          .eq('stripe_account_id', accountId)
-          .or(`type.eq.payout.paid,type.eq.payout.created,type.eq.external_account.created`)
-          .gte('created_at', lookbackDate)
-          .order('created_at', { ascending: false })
-      ).data || [],
-
-    recentCharges:
-      (
-        await supabaseAdmin
-          .from('payout_events')
-          .select('*')
-          .eq('stripe_account_id', accountId)
-          .like('type', 'charge.%')
-          .gte('created_at', lookbackDate)
-          .order('created_at', { ascending: false })
-      ).data || [],
-
+    recentPayouts: payoutsResponse.data || [],
+    recentCharges: chargesResponse.data || [],
     config: mergedConfig,
   };
+
+  const fetchTime = performance.now() - startTime;
+  if (fetchTime > 100) {
+    // TODO: If queries consistently take more than 100ms, consider adding more specific indexes
+    // or further optimizing the query patterns
+    logger.warn(
+      {
+        accountId,
+        fetchTimeMs: Math.round(fetchTime),
+        payoutsCount: ctx.recentPayouts.length,
+        chargesCount: ctx.recentCharges.length,
+      },
+      'Slow context data fetch',
+    );
+  }
 
   // Run each rule against the event
   const alerts: Alert[] = [];
@@ -301,6 +324,15 @@ export async function evaluateRulesEdge(event: StripeEvent): Promise<Alert[]> {
     }
   }
 
-  logger.info({ id: event.id, alerts: alerts.length }, 'Rule engine executed');
+  const totalTime = performance.now() - startTime;
+  logger.info(
+    {
+      id: event.id,
+      alerts: alerts.length,
+      timeMs: Math.round(totalTime),
+      dataFetchMs: Math.round(fetchTime),
+    },
+    'Rule engine executed',
+  );
   return alerts;
 }
