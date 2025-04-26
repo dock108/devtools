@@ -1,0 +1,186 @@
+name: Supabase E2E Test Harness
+
+on:
+  push:
+    branches:
+      - main # Trigger on pushes to main
+  pull_request:
+    branches:
+      - main # Trigger on PRs targeting main
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # Set a timeout for the entire job
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x' # Match project requirement
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Supabase Setup ---
+      # Using the official action is simpler than manual docker-compose
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest # Or pin to a specific version
+
+      - name: Start Supabase local environment
+        run: supabase start
+        env:
+          # Make Supabase CLI non-interactive
+          SUPABASE_CLI_DISABLE_TYPEGEN: true
+
+      - name: Wait for Supabase services to be healthy
+        run: sleep 10 # Simple wait; adjust as needed or use a more robust health check
+
+      - name: Get Supabase local credentials
+        id: supabase_creds
+        run: |
+          echo "SUPABASE_URL=$(supabase status --output json | jq -r .apiURL)" >> $GITHUB_ENV
+          echo "SUPABASE_ANON_KEY=$(supabase status --output json | jq -r .anonKey)" >> $GITHUB_ENV
+          # Service role key is typically needed for direct DB manipulation/seeding in tests
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status --output json | jq -r .serviceKey)" >> $GITHUB_ENV
+          echo "DB_URL=$(supabase status --output json | jq -r .dbURL)" >> $GITHUB_ENV
+          echo "::set-output name=url::$(supabase status --output json | jq -r .apiURL)"
+          echo "::set-output name=anon_key::$(supabase status --output json | jq -r .anonKey)"
+          echo "::set-output name=service_key::$(supabase status --output json | jq -r .serviceKey)"
+          echo "::set-output name=db_url::$(supabase status --output json | jq -r .dbURL)"
+
+      - name: Apply Supabase migrations
+        run: supabase db reset --local
+
+      - name: Seed CI User/Account (using psql)
+        run: |
+          echo "Running SQL seed for CI user/account..."
+          PGPASSWORD=$(echo $DB_URL | awk -F[:/@] '{print $4}') psql $DB_URL -U postgres -c "\
+          insert into public.users(id, email) values \
+            ('00000000-0000-0000-0000-000000000001', 'ci-tester@dock108.ai') \
+          on conflict do nothing; \
+          insert into public.connected_accounts(stripe_account_id, user_id) \
+          values ('acct_ci123', '00000000-0000-0000-0000-000000000001') \
+          on conflict do nothing;"
+        env:
+          DB_URL: ${{ env.DB_URL }}
+
+      # --- Run Application & Stripe Replay ---
+      # Remove the potentially problematic setup action
+      # - name: Setup Stripe CLI
+      #   uses: setup-cli@v1
+      #   with:
+      #     stripe-api-key: ${{ secrets.STRIPE_TEST_KEY }}
+
+      - name: Download and Install Stripe CLI
+        run: |
+          curl -s https://api.github.com/repos/stripe/stripe-cli/releases/latest \
+            | grep "browser_download_url.*linux_x86_64.tar.gz" \
+            | cut -d '"' -f 4 \
+            | wget -qi -
+          tar -xf stripe-*.tar.gz
+          sudo mv stripe /usr/local/bin/
+          stripe version # Verify installation
+          stripe login --api-key ${{ secrets.STRIPE_TEST_KEY }} # Login using the secret
+
+      - name: Start Next.js app in background
+        run: npm run dev &
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }} # Needed by app API routes
+          STRIPE_WEBHOOK_SECRET: whsec_test_fixture_secret # Use a known dummy secret for local tests
+          # Add other required runtime env vars for the app
+          # e.g., RESEND_API_KEY, SENDGRID_API_KEY, etc. (use dummy values or secrets)
+          SENDGRID_API_KEY: dummy_sendgrid_key # Prevent real sends
+          # MOCK_SENDGRID: true # If app supports mocking
+          # ... other env vars
+
+      - name: Wait for app to start
+        run: npx wait-on http://localhost:3000 -t 60000 # Wait up to 60s
+
+      - name: Replay Stripe events from fixture
+        id: stripe_replay
+        run: |
+          echo "Starting Stripe event replay..."
+          # Use a known test webhook secret that the local app expects
+          stripe listen --api-key ${{ secrets.STRIPE_TEST_KEY }} \
+            --forward-to http://localhost:3000/api/stripe/webhook \
+            --events-from-file test/fixtures/full_day.jsonl \
+            --print-json > stripe_output.log &
+          STRIPE_PID=$!
+          echo "Stripe listen started with PID $STRIPE_PID"
+          # Wait for stripe listen to process the file (adjust sleep time based on fixture size/processing speed)
+          # A more robust way would be to check stripe_output.log or metrics
+          sleep 45
+          echo "Attempting to stop Stripe listen (PID $STRIPE_PID)..."
+          kill $STRIPE_PID || echo "Stripe listen already stopped."
+          echo "Stripe event replay finished."
+        env:
+          STRIPE_WEBHOOK_SECRET: whsec_test_fixture_secret
+          # Ensure the app uses this same secret
+
+      # --- Wait for Processing & Run Cypress Tests ---
+      - name: Wait for Reactor processing (Check Metrics - Placeholder)
+        run: |
+          echo "Waiting for backend processing (checking metrics placeholder)..."
+          # Placeholder: Implement check against http://localhost:3000/api/metrics
+          # or check database state (e.g., count alerts)
+          # Example (needs jq installed):
+          # timeout 120 bash -c \
+          #  'while [[ "$(curl -s http://localhost:3000/api/metrics | grep reactor_events_total | grep success | awk \"{print \$2}\")" -lt 45 ]]; do echo \"Waiting for reactor...\"; sleep 5; done'
+          # For now, just wait a bit longer
+          sleep 30
+          echo "Assuming processing complete."
+
+      - name: Run Cypress E2E tests
+        uses: cypress-io/github-action@v6
+        with:
+          start: false # App is already running
+          browser: chrome
+          spec: cypress/e2e/full_stack.cy.ts # Run only this spec
+        env:
+          CYPRESS_BASE_URL: http://localhost:3000
+          # Pass Supabase keys to Cypress if needed for tasks
+          SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
+          # Required for cy.login() or tasks interacting with Supabase
+          TEST_USER_ID: '00000000-0000-0000-0000-000000000001'
+          TEST_STRIPE_ACCOUNT_ID: 'acct_ci123'
+
+      # --- Upload Artifacts ---
+      - name: Upload Cypress artifacts
+        uses: actions/upload-artifact@v4
+        if: failure() # Only upload on failure
+        with:
+          name: cypress-artifacts
+          path: cypress/screenshots/
+          retention-days: 7
+
+      - name: Upload Stripe output log
+        uses: actions/upload-artifact@v4
+        if: always() # Always upload stripe log
+        with:
+          name: stripe-output-log
+          path: stripe_output.log
+          retention-days: 7
+
+      # Optional: Upload Metrics Snapshot
+      # - name: Capture Metrics Snapshot
+      #   if: always()
+      #   run: curl -s http://localhost:3000/api/metrics > guardian-metrics.txt
+      # - name: Upload Metrics Snapshot
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: guardian-metrics-snapshot
+      #     path: guardian-metrics.txt
+      #     retention-days: 7

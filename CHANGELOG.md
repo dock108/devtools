@@ -158,6 +158,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Feat(Guardian)**: Implement structured JSON logging across components (Webhook, Reactor, DLQ Retry, Retention) using Pino (G-14).
 - **Feat(Guardian)**: Add Prometheus metrics exposition via `/api/metrics` (Webhook) and log-based metrics for Edge Functions (Reactor, DLQ Retry) (G-14).
 - **Feat(Guardian)**: Implement per-account rule threshold overrides using `rule_sets` table (G-16).
+- **feat(ci):** Add full E2E test harness using GitHub Actions (G-18):
+  - Workflow (`supabase-e2e.yml`) sets up local Supabase, applies migrations, seeds test user.
+  - Replays Stripe events from fixture file (`test/fixtures/full_day.jsonl`) using Stripe CLI.
+  - Runs Cypress spec (`cypress/e2e/full_stack.cy.ts`) to verify webhook ingestion, alert generation, real-time UI badge, and mark-as-read flow.
+  - Includes script (`scripts/build_fixtures.sh`) to regenerate fixtures.
+  - Uploads Cypress artifacts and Stripe logs on failure.
+  - Added README section explaining the test harness.
 
 ### Changed
 

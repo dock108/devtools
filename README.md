@@ -143,6 +143,38 @@ PWDEBUG=1 npm run test:e2e
 
 See `/tests/e2e/README.md` for more details on e2e tests.
 
+### Full Stack E2E Test (GitHub Actions)
+
+A comprehensive end-to-end test harness runs in GitHub Actions (`.github/workflows/supabase-e2e.yml`) on pushes/PRs to `main`:
+
+1.  **Setup**: Checks out code, installs dependencies.
+2.  **Supabase**: Starts a local Supabase instance using the official CLI action and applies all migrations.
+3.  **Seed**: Seeds a dedicated test user and connected account (`ci-tester@dock108.ai`, `acct_ci123`).
+4.  **App Start**: Starts the Next.js application locally.
+5.  **Stripe Replay**: Uses the Stripe CLI to replay a fixture file (`test/fixtures/full_day.jsonl`) containing ~50 realistic events against the local application's webhook endpoint.
+6.  **Processing Wait**: Waits for the backend (Reactor, etc.) to process the events (currently uses a fixed delay, ideally would check metrics).
+7.  **Cypress Test**: Runs the `cypress/e2e/full_stack.cy.ts` spec:
+    - Verifies the real-time alert badge appears in the header.
+    - Navigates to the alerts dashboard by clicking the badge.
+    - Checks that expected alert types (from the fixture) are present in the alerts table.
+    - Confirms the alert badge clears after navigation (marking as read).
+    - Uses Cypress tasks to verify that alerts were marked as read in the database.
+8.  **Artifacts**: Uploads Cypress screenshots (on failure) and Stripe CLI logs for debugging.
+
+This workflow acts as a critical regression gate before deployments.
+
+**Running Locally:**
+
+While the full flow relies on GitHub Actions secrets and setup, you can simulate parts locally:
+
+1.  Ensure Supabase local dev is running (`supabase start`).
+2.  Ensure migrations are applied (`supabase db reset`).
+3.  Manually run the seed SQL for the CI user (see G-18 issue or workflow file).
+4.  Ensure your `.env.local` has Supabase/Stripe keys and `STRIPE_WEBHOOK_SECRET=whsec_test_fixture_secret` (matching the workflow).
+5.  Start the app: `npm run dev`.
+6.  In another terminal, run the fixture replay: `stripe listen --forward-to http://localhost:3000/api/stripe/webhook --events-from-file test/fixtures/full_day.jsonl`.
+7.  Run the specific Cypress spec: `npx cypress run --spec cypress/e2e/full_stack.cy.ts` (ensure `CYPRESS_BASE_URL` is set or configured).
+
 ## Deployment
 
 This project is intended for deployment on Vercel. Ensure environment variables for Supabase and Resend are set in the Vercel project settings.
