@@ -5,6 +5,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { evaluateRulesEdge } from '../../lib/guardian/rules/edge.ts';
 import { validateStripeEvent } from '../../lib/guardian/validation/edge.ts';
 import { log, generateRequestId } from '../../lib/logger.ts'; // Adjust path if needed
+import { getRuleConfig } from '../../lib/guardian/getRuleConfig.ts'; // Import config loader
 
 // Environment variables
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -51,6 +52,7 @@ serve(async (req: Request) => {
   let status = 500; // Default status
   let metricOutcome = 'critical_error'; // Default outcome for metrics
   let rulesEvalMs: number | null = null;
+  let ruleConfig: Record<string, any> | null = null; // Variable for config
 
   try {
     // Parse request body
@@ -98,21 +100,26 @@ serve(async (req: Request) => {
       });
     }
 
-    // Store details for logging
+    // Store details for logging & fetch config
     eventPayload = event.payload;
     stripeEventId = event.stripe_event_id;
     stripeAccountId = event.stripe_account_id || 'acct_unknown';
     const finalLogData = { ...eventLogData, stripe_event_id: stripeEventId, stripe_account_id: stripeAccountId };
 
-    // Validate the Stripe event shape (optional here, assumes webhook validated)
-    // try {
-    //   validateStripeEvent(eventPayload);
-    // } catch (validationError) {
-    //   status = 400; // Bad data in buffer?
-    //   log.error({ ...finalLogData, err: validationError.message, status }, 'Event validation failed in reactor');
-    //   return new Response(JSON.stringify({ error: 'Event validation failed', details: validationError.errors }),
-    //     { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    // }
+    // --- Fetch Rule Config BEFORE Transaction ---
+    try {
+        ruleConfig = await getRuleConfig(stripeAccountId);
+        if (!ruleConfig) {
+            log.error({ ...finalLogData }, 'Critical: Failed to retrieve any rule configuration (default or custom).');
+            // Decide how to handle - fail hard?
+            throw new Error('Failed to retrieve rule configuration.');
+        }
+        log.debug({ ...finalLogData }, 'Successfully fetched rule configuration.');
+    } catch (configError) {
+        log.error({ ...finalLogData, err: configError.message }, 'Error fetching rule configuration.');
+        // Decide how to handle - fail hard?
+        throw configError;
+    }
 
     // Process the event in a transaction
     const { data: txResult, error: txError } = await supabase.transaction(async (tx) => {
@@ -131,11 +138,11 @@ serve(async (req: Request) => {
         throw new Error(`Failed to mark event as processed: ${dupError.message}`);
       }
 
-      // Evaluate rules
+      // Evaluate rules (using tx client and pre-fetched config)
       let alerts = [];
       try {
         const ruleStart = performance.now();
-        alerts = await evaluateRulesEdge(eventPayload, tx);
+        alerts = await evaluateRulesEdge(eventPayload, tx, ruleConfig);
         rulesEvalMs = Math.round(performance.now() - ruleStart);
         log.info({ ...finalLogData, rules_eval_ms: rulesEvalMs, alert_count: alerts.length }, 'Rules evaluated');
       } catch (ruleError) {

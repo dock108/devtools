@@ -141,6 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Feat(Guardian)**: Implement data retention policy (scrubbing/purging) for `event_buffer` to enhance GDPR/PCI compliance (G-13).
 - **Feat(Guardian)**: Implement structured JSON logging across components (Webhook, Reactor, DLQ Retry, Retention) using Pino (G-14).
 - **Feat(Guardian)**: Add Prometheus metrics exposition via `/api/metrics` (Webhook) and log-based metrics for Edge Functions (Reactor, DLQ Retry) (G-14).
+- **Feat(Guardian)**: Implement per-account rule threshold overrides using `rule_sets` table (G-16).
 
 ### Changed
 

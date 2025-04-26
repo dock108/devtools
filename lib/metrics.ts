@@ -4,7 +4,7 @@ import { Registry, Counter, Histogram, Gauge, collectDefaultMetrics } from 'prom
 export const registry = new Registry();
 
 // Enable default metrics collection (optional)
-collectDefaultMetrics({ register: registry });
+// collectDefaultMetrics({ register: registry }); // <-- REMOVE THIS LINE (Incompatible with Edge Runtime)
 
 // --- Webhook Metrics --- (Collected in Next.js API Route)
 export const webhookRequests = new Counter({

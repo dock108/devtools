@@ -1,17 +1,11 @@
 import type { StripeEvent, Alert, RuleContext } from '../types';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { logger } from '@/lib/logger';
+import { log } from '@/lib/logger';
+import { getRuleConfig } from './getRuleConfig';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Hard-coded default config that matches the schema
-// This avoids using Ajv at runtime in Edge functions
-const defaultConfig = {
-  velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-  bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-  geoMismatch: { mismatchChargeCount: 2 },
-  failedChargeBurst: { minFailedCount: 3, windowMinutes: 5 },
-  suddenPayoutDisable: { enabled: true },
-  highRiskReview: { enabled: true },
-};
+// Remove hardcoded default config, will be fetched via getRuleConfig
+// const defaultConfig = { ... };
 
 // Individual rule functions with inline implementations for Edge compatibility
 async function velocityBreachRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
@@ -23,7 +17,7 @@ async function velocityBreachRule(event: StripeEvent, ctx: RuleContext): Promise
   const cutoff = Date.now() - windowSeconds * 1000;
   const recent = ctx.recentPayouts.filter((p) => new Date(p.created_at).getTime() >= cutoff);
 
-  logger.info({ accountId, count: recent.length }, 'Velocity rule executed');
+  log.debug({ accountId, count: recent.length, rule: 'velocityBreach' }, 'Velocity rule executed');
 
   if (recent.length >= maxPayouts) {
     return [
@@ -56,7 +50,10 @@ async function bankSwapRule(event: StripeEvent, ctx: RuleContext): Promise<Alert
     (e) => e.type === 'external_account.created' && new Date(e.created_at).getTime() >= cutoff,
   );
 
-  logger.info({ accountId, bankChangeFound: !!recentBankChange }, 'Bank-swap rule evaluated');
+  log.debug(
+    { accountId, bankChangeFound: !!recentBankChange, rule: 'bankSwap' },
+    'Bank-swap rule evaluated',
+  );
 
   if (!recentBankChange) return [];
 
@@ -84,8 +81,8 @@ async function geoMismatchRule(event: StripeEvent, ctx: RuleContext): Promise<Al
     return chargeCountry && bankCountry && chargeCountry !== bankCountry;
   });
 
-  logger.info(
-    { accountId: event.account, mismatches: mismatches.length },
+  log.debug(
+    { accountId: event.account, mismatches: mismatches.length, rule: 'geoMismatch' },
     'Geo-mismatch rule executed',
   );
 
@@ -119,12 +116,13 @@ async function failedChargeBurstRule(event: StripeEvent, ctx: RuleContext): Prom
     (charge) => charge.type.includes('failed') && new Date(charge.created_at).getTime() >= cutoff,
   );
 
-  logger.info(
+  log.debug(
     {
       accountId,
       count: recentFailedCharges.length,
       threshold: minFailedCount,
       window: windowMinutes,
+      rule: 'failedChargeBurst',
     },
     'Failed charge burst rule executed',
   );
@@ -161,7 +159,7 @@ async function suddenPayoutDisableRule(event: StripeEvent, ctx: RuleContext): Pr
 
   // Check if payouts_enabled changed from true to false
   if (previousAttributes?.payouts_enabled === true && accountObj.payouts_enabled === false) {
-    logger.info({ accountId }, 'Sudden payout disable detected');
+    log.debug({ accountId, rule: 'suddenPayoutDisable' }, 'Sudden payout disable detected');
 
     return [
       {
@@ -191,10 +189,11 @@ async function highRiskReviewRule(event: StripeEvent, ctx: RuleContext): Promise
 
   // Check if the review reason is 'rule' (Stripe's indicator for high-risk)
   if (review.reason === 'rule') {
-    logger.info(
+    log.debug(
       {
         accountId,
         reviewId: review.id,
+        rule: 'highRiskReview',
       },
       'High risk review detected',
     );
@@ -225,21 +224,26 @@ const rules = [
 ];
 
 /**
- * Edge-compatible version of evaluateRules that doesn't rely on
- * dynamic module imports or Ajv for rule evaluation
+ * Edge-compatible version of evaluateRules.
+ * Fetches account-specific config and runs rules.
  */
 export async function evaluateRulesEdge(
   event: StripeEvent,
-  supabase = supabaseAdmin,
+  supabase: SupabaseClient = supabaseAdmin,
+  config: Record<string, any> | null = null,
 ): Promise<Alert[]> {
   const accountId = event.account as string;
+  const eventId = event.id;
+  const baseLogData = { eventId, accountId, service: 'evaluateRulesEdge' };
 
-  // Skip if no account ID present (rare, but possible)
+  // Skip if no account ID present
   if (!accountId) {
-    logger.info({ id: event.id }, 'Skipping rule evaluation - no account ID');
+    log.warn({ ...baseLogData }, 'Skipping rule evaluation - no account ID');
     return [];
   }
 
+  // If config wasn't passed (e.g., direct call), fetch it.
+  // Note: In the reactor flow, config *should* be passed pre-fetched.
   const startTime = performance.now();
 
   // Calculate lookback period for events

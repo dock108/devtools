@@ -67,6 +67,63 @@ Stripe's internal rules have identified a transaction as high-risk, requiring im
 
 Rules can be configured globally or per account. See the `rule_set` field in the `connected_accounts` table.
 
+Guardian rules use configurable thresholds to determine when an alert should be generated. While default thresholds are provided, these can be customized on a per-account basis.
+
+### Default Thresholds
+
+The default rule set configuration is stored in the `rule_sets` table with `name = 'default'`. It contains values like:
+
+```json
+{
+  "velocityBreach": { "maxPayouts": 3, "windowSeconds": 60 },
+  "bankSwap": { "lookbackMinutes": 5, "minPayoutUsd": 1000 },
+  "geoMismatch": { "mismatchChargeCount": 2 },
+  "failedChargeBurst": { "minFailedCount": 3, "windowMinutes": 5 }, // 300 seconds
+  "suddenPayoutDisable": { "enabled": true }, // These are boolean flags
+  "highRiskReview": { "enabled": true }
+}
+```
+
+### Per-Account Overrides
+
+Each connected Stripe account (`connected_accounts` table) can be linked to a specific rule set via the `rule_set_id` column. This allows you to define custom thresholds for individual accounts or groups of accounts.
+
+**How it works:**
+
+1.  **Create a Custom Rule Set:** Insert a new row into the `public.rule_sets` table with a unique name (e.g., 'high-risk-segment') and a JSON `config` object containing the desired overrides. You only need to include the rules you want to change; others will implicitly use default values (though the current implementation merges at the `getRuleConfig` level, effectively requiring all keys potentially).
+
+    _Example Custom Config (stricter velocity):_
+
+    ```json
+    {
+      "velocityBreach": { "maxPayouts": 2, "windowSeconds": 30 },
+      "bankSwap": { "lookbackMinutes": 5, "minPayoutUsd": 1000 },
+      "geoMismatch": { "mismatchChargeCount": 2 },
+      "failedChargeBurst": { "minFailedCount": 3, "windowMinutes": 5 },
+      "suddenPayoutDisable": { "enabled": true },
+      "highRiskReview": { "enabled": true }
+    }
+    ```
+
+    You can use the helper script:
+
+    ```bash
+    npx ts-node scripts/create_rule_set.ts -n high-risk-segment -f path/to/custom-config.json
+    # Note the returned Rule Set ID (UUID)
+    ```
+
+2.  **Link Account(s):** Update the `rule_set_id` for the relevant row(s) in the `public.connected_accounts` table, setting it to the UUID of the custom rule set created in step 1.
+
+    ```sql
+    UPDATE public.connected_accounts
+    SET rule_set_id = 'your-custom-rule-set-uuid'
+    WHERE stripe_account_id = 'acct_xyz123';
+    ```
+
+3.  **Evaluation:** When `evaluateRulesEdge` runs for an event associated with `acct_xyz123`, the `getRuleConfig` helper will fetch the linked custom configuration. If an account has `rule_set_id = NULL` or the linked set doesn't exist, the 'default' configuration is used.
+
+_(Note: A UI for managing rule sets and linking accounts will be built in a future iteration. For now, management is via SQL or the helper script.)_
+
 # Guardian Rules Engine
 
 The Guardian Rules Engine is responsible for detecting potentially fraudulent activities in the Stripe payment ecosystem. It analyzes events and applies a set of predefined rules to determine if a payout or account update should be flagged for review.
