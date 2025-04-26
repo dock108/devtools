@@ -389,3 +389,4 @@ Guardian provides structured logging and Prometheus metrics for monitoring and d
   - Requires `METRICS_AUTH_TOKEN` for the Supabase `/guardian-metrics` endpoint (placeholder).
   - See `docs/guardian/metrics.md` for metric details and scraping instructions.
   - A starter Grafana dashboard is available at `docs/guardian/grafana.json`.
+- **Real-time Alert Badge**: The dashboard header includes a notification icon that displays a badge with the count of unread alerts, updated in real-time via Supabase subscriptions. Clicking the icon navigates to the alerts page and marks alerts as read.

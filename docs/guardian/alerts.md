@@ -99,6 +99,8 @@ The Stripe Guardian Alerts Dashboard provides a real-time view of all detected f
 
 The dashboard uses Supabase Realtime to provide instant updates when new alerts are generated. You'll see new alerts appear within seconds, without needing to refresh the page.
 
+Additionally, the site header displays a notification icon with a badge showing the count of unread alerts. This count is also updated in real-time. Clicking the icon or navigating to the alerts dashboard marks all currently unread alerts as read, clearing the badge. Read status is tracked per user via the `alert_reads` table.
+
 ### Alert Filtering
 
 Alerts are organized into two tabs:

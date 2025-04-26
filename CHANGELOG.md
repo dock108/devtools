@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **feat(guardian):** Implement real-time alert badge and toast notifications in UI (G-17):
+  - Added `alert_reads` table to track user read status.
+  - Created `AlertNotificationsProvider` context using Supabase Realtime for live updates.
+  - Integrated notification badge (`BellIcon` with count) into `Header.tsx`.
+  - Implemented toast notifications (`react-hot-toast`) for new alerts.
+  - Added `/api/guardian/alerts/mark-read` API route.
+  - Included Cypress E2E test (`alerts_realtime.cy.ts`).
+  - Updated README and docs (`docs/guardian/alerts.md`).
 - **feat(guardian):** Implement email + Slack notifications for new alerts (G-20):
   - Added `settings` table for notification preferences (tier, email, Slack webhook).
   - Added `notify_new_alert` Postgres trigger function (using `pg_net`) to call edge function on new alerts.

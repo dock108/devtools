@@ -6,23 +6,25 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from './ui/button';
 import { useSession } from '@/hooks/useSession';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { supabaseBrowser as supabase } from '@/lib/supabase-browser';
 import { md5 } from '@/utils/md5';
 import { useEffect, useState } from 'react';
-import { ShieldAlert, Plug, Cog, LogOut } from 'lucide-react';
+import { ShieldAlert, Plug, Cog, LogOut, BellIcon } from 'lucide-react';
+import { useAlertNotifications } from '@/app/context/useAlertNotifications';
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { session, loading } = useSession();
   const [connectedAccounts, setConnectedAccounts] = useState<any[] | null>(null);
+  const { unreadCount, markAllRead } = useAlertNotifications();
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -46,15 +48,13 @@ export function Header() {
     }
   }, [session]);
 
-  useEffect(() => {
-    console.log('Header session state:', session);
-    console.log('Header loading state:', loading);
-    console.log('Header connected accounts:', connectedAccounts);
-  }, [session, loading, connectedAccounts]);
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  const handleAlertsClick = () => {
+    markAllRead();
   };
 
   const showConnectLink = session && connectedAccounts !== null && connectedAccounts.length === 0;
@@ -64,7 +64,7 @@ export function Header() {
       <Container className="flex h-14 items-center">
         <div className="mr-auto flex">
           <Link href="/" className="mr-6 flex items-center">
-            <Image 
+            <Image
               src="/logo.png"
               alt="DOCK108 logo"
               width={140}
@@ -90,49 +90,67 @@ export function Header() {
           >
             Blog
           </Link>
-          
-          {loading || (session && connectedAccounts === null) ? (
-            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-700"></div> 
-          ) : session ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="h-8 w-8 cursor-pointer">
-                  <AvatarImage src={`https://www.gravatar.com/avatar/${md5(session.user.email || '')}?d=mp`} />
-                  <AvatarFallback>{(session.user.email || 'U')[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link href="/stripe-guardian/alerts">
-                    <ShieldAlert className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </DropdownMenuItem>
 
-                {showConnectLink && (
+          {loading || (session && connectedAccounts === null) ? (
+            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-700"></div>
+          ) : session ? (
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/guardian/alerts"
+                onClick={handleAlertsClick}
+                className="relative text-slate-300 hover:text-white"
+                aria-label={`View alerts (${unreadCount} unread)`}
+              >
+                <BellIcon className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-8 w-8 cursor-pointer">
+                    <AvatarImage
+                      src={`https://www.gravatar.com/avatar/${md5(session.user.email || '')}?d=mp`}
+                    />
+                    <AvatarFallback>{(session.user.email || 'U')[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link href="/stripe-guardian/onboard">
-                      <Plug className="mr-2 h-4 w-4" />
-                      <span>Connect account</span>
+                    <Link href="/stripe-guardian/alerts" onClick={handleAlertsClick}>
+                      <ShieldAlert className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
-                )}
 
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">
-                    <Cog className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
+                  {showConnectLink && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/stripe-guardian/onboard">
+                        <Plug className="mr-2 h-4 w-4" />
+                        <span>Connect account</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
 
-                <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Cog className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
 
-                <DropdownMenuItem onSelect={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem onSelect={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <Button asChild variant="secondary" size="sm">
               <Link href="/login">Log In</Link>
@@ -143,5 +161,3 @@ export function Header() {
     </header>
   );
 }
- 
- 
