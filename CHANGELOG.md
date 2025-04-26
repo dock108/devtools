@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `src/lib/timewarp-seeder.ts` with stubbed `runSeeder()`; serves as scaffold for upcoming seeder logic.
 - Bundled Stripe CLI binary (stripe-cli-linux-x64) via postinstall so serverless Time-Warp seeder can execute `stripe fixtures` inside Vercel.
+- **feat(event-buffer):** Add event_buffer table with 30-day TTL purge:
+  - Create event_buffer table with proper indexing
+  - Implement configurable purge_old_events() procedure
+  - Add pg_cron schedule for hourly purge of old events
+  - Create apply_event_buffer_migration.py helper script
+  - Add ENV_BUFFER_TTL_DAYS env variable to control retention period
+  - Add comprehensive unit tests for insertion and purging
 - Time-Warp seeder now creates a real $5-$50 charge on a random sandbox account each run and tracks in-memory balances.
 - Vercel cron job (\*/10 min) triggers `/api/tasks/timewarp-seeder`, ensuring continuous sandbox activity.
 - Edge route `/api/tasks/timewarp-seeder` that runs `npm run seed:prod` (used by scheduled cron to keep sandbox traffic flowing).

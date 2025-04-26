@@ -70,7 +70,9 @@ If you're working with the Stripe Guardian component, you'll need to set up the 
    supabase db reset
    ```
 
-This will create all required tables (connected_accounts, payout_events, alerts) and seed initial test data.
+This will create all required tables (connected_accounts, payout_events, alerts, event_buffer) and seed initial test data.
+
+> **Note:** Environment files (.env.local) are git-ignored; copy values printed by setup scripts such as `scripts/apply_event_buffer_migration.py` which will suggest environment variables like `EVENT_BUFFER_TTL_DAYS`.
 
 ## Available Scripts
 
