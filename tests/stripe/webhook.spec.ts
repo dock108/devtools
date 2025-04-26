@@ -1,6 +1,21 @@
 import { describe, expect, jest, it, beforeEach, afterEach } from '@jest/globals';
 import * as stripeModule from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { GUARDIAN_EVENTS } from '@/lib/guardian/stripeEvents';
+
+// Mock isGuardianSupportedEvent before importing module
+jest.mock('@/lib/guardian/stripeEvents', () => {
+  // Get the actual events from the module
+  const actual = jest.requireActual('@/lib/guardian/stripeEvents');
+  return {
+    ...actual,
+    // Pass through the implementation with spy
+    isGuardianSupportedEvent: jest.fn(actual.isGuardianSupportedEvent),
+  };
+});
+
+// Import the mocked function
+import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
 
 // Mock the nextjs components
 jest.mock('next/server', () => {
@@ -102,7 +117,9 @@ describe('Stripe Webhook Handler', () => {
     jest.clearAllMocks();
 
     // Setup default mock returns
-    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue(mockStripeEvent);
+    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
+      ...mockStripeEvent,
+    });
 
     (supabaseAdmin.from as jest.Mock).mockReturnThis();
     (supabaseAdmin.upsert as jest.Mock).mockReturnThis();
@@ -189,6 +206,47 @@ describe('Stripe Webhook Handler', () => {
     expect(responseBody).toHaveProperty('error', 'Missing account ID');
   });
 
+  it('should return 400 for unsupported event types', async () => {
+    // Mock an unsupported event type
+    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
+      id: 'evt_test123',
+      type: 'customer.created', // Not in GUARDIAN_EVENTS
+      account: 'acct_test123',
+      data: {
+        object: {
+          id: 'cus_test123',
+          object: 'customer',
+        },
+      },
+    });
+
+    const mockRequest = {
+      method: 'POST',
+      body: JSON.stringify({ id: 'evt_test123' }),
+      headers: {
+        get: (name: string) => {
+          if (name === 'stripe-signature') return 'test_signature';
+          if (name === 'stripe-account') return 'acct_test123';
+          return null;
+        },
+      },
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            id: 'evt_test123',
+            type: 'customer.created',
+          }),
+        ),
+    };
+
+    const response = await POST(mockRequest as any);
+
+    expect(response.status).toBe(400);
+    const responseBody = await response.json();
+    expect(responseBody).toHaveProperty('error', 'Unsupported event type');
+    expect(isGuardianSupportedEvent).toHaveBeenCalledWith('customer.created');
+  });
+
   it('should process a valid webhook event successfully', async () => {
     // Mock the supabase response for event buffer insertion
     (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
@@ -241,6 +299,60 @@ describe('Stripe Webhook Handler', () => {
 
     // Verify the event was stored in the buffer
     expect(supabaseAdmin.from).toHaveBeenCalledWith('event_buffer');
+
+    // Verify supported event check was called
+    expect(isGuardianSupportedEvent).toHaveBeenCalledWith('charge.succeeded');
+  });
+
+  it('should test all GUARDIAN_EVENTS for acceptance', async () => {
+    // Setup mock for this test only
+    (supabaseAdmin.from as jest.Mock).mockImplementation(() => ({
+      upsert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: { id: 1 },
+        error: null,
+      }),
+    }));
+
+    // Create a request builder function
+    const createRequest = (eventType: string) => ({
+      method: 'POST',
+      body: JSON.stringify({ id: 'evt_test123', type: eventType }),
+      headers: {
+        get: (name: string) => {
+          if (name === 'stripe-signature') return 'test_signature';
+          if (name === 'stripe-account') return 'acct_test123';
+          return null;
+        },
+      },
+      text: () => Promise.resolve(JSON.stringify({ id: 'evt_test123', type: eventType })),
+    });
+
+    // Test each supported event
+    for (const eventType of GUARDIAN_EVENTS) {
+      // Mock the event with this event type
+      (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
+        id: 'evt_test123',
+        type: eventType,
+        account: 'acct_test123',
+        data: {
+          object: {
+            id: `obj_${eventType.replace('.', '_')}`,
+            object: eventType.split('.')[0],
+          },
+        },
+      });
+
+      const mockRequest = createRequest(eventType);
+      const response = await POST(mockRequest as any);
+
+      expect(response.status).toBe(200);
+      expect(isGuardianSupportedEvent).toHaveBeenCalledWith(eventType);
+
+      // Clear mocks for next iteration
+      jest.clearAllMocks();
+    }
   });
 
   it('should handle reactor failure gracefully', async () => {

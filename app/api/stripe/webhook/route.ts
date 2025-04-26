@@ -3,7 +3,7 @@ import { stripe, Stripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { logRequest } from '@/lib/logRequest';
-import { performance } from 'perf_hooks';
+import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
 
 export const runtime = 'edge';
 export const maxDuration = 5; // 5 seconds maximum for the webhook handler
@@ -12,6 +12,7 @@ export const maxDuration = 5; // 5 seconds maximum for the webhook handler
  * Handles Stripe webhook events
  * - Verifies signature
  * - Identifies source account
+ * - Checks if event type is supported
  * - Stores raw event payload in event_buffer
  * - Forwards to guardian-reactor
  * - Returns 200 OK quickly
@@ -50,6 +51,12 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       logger.error({ err }, 'Webhook signature verification failed');
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 400 });
+    }
+
+    // Check if this event type is supported by Guardian
+    if (!isGuardianSupportedEvent(event.type)) {
+      logger.warn({ eventType: event.type }, 'Unsupported event type received');
+      return NextResponse.json({ error: 'Unsupported event type' }, { status: 400 });
     }
 
     // Extract the account ID from header or event

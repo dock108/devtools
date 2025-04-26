@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
+import { verifyWebhookConfiguration } from '@/lib/guardian/webhookVerifier';
+
+// Flag to track if verification has run during this instance
+let webhookVerified = false;
 
 /**
  * Guardian Reactor API
@@ -10,6 +14,15 @@ import { logger } from '@/lib/logger';
  * - Will be expanded with full business logic in future PRs
  */
 export async function POST(req: NextRequest) {
+  // Verify webhook configuration on first event
+  if (!webhookVerified) {
+    // Run verification asynchronously to not block event processing
+    verifyWebhookConfiguration().catch((err) => {
+      logger.error({ err }, 'Failed to verify webhook configuration');
+    });
+    webhookVerified = true;
+  }
+
   try {
     const { event_buffer_id } = await req.json();
 

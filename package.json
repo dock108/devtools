@@ -23,7 +23,9 @@
     "pw-test": "playwright test",
     "start-preview": "next start -p 5555",
     "lh-ci": "lhci autorun",
-    "size:check": "node scripts/size-check.js"
+    "size:check": "node scripts/size-check.js",
+    "stripe:setup-webhook": "ts-node scripts/setup_webhook.ts",
+    "stripe:verify-webhook": "ts-node -e \"require('./lib/guardian/webhookVerifier').verifyWebhookConfiguration()\""
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,json,md,mdx,yml}": [

@@ -36,6 +36,8 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
     # Additional variables needed for specific features
     ```
 
+    > **Note:** Environment files are not in repo; create them locally using values printed by setup scripts.
+
 2.  **Install Dependencies:**
 
     ```bash
@@ -255,20 +257,31 @@ Authenticated users can manage their account settings at the [/settings](/settin
 
 Guardian processes Stripe events through a centralized webhook system:
 
-1. **Get a webhook secret:**
+1. **Run the webhook setup script:**
 
-   - Run `stripe listen` locally to get a webhook signing secret
-   - Or create a webhook endpoint in the Stripe Dashboard and copy the signing secret
+   ```bash
+   npm run stripe:setup-webhook
+   ```
+
+   This script will:
+
+   - Find or create a webhook endpoint in your Stripe account
+   - Configure it to listen only to events needed by Guardian
+   - Print the necessary environment variables to add to your `.env.local`
 
 2. **Configure Environment:**
 
-   - Add the webhook secret to your `.env.local`:
+   - Add the webhook secret printed by the script to your `.env.local`:
 
    ```
    STRIPE_WEBHOOK_SECRET=whsec_...
    ```
 
-3. **Local Testing:**
+3. **Verify Configuration:**
+   ```bash
+   npm run stripe:verify-webhook
+   ```
+4. **Local Testing:**
 
    ```bash
    # Start your development server
@@ -282,8 +295,9 @@ Guardian processes Stripe events through a centralized webhook system:
    stripe trigger payout.paid
    ```
 
-4. **Event Flow:**
+5. **Event Flow:**
    - Events flow into the `event_buffer` table with the full payload preserved
+   - Guardian only accepts events defined in `lib/guardian/stripeEvents.ts`
    - The guardian-reactor processes events asynchronously
    - Failed processing attempts are tracked in `failed_event_dispatch` for retries
 

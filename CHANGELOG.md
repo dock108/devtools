@@ -100,6 +100,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tracks failed dispatches for retry in failed_event_dispatch table
   - Responds to Stripe within 200ms for high availability
   - Includes comprehensive test suite
+- **feat(webhook):** Implement webhook event filtering system:
+  - Define canonical GUARDIAN_EVENTS list in lib/guardian/stripeEvents.ts
+  - Add scripts/setup_webhook.ts to set up and configure Stripe webhook endpoints
+  - Add webhook verification on application startup to detect configuration drift
+  - Update webhook handler to reject unsupported event types
+  - Extend tests to verify all supported events and reject unsupported ones
+  - Add npm scripts: stripe:setup-webhook and stripe:verify-webhook
+  - Update README.md with instructions on setting up webhooks
 
 ### Changed
 
