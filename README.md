@@ -303,4 +303,30 @@ Guardian processes Stripe events through a centralized webhook system:
    - The guardian-reactor processes events asynchronously
    - Failed processing attempts are tracked in `failed_event_dispatch` for retries
 
+### Validation
+
+Guardian implements strict schema validation for all Stripe events:
+
+1. **Strict Mode (Default):**
+
+   - All incoming webhook payloads are validated against Zod schemas
+   - Invalid payloads are rejected with a 400 response and clear error message
+   - Ensures the reactor never processes malformed data that could cause errors
+
+2. **Development Mode:**
+
+   - During local development, you can disable strict validation:
+
+   ```
+   STRICT_STRIPE_VALIDATION=false
+   ```
+
+   - This is useful when working with newer Stripe API versions or testing custom event shapes
+   - The environment variable hint is printed to console on startup
+
+3. **Error Handling:**
+   - `unsupported_event_type`: Event type not in GUARDIAN_EVENTS list
+   - `unsupported_event_shape`: Event payload doesn't match expected schema
+   - All validation errors are logged for debugging
+
 For more details on Guardian local development, see [Guardian Local Development](./docs/guardian/local-dev.md).

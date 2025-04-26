@@ -4,15 +4,28 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logger } from '@/lib/logger';
 import { logRequest } from '@/lib/logRequest';
 import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
+import { validateStripeEvent, isStrictValidationEnabled } from '@/lib/guardian/validateStripeEvent';
+import { ZodError } from 'zod';
 
 export const runtime = 'edge';
 export const maxDuration = 5; // 5 seconds maximum for the webhook handler
+
+// Print environment variable hint on startup
+if (isStrictValidationEnabled()) {
+  console.log('Stripe event validation is ENABLED (default)');
+  console.log('Add to .env if you need to disable validation locally:');
+  console.log('STRICT_STRIPE_VALIDATION=false');
+} else {
+  console.log('⚠️ Warning: Stripe event validation is DISABLED');
+  console.log('This should only be used for development');
+}
 
 /**
  * Handles Stripe webhook events
  * - Verifies signature
  * - Identifies source account
  * - Checks if event type is supported
+ * - Validates event shape against schema
  * - Stores raw event payload in event_buffer
  * - Forwards to guardian-reactor
  * - Returns 200 OK quickly
@@ -56,7 +69,31 @@ export async function POST(req: NextRequest) {
     // Check if this event type is supported by Guardian
     if (!isGuardianSupportedEvent(event.type)) {
       logger.warn({ eventType: event.type }, 'Unsupported event type received');
-      return NextResponse.json({ error: 'Unsupported event type' }, { status: 400 });
+      return NextResponse.json({ error: 'unsupported_event_type' }, { status: 400 });
+    }
+
+    // Validate event shape against schema
+    if (isStrictValidationEnabled()) {
+      try {
+        validateStripeEvent(event);
+      } catch (err) {
+        if (err instanceof ZodError) {
+          logger.error(
+            {
+              eventId: event.id,
+              eventType: event.type,
+              zodErrors: err.errors,
+            },
+            'Event validation failed',
+          );
+          return NextResponse.json({ error: 'unsupported_event_shape' }, { status: 400 });
+        }
+        if (err instanceof Error && err.message.includes('Unsupported event type')) {
+          logger.warn({ eventType: event.type }, 'Unsupported event type received');
+          return NextResponse.json({ error: 'unsupported_event_type' }, { status: 400 });
+        }
+        throw err; // Re-throw unknown errors
+      }
     }
 
     // Extract the account ID from header or event
@@ -72,6 +109,7 @@ export async function POST(req: NextRequest) {
         accountId: verifiedAccountId,
         eventType: event.type,
         eventId: event.id,
+        validationEnabled: isStrictValidationEnabled(),
       },
       'Webhook verified',
     );

@@ -115,6 +115,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extend tests to verify all supported events and reject unsupported ones
   - Add npm scripts: stripe:setup-webhook and stripe:verify-webhook
   - Update README.md with instructions on setting up webhooks
+- **feat(validation):** Add strict validation for Stripe event payloads:
+  - Create Zod schemas for all supported Stripe events in stripeSchemas.ts
+  - Add validateStripeEvent helper to parse and validate incoming payloads
+  - Integrate validation into webhook handler with clear error responses
+  - Add STRICT_STRIPE_VALIDATION environment variable (default: true)
+  - Add comprehensive unit tests for valid and invalid schemas
+  - Update documentation with validation details and development mode toggle
+  - Log environment variable hint on webhook startup
 
 ### Changed
 
