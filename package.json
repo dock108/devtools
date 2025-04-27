@@ -82,7 +82,7 @@
     "clsx": "^2.0.0",
     "cmdk": "^0.2.0",
     "commander": "^13.1.0",
-    "date-fns": "^4.1.0",
+    "date-fns": "^3.0.0",
     "dompurify": "^3.0.6",
     "feed": "^4.2.2",
     "framer-motion": "^11.1.2",
