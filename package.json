@@ -29,7 +29,8 @@
     "stripe:setup-webhook": "ts-node scripts/setup_webhook.ts",
     "stripe:verify-webhook": "ts-node -e \"require('./lib/guardian/webhookVerifier').verifyWebhookConfiguration()\"",
     "gen:types": "supabase gen types typescript --project-id \"YOUR_PROJECT_ID\" --schema public > types/supabase.ts",
-    "blog:rss": "node --loader ts-node/esm scripts/generate-rss.ts"
+    "blog:rss": "node --loader ts-node/esm scripts/generate-rss.ts",
+    "docs:audit": "tsx scripts/docs-audit.ts"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,json,md,mdx,yml}": [
