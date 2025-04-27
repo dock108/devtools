@@ -135,22 +135,36 @@ jobs:
           path: artifacts/
           retention-days: 3
 
+      - name: Upload build/test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-build # Artifact name for e2e job
+          path: |
+            node_modules/
+            package.json
+            package-lock.json
+            playwright.config.ts
+            tests/e2e/ # Assuming tests are here
+          retention-days: 1 # Only need for the next job
+
   run-e2e-tests:
     name: Run E2E Tests
     needs: deploy-staging
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup Node + NPM Deps
-        uses: ./.github/actions/setup-node-npm
+      # Download artifacts from deploy job
+      - name: Download build/test artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20.x'
+          name: staging-build
+          # No path specified, downloads to current directory
 
-      - name: Disable corepack & ensure npm is default
-        run: corepack disable
-
-      - name: Install dependencies
-        run: npm ci
+      # Ensure Node is available for subsequent steps
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x' # Ensure consistent Node version
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
