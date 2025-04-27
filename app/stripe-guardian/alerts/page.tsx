@@ -1,24 +1,45 @@
 'use client';
 
 import React, { useEffect, useState, Suspense, useMemo, useTransition } from 'react';
-import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { format, startOfMonth, addDays, formatRelative } from 'date-fns';
+import { Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
 import {
   resumePayoutsServerAction,
-  pausePayoutsServerAction
+  pausePayoutsServerAction,
 } from 'app/(auth)/settings/connected-accounts/actions';
+import { Alert as ShadcnAlert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
+import { alertCapFor } from '@/lib/guardian/plan';
+import { UpgradeBanner } from '@/app/components/UpgradeBanner';
 
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { HiSearch, HiCheckCircle, HiOutlineExclamationCircle } from 'react-icons/hi';
+import Image from 'next/image';
+import { Card, Input, Spinner, Alert } from 'flowbite-react';
+import StripeAccountSelect from '@/app/components/StripeAccountSelect';
+import RuleResultAlert from '@/app/components/RuleResultAlert';
+import MetricCard from '@/app/components/MetricCard';
+import StatusFilters from '@/app/components/StatusFilters';
+import { Database } from '@/types/supabase';
+import { AlertStatus, Settings, StripeEvent } from '@/types/guardian';
+import { transformAlertData, fetchStripeEvent } from '@/lib/guardian/display';
+import { displayableStripeEvent } from '@/lib/guardian/utils';
 
 // Type for connected account data needed
 type ConnectedAccount = {
@@ -50,6 +71,13 @@ type AlertChannels = {
   auto_pause: boolean;
 };
 
+// Settings type definition
+type Settings = {
+  id: string;
+  tier: string | null;
+  // Other settings fields as needed
+};
+
 // Wrap the core logic in a component to use Suspense
 function AlertsPageContent() {
   const [initialLoading, setInitialLoading] = useState(true); // Loading accounts
@@ -59,7 +87,19 @@ function AlertsPageContent() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [autoPause, setAutoPause] = useState(false);
   const [updatingAutoPause, setUpdatingAutoPause] = useState(false);
-  
+  // Add new state for settings and monthly alert count
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [monthlyAlertCount, setMonthlyAlertCount] = useState(0);
+  const [alertMetrics, setAlertMetrics] = useState<{
+    monthlyCount: number;
+    openCount: number;
+    lastProcessed: string | null;
+  }>({
+    monthlyCount: 0,
+    openCount: 0,
+    lastProcessed: null,
+  });
+
   // Add state for selected account's payout status
   const [isTogglingPayouts, startToggleTransition] = useTransition();
 
@@ -69,8 +109,28 @@ function AlertsPageContent() {
 
   // Memoize the currently selected account's full data
   const selectedAccountData = useMemo(() => {
-    return allAccounts.find(acc => acc.stripe_account_id === selectedAccountId) || null;
+    return allAccounts.find((acc) => acc.stripe_account_id === selectedAccountId) || null;
   }, [allAccounts, selectedAccountId]);
+
+  // Function to determine alert cap based on tier
+  const alertCapFor = (settings: Settings | null): number => {
+    if (!settings) return 50; // Default to free tier limit
+
+    if (settings.tier === 'pro') {
+      return settings.pro_tier_alert_limit || 1000; // Default pro tier limit
+    } else if (settings.tier === 'enterprise') {
+      return settings.enterprise_tier_alert_limit || 10000; // Default enterprise tier limit
+    } else {
+      // Free tier
+      return settings.free_tier_alert_limit || 50; // Default free tier limit
+    }
+  };
+
+  // Calculate whether to show upgrade banner
+  const showUpgradeBanner = useMemo(() => {
+    const alertCap = alertCapFor(settings);
+    return settings?.tier === 'free' && monthlyAlertCount >= alertCap;
+  }, [settings, monthlyAlertCount]);
 
   // Show toast on first connect (runs only once)
   useEffect(() => {
@@ -80,7 +140,7 @@ function AlertsPageContent() {
       // Use window.history.replaceState to remove query param without triggering full effect chain
       window.history.replaceState(null, '', '/stripe-guardian/alerts');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array ensures it runs only on mount
 
   // Fetch user's connected accounts on mount
@@ -90,7 +150,9 @@ function AlertsPageContent() {
       console.log('Fetching user accounts and payout status...');
       setInitialLoading(true);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (!session || !isMounted) return;
         console.log('Session obtained, fetching accounts for user:', session.user.id);
 
@@ -108,8 +170,8 @@ function AlertsPageContent() {
             setAllAccounts(accountsData);
             // Set the first account as selected initially
             if (!selectedAccountId) {
-                console.log('Setting initial selected account:', accountsData[0].stripe_account_id);
-                setSelectedAccountId(accountsData[0].stripe_account_id);
+              console.log('Setting initial selected account:', accountsData[0].stripe_account_id);
+              setSelectedAccountId(accountsData[0].stripe_account_id);
             }
           } else {
             console.log('No connected accounts found for user.');
@@ -133,9 +195,9 @@ function AlertsPageContent() {
     }
 
     fetchUserAccounts();
-    return () => { 
+    return () => {
       console.log('Unmounting account fetch effect');
-      isMounted = false; 
+      isMounted = false;
     }; // Cleanup
   }, [supabase]); // Only depends on supabase client
 
@@ -145,7 +207,8 @@ function AlertsPageContent() {
       console.log('No account selected, clearing data.');
       setAlerts([]); // Clear alerts if no account is selected
       setAutoPause(false);
-      return; 
+      setMonthlyAlertCount(0); // Reset alert count
+      return;
     }
 
     let isMounted = true;
@@ -154,8 +217,39 @@ function AlertsPageContent() {
       setLoadingAlerts(true);
       setAlerts([]); // Clear previous account's alerts
       setAutoPause(false); // Reset autopause state
+      setMonthlyAlertCount(0); // Reset alert count
 
       try {
+        // Fetch global settings to check plan tier
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('id', 'global_settings')
+          .maybeSingle();
+
+        if (settingsError) throw settingsError;
+        console.log('Fetched settings:', settingsData);
+        if (isMounted && settingsData) {
+          setSettings(settingsData);
+        }
+
+        // Get monthly alert count for the current month
+        const now = new Date();
+        const firstDayOfMonth = startOfMonth(now);
+
+        const { data: monthlyAlerts, error: monthlyAlertsError } = await supabase
+          .from('alerts')
+          .select('id')
+          .eq('stripe_account_id', selectedAccountId)
+          .gte('created_at', firstDayOfMonth.toISOString())
+          .lte('created_at', now.toISOString());
+
+        if (monthlyAlertsError) {
+          console.error('Error fetching monthly alerts:', monthlyAlertsError);
+        }
+
+        const monthlyAlertCount = monthlyAlerts?.length || 0;
+
         // Fetch alert channels for the selected account
         console.log(`Fetching channels for ${selectedAccountId}...`);
         const { data: channels, error: channelError } = await supabase
@@ -163,7 +257,7 @@ function AlertsPageContent() {
           .select('auto_pause')
           .eq('stripe_account_id', selectedAccountId)
           .maybeSingle();
-        
+
         if (channelError) throw channelError;
         console.log(`Fetched channels for ${selectedAccountId}:`, channels);
         if (isMounted && channels) {
@@ -184,6 +278,71 @@ function AlertsPageContent() {
           setAlerts(alertsData);
         }
 
+        // Fetch account info and settings
+        async function fetchAccountInfo() {
+          if (!selectedAccountId) return;
+
+          try {
+            // Fetch settings
+            const { data: settingsData, error: settingsError } = await supabase
+              .from('settings')
+              .select('*')
+              .eq('account_id', selectedAccountId)
+              .single();
+
+            if (settingsError && settingsError.code !== 'PGRST116') {
+              console.error('Error fetching settings:', settingsError);
+            }
+
+            setSettings(settingsData || { tier: 'free', free_tier_alert_limit: 50 });
+
+            // Calculate first day of current month
+            const firstDayOfMonth = startOfMonth(new Date());
+
+            // Fetch monthly alert count
+            const { count: monthlyCount, error: monthlyCountError } = await supabase
+              .from('alerts')
+              .select('*', { count: 'exact', head: true })
+              .eq('account_id', selectedAccountId)
+              .gte('created_at', firstDayOfMonth.toISOString());
+
+            if (monthlyCountError) throw monthlyCountError;
+
+            // Fetch open alert count
+            const { count: openCount, error: openCountError } = await supabase
+              .from('alerts')
+              .select('*', { count: 'exact', head: true })
+              .eq('account_id', selectedAccountId)
+              .eq('status', 'open');
+
+            if (openCountError) throw openCountError;
+
+            // Fetch last processed event timestamp
+            const { data: lastEvent, error: lastEventError } = await supabase
+              .from('processed_events')
+              .select('created_at')
+              .eq('account_id', selectedAccountId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (lastEventError && lastEventError.code !== 'PGRST116') {
+              console.error('Error fetching last event:', lastEventError);
+            }
+
+            setAlertMetrics({
+              monthlyCount: monthlyCount || 0,
+              openCount: openCount || 0,
+              lastProcessed: lastEvent?.created_at || null,
+            });
+
+            setMonthlyAlertCount(monthlyCount || 0);
+          } catch (error) {
+            console.error('Error fetching account info:', error);
+          }
+        }
+
+        fetchAccountInfo();
       } catch (error) {
         console.error('Error fetching data for account:', selectedAccountId, error);
         toast.error(`Failed to load data for account ${selectedAccountId}`);
@@ -196,9 +355,9 @@ function AlertsPageContent() {
     }
 
     fetchAccountData();
-    return () => { 
+    return () => {
       console.log(`Unmounting data fetch effect for ${selectedAccountId}`);
-      isMounted = false; 
+      isMounted = false;
     }; // Cleanup
   }, [selectedAccountId, supabase]);
 
@@ -213,28 +372,27 @@ function AlertsPageContent() {
     console.log(`Setting up realtime channel: ${channelId}`);
     const channel = supabase
       .channel(channelId)
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'alerts',
-          filter: `stripe_account_id=eq.${selectedAccountId}` // Filter by selected account
-        }, 
+          filter: `stripe_account_id=eq.${selectedAccountId}`, // Filter by selected account
+        },
         (payload) => {
           console.log(`Realtime payload received on ${channelId}:`, payload);
           if (payload.eventType === 'INSERT') {
-            setAlerts(prev => [payload.new as Alert, ...prev]);
+            setAlerts((prev) => [payload.new as Alert, ...prev]);
             toast.success('New alert received!');
           } else if (payload.eventType === 'UPDATE') {
-            setAlerts(prev => 
-              prev.map(alert => 
-                alert.id === payload.new.id ? payload.new as Alert : alert
-              )
+            setAlerts((prev) =>
+              prev.map((alert) => (alert.id === payload.new.id ? (payload.new as Alert) : alert)),
             );
           } else if (payload.eventType === 'DELETE') {
-            setAlerts(prev => prev.filter(alert => alert.id !== payload.old.id));
+            setAlerts((prev) => prev.filter((alert) => alert.id !== payload.old.id));
           }
-        }
+        },
       )
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
@@ -248,14 +406,14 @@ function AlertsPageContent() {
     // Cleanup function to remove the channel when component unmounts or selectedAccountId changes
     return () => {
       console.log(`Removing realtime channel: ${channelId}`);
-      supabase.removeChannel(channel).catch(err => console.error('Error removing channel:', err));
+      supabase.removeChannel(channel).catch((err) => console.error('Error removing channel:', err));
     };
   }, [selectedAccountId, supabase]);
 
   // Toggle auto-pause setting for the selected account
   const toggleAutoPause = async (value: boolean) => {
     if (!selectedAccountId) return;
-    
+
     setUpdatingAutoPause(true);
     try {
       const { error } = await supabase
@@ -283,27 +441,31 @@ function AlertsPageContent() {
     startToggleTransition(async () => {
       const action = account.payouts_paused ? resumePayoutsServerAction : pausePayoutsServerAction;
       const optimisticUpdate = !account.payouts_paused;
-      
+
       // Optimistic UI Update - Modify the allAccounts state directly
-      setAllAccounts(prev => prev.map(acc => 
-        acc.stripe_account_id === account.stripe_account_id 
-          ? { ...acc, payouts_paused: optimisticUpdate } 
-          : acc
-      ));
+      setAllAccounts((prev) =>
+        prev.map((acc) =>
+          acc.stripe_account_id === account.stripe_account_id
+            ? { ...acc, payouts_paused: optimisticUpdate }
+            : acc,
+        ),
+      );
 
       try {
         await action(account.stripe_account_id);
         toast.success(`Payouts ${optimisticUpdate ? 'paused' : 'resumed'} successfully.`);
         // Re-fetching/revalidation should handle the final state
-      } catch (error) {        
+      } catch (error) {
         // Rollback optimistic update on error
-        setAllAccounts(prev => prev.map(acc => 
-          acc.stripe_account_id === account.stripe_account_id 
-            ? { ...acc, payouts_paused: account.payouts_paused } // Revert to original state
-            : acc
-        ));
+        setAllAccounts((prev) =>
+          prev.map((acc) =>
+            acc.stripe_account_id === account.stripe_account_id
+              ? { ...acc, payouts_paused: account.payouts_paused } // Revert to original state
+              : acc,
+          ),
+        );
         toast.error(error instanceof Error ? error.message : 'Failed to update payout status.');
-      } 
+      }
       // No finally block needed to reset loading state as useTransition handles it
     });
   };
@@ -314,10 +476,8 @@ function AlertsPageContent() {
     // you might need to pass selectedAccountId in the body or as a query param.
     // For now, assuming the API can handle it based on user session + alert ID.
     try {
-      setAlerts(prev => 
-        prev.map(alert => 
-          alert.id === id ? { ...alert, resolved: true } : alert
-        )
+      setAlerts((prev) =>
+        prev.map((alert) => (alert.id === id ? { ...alert, resolved: true } : alert)),
       );
       const response = await fetch(`/api/alerts/${id}`, {
         method: 'PATCH',
@@ -329,23 +489,21 @@ function AlertsPageContent() {
     } catch (error) {
       console.error('Error resolving alert:', error);
       toast.error('Failed to resolve alert');
-      setAlerts(prev => 
-        prev.map(alert => 
-          alert.id === id ? { ...alert, resolved: false } : alert
-        )
+      setAlerts((prev) =>
+        prev.map((alert) => (alert.id === id ? { ...alert, resolved: false } : alert)),
       );
     }
   };
 
   // --- Helper to get tooltip content ---
   const getPauseTooltipContent = (account: ConnectedAccount | null): string => {
-    if (!account) return "";
+    if (!account) return '';
     if (account.payouts_paused) {
-      let reason = `Paused by ${account.paused_by || 'unknown'}`; 
+      let reason = `Paused by ${account.paused_by || 'unknown'}`;
       if (account.paused_reason) reason += `: ${account.paused_reason.replace(/_/g, ' ')}`;
       return reason;
     } else {
-      return "Automatic payouts active.";
+      return 'Automatic payouts active.';
     }
   };
 
@@ -354,7 +512,8 @@ function AlertsPageContent() {
     return (
       <Container className="py-10">
         <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-500" /> <span className="ml-2">Loading accounts...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />{' '}
+          <span className="ml-2">Loading accounts...</span>
         </div>
       </Container>
     );
@@ -378,32 +537,35 @@ function AlertsPageContent() {
   }
 
   // Filter alerts for the selected account (safe check)
-  const filteredAlerts = selectedAccountId ? alerts.filter(alert => alert.stripe_account_id === selectedAccountId) : [];
-  const activeAlerts = filteredAlerts.filter(alert => !alert.resolved);
-  const resolvedAlerts = filteredAlerts.filter(alert => alert.resolved);
+  const filteredAlerts = selectedAccountId
+    ? alerts.filter((alert) => alert.stripe_account_id === selectedAccountId)
+    : [];
+  const activeAlerts = filteredAlerts.filter((alert) => !alert.resolved);
+  const resolvedAlerts = filteredAlerts.filter((alert) => alert.resolved);
 
   return (
     <Container className="py-10">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Payout Guardian Alerts</h1>
-        
-        {/* Account Selector Dropdown - only show if multiple accounts exist */} 
+
+        {/* Account Selector Dropdown - only show if multiple accounts exist */}
         {allAccounts.length > 1 && (
           <div className="flex items-center space-x-3">
             <span className="text-sm font-medium text-slate-700">Account:</span>
-            <Select 
-              value={selectedAccountId ?? ''} 
-              onValueChange={setSelectedAccountId} 
-            >
-              <SelectTrigger className="w-auto min-w-[250px]"> {/* Adjust width */} 
+            <Select value={selectedAccountId ?? ''} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="w-auto min-w-[250px]">
+                {' '}
+                {/* Adjust width */}
                 <SelectValue placeholder="Select account..." />
               </SelectTrigger>
               <SelectContent>
-                {allAccounts.map(acc => (
+                {allAccounts.map((acc) => (
                   <SelectItem key={acc.stripe_account_id} value={acc.stripe_account_id}>
                     <div className="flex flex-col">
                       <span className="font-medium">{acc.business_name ?? 'Unnamed Account'}</span>
-                      <span className="text-xs text-slate-500 font-mono">{acc.stripe_account_id}</span>
+                      <span className="text-xs text-slate-500 font-mono">
+                        {acc.stripe_account_id}
+                      </span>
                     </div>
                   </SelectItem>
                 ))}
@@ -411,67 +573,106 @@ function AlertsPageContent() {
             </Select>
           </div>
         )}
-        {/* Display selected account ID and name if only one account */} 
+        {/* Display selected account ID and name if only one account */}
         {allAccounts.length === 1 && selectedAccountId && (
-            <div className="flex items-center space-x-2 p-2 bg-slate-100 rounded-md">
-                <span className="text-sm font-medium text-slate-700">Account:</span>
-                <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium text-slate-800">{allAccounts[0].business_name ?? 'Unnamed Account'}</span>
-                    <span className="text-xs text-slate-500 font-mono">{selectedAccountId}</span>
-                </div>
+          <div className="flex items-center space-x-2 p-2 bg-slate-100 rounded-md">
+            <span className="text-sm font-medium text-slate-700">Account:</span>
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-medium text-slate-800">
+                {allAccounts[0].business_name ?? 'Unnamed Account'}
+              </span>
+              <span className="text-xs text-slate-500 font-mono">{selectedAccountId}</span>
             </div>
+          </div>
         )}
       </div>
 
-      {/* Auto-pause and Tabs section - only show if an account is selected */} 
+      {/* Display alert metrics */}
+      <div className="mb-8 grid gap-6 md:grid-cols-3">
+        <MetricCard
+          title="Current Month Alerts"
+          value={monthlyAlertCount}
+          description={
+            settings?.tier === 'free'
+              ? `Free tier limit: ${alertCapFor(settings)}`
+              : 'Enterprise tier'
+          }
+        />
+        <MetricCard
+          title="Open Alerts"
+          value={activeAlerts.length}
+          description="Unresolved alerts"
+        />
+        <MetricCard
+          title="Last Event Processed"
+          value={
+            alertMetrics.lastProcessed
+              ? formatRelative(new Date(alertMetrics.lastProcessed), new Date())
+              : '-'
+          }
+          description="Last webhook event"
+        />
+      </div>
+
+      {/* Show upgrade banner for users exceeding free tier limits */}
+      {showUpgradeBanner && (
+        <UpgradeBanner monthlyAlertCount={monthlyAlertCount} alertLimit={alertCapFor(settings)} />
+      )}
+
+      {/* Auto-pause and Tabs section - only show if an account is selected */}
       {selectedAccountId && selectedAccountData && (
         <>
-          <TooltipProvider delayDuration={300}> {/* Ensure TooltipProvider wraps the toggles */}
-            <div className="flex items-center justify-end space-x-6 mb-4"> {/* Use space-x for spacing */}
+          <TooltipProvider delayDuration={300}>
+            {' '}
+            {/* Ensure TooltipProvider wraps the toggles */}
+            <div className="flex items-center justify-end space-x-6 mb-4">
+              {' '}
+              {/* Use space-x for spacing */}
               {/* Payout Pause Toggle */}
               <div className="flex items-center space-x-2">
-                 <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className='text-sm font-medium text-slate-600 flex items-center'>
-                        Pause Payouts
-                        <Info className="h-3 w-3 ml-1 text-muted-foreground"/>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      Stops Stripe from automatically sending funds to your bank. Guardian may turn this off automatically when fraud is suspected. You can resume payouts once you've reviewed the transactions.
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {/* Wrap Switch in a div to attach tooltip trigger easily */}
-                      <div className="flex items-center">
-                        <Switch
-                          id={`payout-switch-dashboard-${selectedAccountData.stripe_account_id}`}
-                          checked={!selectedAccountData.payouts_paused} // ON when NOT paused
-                          onCheckedChange={handleTogglePayouts} // No need to pass value, handler uses state
-                          disabled={isTogglingPayouts}
-                          aria-label={selectedAccountData.payouts_paused ? 'Resume payouts' : 'Pause payouts'}
-                        />
-                         {isTogglingPayouts && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {getPauseTooltipContent(selectedAccountData)}
-                    </TooltipContent>
-                  </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-sm font-medium text-slate-600 flex items-center">
+                      Pause Payouts
+                      <Info className="h-3 w-3 ml-1 text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Stops Stripe from automatically sending funds to your bank. Guardian may turn
+                    this off automatically when fraud is suspected. You can resume payouts once
+                    you've reviewed the transactions.
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* Wrap Switch in a div to attach tooltip trigger easily */}
+                    <div className="flex items-center">
+                      <Switch
+                        id={`payout-switch-dashboard-${selectedAccountData.stripe_account_id}`}
+                        checked={!selectedAccountData.payouts_paused} // ON when NOT paused
+                        onCheckedChange={handleTogglePayouts} // No need to pass value, handler uses state
+                        disabled={isTogglingPayouts}
+                        aria-label={
+                          selectedAccountData.payouts_paused ? 'Resume payouts' : 'Pause payouts'
+                        }
+                      />
+                      {isTogglingPayouts && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{getPauseTooltipContent(selectedAccountData)}</TooltipContent>
+                </Tooltip>
               </div>
-
               {/* Existing Auto-pause Alerts Toggle */}
               <div className="flex items-center space-x-2">
-                  <span className='text-sm font-medium text-slate-600'>Auto-pause alerts</span>
-                  <Switch
+                <span className="text-sm font-medium text-slate-600">Auto-pause alerts</span>
+                <Switch
                   id={`auto-pause-switch-${selectedAccountData.stripe_account_id}`}
                   checked={autoPause}
                   onCheckedChange={toggleAutoPause}
                   disabled={updatingAutoPause}
                   aria-label="Toggle auto-pause for selected account"
-                  />
-                   {updatingAutoPause && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                />
+                {updatingAutoPause && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
               </div>
             </div>
           </TooltipProvider>
@@ -484,19 +685,29 @@ function AlertsPageContent() {
             <TabsContent value="active">
               {loadingAlerts ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" /> <span className="ml-2">Loading alerts...</span>
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" />{' '}
+                  <span className="ml-2">Loading alerts...</span>
                 </div>
               ) : (
-                <AlertsTable alerts={activeAlerts} onResolve={markResolved} showResolveAction={true} />
+                <AlertsTable
+                  alerts={activeAlerts}
+                  onResolve={markResolved}
+                  showResolveAction={true}
+                />
               )}
             </TabsContent>
             <TabsContent value="resolved">
               {loadingAlerts ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" /> <span className="ml-2">Loading alerts...</span>
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" />{' '}
+                  <span className="ml-2">Loading alerts...</span>
                 </div>
               ) : (
-                <AlertsTable alerts={resolvedAlerts} onResolve={markResolved} showResolveAction={false} />
+                <AlertsTable
+                  alerts={resolvedAlerts}
+                  onResolve={markResolved}
+                  showResolveAction={false}
+                />
               )}
             </TabsContent>
           </Tabs>
@@ -504,7 +715,7 @@ function AlertsPageContent() {
       )}
       {!selectedAccountId && !initialLoading && (
         <div className="text-center text-slate-500 py-10">
-            Please select an account to view alerts.
+          Please select an account to view alerts.
         </div>
       )}
     </Container>
@@ -514,13 +725,16 @@ function AlertsPageContent() {
 // New top-level export that uses Suspense
 export default function AlertsPage() {
   return (
-    <Suspense fallback={
-      <Container className="py-10">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-500" /> <span className="ml-2">Loading page...</span>
-        </div>
-      </Container>
-    }>
+    <Suspense
+      fallback={
+        <Container className="py-10">
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-slate-500" />{' '}
+            <span className="ml-2">Loading page...</span>
+          </div>
+        </Container>
+      }
+    >
       <AlertsPageContent />
     </Suspense>
   );
@@ -539,9 +753,12 @@ function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps)
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
-      case 'high': return 'destructive';
-      case 'medium': return 'warning';
-      default: return 'secondary';
+      case 'high':
+        return 'destructive';
+      case 'medium':
+        return 'warning';
+      default:
+        return 'secondary';
     }
   };
 
@@ -550,22 +767,53 @@ function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps)
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Severity</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Message</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Payout ID</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Time</th>
-            {showResolveAction && <th scope="col" className="relative px-6 py-3"><span className="sr-only">Resolve</span></th>}
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+            >
+              Severity
+            </th>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+            >
+              Message
+            </th>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+            >
+              Payout ID
+            </th>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+            >
+              Time
+            </th>
+            {showResolveAction && (
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">Resolve</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
           {alerts.map((alert) => (
             <tr key={alert.id}>
               <td className="px-6 py-4 whitespace-nowrap">
-                <Badge variant={getSeverityBadge(alert.severity)} className="capitalize">{alert.severity}</Badge>
+                <Badge variant={getSeverityBadge(alert.severity)} className="capitalize">
+                  {alert.severity}
+                </Badge>
               </td>
               <td className="px-6 py-4 text-sm text-slate-700">{alert.message}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">{alert.stripe_payout_id || 'N/A'}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500" title={new Date(alert.created_at).toISOString()}>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">
+                {alert.stripe_payout_id || 'N/A'}
+              </td>
+              <td
+                className="px-6 py-4 whitespace-nowrap text-sm text-slate-500"
+                title={new Date(alert.created_at).toISOString()}
+              >
                 {format(new Date(alert.created_at), 'PP pp')}
               </td>
               {showResolveAction && (
@@ -581,4 +829,4 @@ function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps)
       </table>
     </div>
   );
-} 
+}

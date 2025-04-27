@@ -1,6 +1,57 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
 import sgMail from 'https://esm.sh/@sendgrid/mail@7.7.0';
+
+// Type definitions (consider moving to a shared types file if possible)
+interface Database {
+  public: {
+    Tables: {
+      settings: {
+        Row: {
+          id: string;
+          tier: string | null;
+          email_to: string | null; // Assuming email_to is the column name
+          slack_webhook: string | null; // Assuming slack_webhook is the column name
+          slack_notifications_enabled?: boolean | null; // Need this for canSendSlack
+          // Add other relevant fields
+        };
+      };
+      alerts: {
+        Row: {
+          id: string;
+          stripe_account_id: string | null;
+          type: string | null;
+          severity: string | null;
+          description: string | null;
+          triggered_at: string;
+          // Add other relevant fields
+        };
+      };
+      // Add other table types if needed
+    };
+    // Add other schemas if needed
+  };
+}
+type SettingsRow = Database['public']['Tables']['settings']['Row'];
+type AlertRow = Database['public']['Tables']['alerts']['Row'];
+
+// --- Plan Helper Functions (Duplicated from lib/guardian/plan.ts) ---
+const isPro = (settings: SettingsRow | null | undefined): boolean => {
+  return settings?.tier === 'pro';
+};
+
+const canSendSlack = (settings: SettingsRow | null | undefined): boolean => {
+  // Check if settings exist, if it's a Pro plan, and if Slack is enabled in settings
+  // NOTE: Assuming settings table has `slack_notifications_enabled` boolean column
+  return (
+    !!settings &&
+    isPro(settings) &&
+    settings.slack_notifications_enabled === true &&
+    !!settings.slack_webhook
+  );
+};
+
+// --- End Plan Helper Functions ---
 
 // Log required environment variables on cold start
 console.log('Guardian Notify Booting...');
@@ -52,7 +103,7 @@ serve(async (req: Request) => {
     });
   }
 
-  const supabase = createClient(
+  const supabase: SupabaseClient<Database> = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
@@ -62,9 +113,9 @@ serve(async (req: Request) => {
     console.log(`Fetching alert ${alertId}...`);
     const { data: alert, error: alertError } = await supabase
       .from('alerts')
-      .select('id, stripe_account_id, type, severity, description, triggered_at') // Added fields for notification content
+      .select('id, stripe_account_id, type, severity, description, triggered_at')
       .eq('id', alertId)
-      .single();
+      .single<AlertRow>();
 
     if (alertError || !alert) {
       console.error(`Alert ${alertId} not found or error fetching:`, alertError?.message);
@@ -75,14 +126,13 @@ serve(async (req: Request) => {
     }
     console.log(`Alert ${alertId} found for account ${alert.stripe_account_id}.`);
 
-    // Fetch the *single* global settings row (adjust if becomes account-specific)
+    // Fetch the single global settings row (adjust if becomes account-specific)
     console.log('Fetching global settings...');
     const { data: settings, error: settingsError } = await supabase
       .from('settings')
-      .select('id, tier, email_to, slack_webhook')
-      // .eq('account_id', alert.stripe_account_id) // Uncomment and adjust if settings become per-account
-      .limit(1)
-      .single();
+      .select('*')
+      .eq('id', 'global_settings')
+      .single<SettingsRow>();
 
     if (settingsError || !settings) {
       console.error(`Settings not found or error fetching:`, settingsError?.message);
@@ -93,35 +143,8 @@ serve(async (req: Request) => {
       });
     }
     console.log(
-      `Settings found: Tier=${settings.tier}, Email=${settings.email_to}, Slack=${settings.slack_webhook ? 'configured' : 'none'}`,
+      `Settings found: Tier=${settings.tier}, Email=${settings.email_to}, Slack Enabled=${settings.slack_notifications_enabled}, Slack Webhook=${settings.slack_webhook ? 'configured' : 'none'}`,
     );
-
-    // --- 4. Free-tier Account Cap --- //
-    if (settings.tier === 'free') {
-      console.log('Checking free tier alert count for account:', alert.stripe_account_id);
-      const { count, error: countError } = await supabase
-        .from('alerts')
-        .select('id', { head: true, count: 'exact' })
-        .eq('stripe_account_id', alert.stripe_account_id);
-
-      if (countError) {
-        console.error('Error counting alerts for free tier check:', countError.message);
-        // Proceed with notification despite error? Or fail?
-        // Let's proceed for now, but log error prominently.
-      } else if (count !== null && count >= 50) {
-        // Use >= 50, as the 50th alert should still be sent
-        console.warn(
-          `Free tier limit reached for account ${alert.stripe_account_id} (count: ${count}). Skipping notification for alert ${alertId}.`,
-        );
-        return new Response(JSON.stringify({ message: 'Free tier limit reached' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }); // Return 200 but indicate skipped
-      }
-      console.log(
-        `Free tier count for account ${alert.stripe_account_id} is ${count}, within limit.`,
-      );
-    }
 
     // --- 3. Email Notification --- //
     const emailSubject = `Guardian alert - ${alert.type} (${alert.severity})`;
@@ -136,52 +159,51 @@ serve(async (req: Request) => {
                      </ul>
                      <p>View details in the Guardian Dashboard.</p>`; // HTML version
 
-    const recipients = settings.email_to
-      .split(',')
-      .map((email) => email.trim())
-      .filter(Boolean);
-    if (recipients.length > 0) {
-      console.log(`Sending email notification for alert ${alertId} to:`, recipients.join(', '));
-      try {
-        await sgMail.send({
-          to: recipients,
-          from: fromEmail,
-          subject: emailSubject,
-          text: emailText,
-          html: emailHtml,
-        });
-        console.log(`Email sent successfully for alert ${alertId}.`);
-      } catch (emailError) {
-        console.error(
-          `Failed to send email for alert ${alertId}:`,
-          emailError.response?.body || emailError.message,
+    // Check if email notifications are globally enabled in settings
+    if (settings.email_notifications_enabled) {
+      const recipients =
+        settings.email_to
+          ?.split(',')
+          .map((email) => email.trim())
+          .filter(Boolean) ?? []; // Handle null email_to gracefully
+
+      if (recipients.length > 0) {
+        console.log(`Sending email notification for alert ${alertId} to:`, recipients.join(', '));
+        try {
+          await sgMail.send({
+            to: recipients,
+            from: fromEmail,
+            subject: emailSubject,
+            text: emailText,
+            html: emailHtml,
+          });
+          console.log(`Email sent successfully for alert ${alertId}.`);
+        } catch (emailError) {
+          console.error(
+            `Failed to send email for alert ${alertId}:`,
+            emailError.response?.body || emailError.message,
+          );
+        }
+      } else {
+        console.warn(
+          'Email notifications enabled, but no valid recipient emails found in settings.email_to',
         );
-        // Don't fail the whole function, just log the error
       }
     } else {
-      console.warn('No valid recipient emails found in settings.email_to');
+      console.log('Email notifications are disabled in settings.');
     }
 
-    // --- 4. Slack Notification (Pro tier only) --- //
-    if (settings.tier === 'pro' && settings.slack_webhook) {
-      console.log(`Sending Slack notification for alert ${alertId} (Pro tier).`);
+    // --- 4. Slack Notification (Uses canSendSlack helper) --- //
+    if (canSendSlack(settings)) {
+      console.log(`Sending Slack notification for alert ${alertId} (Pro tier & enabled).`);
       const slackPayload = {
         username: slackUsername,
         text: `*Guardian Alert*\n*Type:* ${alert.type}\n*Severity:* ${alert.severity}\n*Description:* ${alert.description}\n*Account:* ${alert.stripe_account_id}\n*Time:* ${new Date(alert.triggered_at).toUTCString()}\n<fakelink.to.dashboard|View in Dashboard>`,
-        // Use blocks for better formatting if desired
-        // blocks: [
-        //   {
-        //     "type": "section",
-        //     "text": {
-        //       "type": "mrkdwn",
-        //       "text": `*Guardian Alert*\n*Type:* ${alert.type}\n*Severity:* ${alert.severity}\n*Description:* ${alert.description}\n*Account:* ${alert.stripe_account_id}\n*Time:* ${new Date(alert.triggered_at).toUTCString()}\n<fakelink.to.dashboard|View in Dashboard>`
-        //     }
-        //   }
-        // ]
       };
+      const webhookUrl = settings.slack_webhook!;
 
       try {
-        const slackResponse = await fetch(settings.slack_webhook, {
+        const slackResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(slackPayload),
@@ -197,10 +219,15 @@ serve(async (req: Request) => {
           `Failed to send Slack notification for alert ${alertId}:`,
           slackError.message,
         );
-        // Don't fail the whole function, just log the error
       }
-    } else if (settings.tier === 'pro' && !settings.slack_webhook) {
-      console.warn('Pro tier enabled, but no Slack webhook URL configured in settings.');
+    } else {
+      if (!isPro(settings)) {
+        console.log('Skipping Slack notification: Free tier.');
+      } else if (!settings.slack_notifications_enabled) {
+        console.log('Skipping Slack notification: Disabled in settings.');
+      } else if (!settings.slack_webhook) {
+        console.log('Skipping Slack notification: Webhook URL not configured.');
+      }
     }
 
     console.log(`Notification processing complete for alert ${alertId}.`);

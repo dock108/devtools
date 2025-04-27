@@ -1,1 +1,235 @@
-\'use client\';\n\nimport { useState, useEffect } from \'react\';\nimport { Container } from \'@/components/Container\';\nimport { Button } from \'@/components/ui/button\';\nimport { Input } from \'@/components/ui/input\';\nimport { Label } from \'@/components/ui/label\';\nimport { Switch } from \"@/components/ui/switch\"\nimport { toast } from \'react-hot-toast\';\nimport { Loader2, Save } from \'lucide-react\';\nimport { Database } from \'@/types/supabase\';\nimport { Card, CardContent, CardDescription, CardHeader, CardTitle } from \"@/components/ui/card\"\n\n// Assuming settings table structure - adjust as needed\ntype Settings = Database[\'public\'][\'Tables\'][\'settings\'][\'Row\'];\n\n// Default settings structure if none found in DB\nconst defaultSettings: Partial<Settings> = {\n    id: \'global_settings\', // Use a fixed identifier if your table uses one\n    slack_webhook_url: \'\',\n    notification_emails: [],\n    slack_notifications_enabled: false,\n    email_notifications_enabled: false,\n};\n\nexport default function NotificationSettingsAdminPage() {\n  const [settings, setSettings] = useState<Partial<Settings>>(defaultSettings);\n  const [isLoading, setIsLoading] = useState(true);\n  const [isSaving, setIsSaving] = useState(false);\n  const [emailInput, setEmailInput] = useState(\'\');\n\n  const fetchSettings = async () => {\n    setIsLoading(true);\n    try {\n      const res = await fetch(\'/api/admin/settings\');\n      if (!res.ok) throw new Error(\'Failed to fetch settings\');\n      const data = await res.json();\n      // Use fetched data or defaults if empty/error\n      const loadedSettings = data && Object.keys(data).length > 0 ? data : defaultSettings;\n      setSettings(loadedSettings);\n      setEmailInput((loadedSettings.notification_emails || []).join(\', \'));\n    } catch (error: any) {\n      toast.error(`Error fetching settings: ${error.message}`);\n      // Keep default settings on error\n      setSettings(defaultSettings);\n      setEmailInput(\'\');\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  useEffect(() => {\n    fetchSettings();\n  }, []);\n\n  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    const { name, value, type, checked } = e.target;\n    setSettings(prev => ({\n      ...prev,\n      [name]: type === \'checkbox\' || e.target instanceof HTMLInputElement && e.target.role === \'switch\' ? checked : value,\n    }));\n  };\n\n    const handleSwitchChange = (checked: boolean, name: keyof Settings) => {\n        setSettings(prev => ({\n            ...prev,\n            [name]: checked,\n        }));\n    };\n\n  const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    setEmailInput(e.target.value);\n  };\n\n  const handleSave = async () => {\n    setIsSaving(true);\n    // Basic validation for Slack URL (if provided)\n    if (settings.slack_webhook_url && !settings.slack_webhook_url.startsWith(\'https://hooks.slack.com/\')) {\n        toast.error(\'Invalid Slack Webhook URL format.\');\n        setIsSaving(false);\n        return;\n    }\n\n    // Parse and validate emails\n    const emails = emailInput\n      .split(\',\')\n      .map(email => email.trim())\n      .filter(email => email !== \'\' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)); // Basic email regex\n\n    if (emailInput.trim() !== \'\' && emails.length === 0 && emailInput.split(\',\').map(e => e.trim()).filter(e => e !== \'\').length > 0) {\n        toast.error(\'One or more email addresses are invalid. Please use comma-separated valid emails.\');\n        setIsSaving(false);\n        return;\n    }\n\n    const payload = {\n        ...settings,\n        notification_emails: emails,\n        // Ensure the fixed ID is included if your upsert relies on it\n        id: settings.id || defaultSettings.id, \n    };\n\n    try {\n      const res = await fetch(\'/api/admin/settings\', {\n        method: \'PUT\',\n        headers: { \'Content-Type\': \'application/json\' },\n        body: JSON.stringify(payload),\n      });\n\n      if (!res.ok) {\n        const errorData = await res.json();\n        throw new Error(errorData.error || \'Failed to save settings\');\n      }\n\n      const updatedSettings = await res.json();\n      setSettings(updatedSettings);\n      setEmailInput((updatedSettings.notification_emails || []).join(\', \'));\n      toast.success(\'Settings saved successfully!\');\n    } catch (error: any) {\n      toast.error(`Save failed: ${error.message}`);\n    } finally {\n      setIsSaving(false);\n    }\n  };\n\n  if (isLoading) {\n    return (\n      <Container className=\"py-10\">\n        <div className=\"flex justify-center items-center h-40\">\n          <Loader2 className=\"h-8 w-8 animate-spin text-slate-500\" />\n        </div>\n      </Container>\n    );\n  }\n\n  return (\n    <Container className=\"py-10\">\n         <Card className=\"max-w-2xl mx-auto\">\n            <CardHeader>\n                <CardTitle>Notification Settings</CardTitle>\n                <CardDescription>Configure how and where Guardian sends alert notifications.</CardDescription>\n            </CardHeader>\n            <CardContent className=\"space-y-6\">\n                 {/* Slack Settings */}\n                 <div className=\"space-y-2\">\n                    <Label htmlFor=\"slack_webhook_url\" className=\"text-base font-semibold\">Slack Notifications</Label>\n                    <div className=\"flex items-center space-x-2\">\n                         <Switch\n                            id=\"slack_notifications_enabled\"\n                            checked={settings.slack_notifications_enabled ?? false}\n                            onCheckedChange={(checked) => handleSwitchChange(checked, \'slack_notifications_enabled\')}\n                            disabled={isSaving}\n                         />\n                         <Label htmlFor=\"slack_notifications_enabled\">Enable Slack Alerts</Label>\n                    </div>\n                    <Input\n                        id=\"slack_webhook_url\"\n                        name=\"slack_webhook_url\"\n                        type=\"url\"\n                        placeholder=\"https://hooks.slack.com/...\"\n                        value={settings.slack_webhook_url || \'\'}\n                        onChange={handleInputChange}\n                        disabled={isSaving || !settings.slack_notifications_enabled}\n                        className=\"mt-1\"\n                    />\n                    <p className=\"text-sm text-slate-500\">Enter the Incoming Webhook URL provided by Slack.</p>\n                 </div>\n\n                 {/* Email Settings */}\n                 <div className=\"space-y-2\">\n                    <Label htmlFor=\"notification_emails\" className=\"text-base font-semibold\">Email Notifications</Label>\n                     <div className=\"flex items-center space-x-2\">\n                         <Switch\n                            id=\"email_notifications_enabled\"\n                            checked={settings.email_notifications_enabled ?? false}\n                            onCheckedChange={(checked) => handleSwitchChange(checked, \'email_notifications_enabled\')}\n                            disabled={isSaving}\n                         />\n                         <Label htmlFor=\"email_notifications_enabled\">Enable Email Alerts</Label>\n                    </div>\n                    <Input\n                        id=\"notification_emails\"\n                        name=\"notification_emails\"\n                        type=\"text\" \n                        placeholder=\"ops@example.com, security@example.com\"\n                        value={emailInput}\n                        onChange={handleEmailInputChange}\n                        disabled={isSaving || !settings.email_notifications_enabled}\n                        className=\"mt-1\"\n                    />\n                     <p className=\"text-sm text-slate-500\">Enter comma-separated email addresses.</p>\n                 </div>\n\n                <div className=\"flex justify-end pt-4\">\n                    <Button onClick={handleSave} disabled={isSaving || isLoading}>\n                        {isSaving ? (\n                            <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />\n                        ) : (\n                            <Save className=\"mr-2 h-4 w-4\" />\n                        )}\n                        Save Settings\n                    </Button>\n                </div>\n            </CardContent>\n         </Card>\n    </Container>\n  );\n}\n 
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Container } from '@/components/Container';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'react-hot-toast';
+import { Loader2, Save } from 'lucide-react';
+import { Database } from '@/types/supabase';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+// Assuming settings table structure - adjust as needed
+type Settings = Database['public']['Tables']['settings']['Row'];
+
+// Default settings structure if none found in DB
+const defaultSettings: Partial<Settings> = {
+  id: 'global_settings', // Use a fixed identifier if your table uses one
+  slack_webhook_url: '',
+  notification_emails: [],
+  slack_notifications_enabled: false,
+  email_notifications_enabled: false,
+};
+
+export default function NotificationSettingsAdminPage() {
+  const [settings, setSettings] = useState<Partial<Settings>>(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+
+  const fetchSettings = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/admin/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
+      const data = await res.json();
+      // Use fetched data or defaults if empty/error
+      const loadedSettings = data && Object.keys(data).length > 0 ? data : defaultSettings;
+      setSettings(loadedSettings);
+      setEmailInput((loadedSettings.notification_emails || []).join(', '));
+    } catch (error: any) {
+      toast.error(`Error fetching settings: ${error.message}`);
+      // Keep default settings on error
+      setSettings(defaultSettings);
+      setEmailInput('');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setSettings((prev) => ({
+      ...prev,
+      [name]:
+        type === 'checkbox' || (e.target instanceof HTMLInputElement && e.target.role === 'switch')
+          ? checked
+          : value,
+    }));
+  };
+
+  const handleSwitchChange = (checked: boolean, name: keyof Settings) => {
+    setSettings((prev) => ({
+      ...prev,
+      [name]: checked,
+    }));
+  };
+
+  const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmailInput(e.target.value);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    // Basic validation for Slack URL (if provided)
+    if (
+      settings.slack_webhook_url &&
+      !settings.slack_webhook_url.startsWith('https://hooks.slack.com/')
+    ) {
+      toast.error('Invalid Slack Webhook URL format.');
+      setIsSaving(false);
+      return;
+    }
+
+    // Parse and validate emails
+    const emails = emailInput
+      .split(',')
+      .map((email) => email.trim())
+      .filter((email) => email !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)); // Basic email regex
+
+    if (
+      emailInput.trim() !== '' &&
+      emails.length === 0 &&
+      emailInput
+        .split(',')
+        .map((e) => e.trim())
+        .filter((e) => e !== '').length > 0
+    ) {
+      toast.error(
+        'One or more email addresses are invalid. Please use comma-separated valid emails.',
+      );
+      setIsSaving(false);
+      return;
+    }
+
+    const payload = {
+      ...settings,
+      notification_emails: emails,
+      // Ensure the fixed ID is included if your upsert relies on it
+      id: settings.id || defaultSettings.id,
+    };
+
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to save settings');
+      }
+
+      const updatedSettings = await res.json();
+      setSettings(updatedSettings);
+      setEmailInput((updatedSettings.notification_emails || []).join(', '));
+      toast.success('Settings saved successfully!');
+    } catch (error: any) {
+      toast.error(`Save failed: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Container className="py-10">
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+        </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="py-10">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Notification Settings</CardTitle>
+          <CardDescription>
+            Configure how and where Guardian sends alert notifications.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Slack Settings */}
+          <div className="space-y-2">
+            <Label htmlFor="slack_webhook_url" className="text-base font-semibold">
+              Slack Notifications
+            </Label>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="slack_notifications_enabled"
+                checked={settings.slack_notifications_enabled ?? false}
+                onCheckedChange={(checked) =>
+                  handleSwitchChange(checked, 'slack_notifications_enabled')
+                }
+                disabled={isSaving}
+              />
+              <Label htmlFor="slack_notifications_enabled">Enable Slack Alerts</Label>
+            </div>
+            <Input
+              id="slack_webhook_url"
+              name="slack_webhook_url"
+              type="url"
+              placeholder="https://hooks.slack.com/..."
+              value={settings.slack_webhook_url || ''}
+              onChange={handleInputChange}
+              disabled={isSaving || !settings.slack_notifications_enabled}
+              className="mt-1"
+            />
+            <p className="text-sm text-slate-500">
+              Enter the Incoming Webhook URL provided by Slack.
+            </p>
+          </div>
+
+          {/* Email Settings */}
+          <div className="space-y-2">
+            <Label htmlFor="notification_emails" className="text-base font-semibold">
+              Email Notifications
+            </Label>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="email_notifications_enabled"
+                checked={settings.email_notifications_enabled ?? false}
+                onCheckedChange={(checked) =>
+                  handleSwitchChange(checked, 'email_notifications_enabled')
+                }
+                disabled={isSaving}
+              />
+              <Label htmlFor="email_notifications_enabled">Enable Email Alerts</Label>
+            </div>
+            <Input
+              id="notification_emails"
+              name="notification_emails"
+              type="text"
+              placeholder="ops@example.com, security@example.com"
+              value={emailInput}
+              onChange={handleEmailInputChange}
+              disabled={isSaving || !settings.email_notifications_enabled}
+              className="mt-1"
+            />
+            <p className="text-sm text-slate-500">Enter comma-separated email addresses.</p>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button onClick={handleSave} disabled={isSaving || isLoading}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Container>
+  );
+}
