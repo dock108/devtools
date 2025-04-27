@@ -8,7 +8,14 @@ import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 // Client component that safely uses useSearchParams
 function LoginForm() {
@@ -16,7 +23,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo');
   const defaultRedirect = '/stripe-guardian/alerts';
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,12 +33,14 @@ function LoginForm() {
   useEffect(() => {
     // Check if already logged in and redirect to dashboard
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         router.replace('/stripe-guardian/alerts');
       }
     };
-    
+
     checkSession();
   }, [router, supabase]);
 
@@ -94,14 +103,8 @@ function LoginForm() {
                 className="bg-slate-700 border-slate-600"
               />
             </div>
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
-            )}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -115,7 +118,10 @@ function LoginForm() {
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-center text-sm text-slate-400">
-            Need access? Contact <a href="mailto:beta@dock108.ai" className="text-blue-400 hover:underline">beta@dock108.ai</a>
+            Don't have an account?
+            <a href="/sign-up" className="ml-1 font-medium text-blue-400 hover:underline">
+              Sign up for Beta
+            </a>
           </div>
         </CardFooter>
       </Card>
@@ -126,12 +132,14 @@ function LoginForm() {
 // Main page component with Suspense boundary
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-slate-900">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-900">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
-} 
+}

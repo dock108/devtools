@@ -213,7 +213,7 @@ export default function StripeGuardianPage() {
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center gap-x-6 gap-y-4">
               <Button asChild size="lg">
-                <Link href="/login">Join the Free Beta</Link>
+                <Link href="/sign-up">Join the Free Beta</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link href="/guardian-demo">View Demo</Link>
@@ -453,7 +453,7 @@ export default function StripeGuardianPage() {
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-4">
               <Button asChild size="lg">
-                <Link href="/login">Start Free Beta</Link>
+                <Link href="/sign-up">Start Free Beta</Link>
               </Button>
               <Link
                 href="/guardian-demo"
