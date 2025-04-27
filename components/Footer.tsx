@@ -42,6 +42,18 @@ export async function Footer() {
             Twitter
           </Link>
           <Link
+            href="/docs/getting-started"
+            className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Docs
+          </Link>
+          <Link
+            href="/contact"
+            className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Contact
+          </Link>
+          <Link
             href="/rss.xml"
             className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
           >
