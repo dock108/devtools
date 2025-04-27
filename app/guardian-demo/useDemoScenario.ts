@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { DemoEvent } from './useFakeStripeEvents';
-import { logger } from '@/lib/logger';
 
 export type ScenarioEvent = {
   delayMs: number;
@@ -35,7 +34,6 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
   // Clear all timers on unmount or reset
   const clearAllTimers = () => {
     if (timersRef.current.length > 0) {
-      logger.info({ count: timersRef.current.length }, 'Clearing all timers');
       timersRef.current.forEach(clearTimeout);
       timersRef.current = [];
     }
@@ -76,7 +74,6 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
     setError(null);
 
     try {
-      logger.info({ scenarioId: name }, 'Loading scenario');
       const response = await fetch(`/guardian-demo/scenarios/${name}.json`, { signal });
       if (!response.ok) {
         throw new Error(`Failed to load scenario: ${response.statusText}`);
@@ -97,7 +94,6 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
     } catch (err) {
       // Don't set error if aborted
       if (err instanceof Error && err.name === 'AbortError') {
-        logger.info({ scenarioId: name }, 'Fetch aborted due to new scenario request');
         return;
       }
       setError(err instanceof Error ? err.message : 'Failed to load scenario');
@@ -226,7 +222,6 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
   // Load scenario effect
   useEffect(() => {
     if (scenarioName) {
-      logger.info({ id: scenarioName }, 'Scenario change – timers cleared');
       clearAllTimers();
       loadScenario(scenarioName);
     }
@@ -250,10 +245,6 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
   // Reschedule when speed changes
   useEffect(() => {
     if (scenarioEvents.length > 0 && pendingEventsRef.current.length > 0) {
-      logger.info(
-        { speed, pendingEvents: pendingEventsRef.current.length },
-        'Speed changed – rescheduling events',
-      );
       rescheduleEvents();
     }
   }, [speed]);

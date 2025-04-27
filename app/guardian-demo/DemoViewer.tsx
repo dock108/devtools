@@ -49,11 +49,10 @@ export function DemoViewer() {
     setAlert(undefined);
   }
 
-  function handleScenarioChange(newScenario: string) {
-    log.info({ newScenario }, 'Changing scenario');
+  const handleScenarioChange = (newScenario: string) => {
     setScenario(newScenario);
     handleReset(false);
-  }
+  };
 
   // Update the log message based on the scenario type
   useEffect(() => {
