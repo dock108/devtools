@@ -3,9 +3,9 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { Database } from '@/types/supabase';
 
-export async function GET(request: Request, { params }: { params: { alertId: string } }) {
-  const { alertId } = params;
-  if (!alertId) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
+  if (!id) {
     return NextResponse.json({ error: 'Alert ID is required' }, { status: 400 });
   }
 
@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: { alertId: str
   const { data: alert, error: fetchError } = await supabase
     .from('alerts')
     .select('delivery_status')
-    .eq('id', alertId)
+    .eq('id', id)
     .maybeSingle(); // Use maybeSingle as alert might not exist
 
   if (fetchError) {

@@ -3,12 +3,12 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { Database } from '@/types/supabase';
 
-export async function POST(request: Request, { params }: { params: { alertId: string } }) {
-  const { alertId } = params;
+export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get('channel');
 
-  if (!alertId) {
+  if (!id) {
     return NextResponse.json({ error: 'Alert ID is required' }, { status: 400 });
   }
   if (!channel) {
@@ -65,13 +65,13 @@ export async function POST(request: Request, { params }: { params: { alertId: st
 
   // Call the RPC to re-enqueue the notification
   const { error: rpcError } = await supabaseAdmin.rpc('enqueue_notification', {
-    p_alert_id: alertId,
+    p_alert_id: id,
     p_channel: channel,
   });
 
   if (rpcError) {
     console.error(
-      `Error calling enqueue_notification RPC for alert ${alertId}, channel ${channel}:`,
+      `Error calling enqueue_notification RPC for alert ${id}, channel ${channel}:`,
       rpcError,
     );
     // Provide a more specific error if possible, e.g., check rpcError.code
