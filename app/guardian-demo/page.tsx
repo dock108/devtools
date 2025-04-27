@@ -2,20 +2,21 @@ import { Container } from '@/components/Container';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { DemoViewer } from './DemoViewer';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Guardian Demo',
-  description: 'Replay Guardian\'s fraud scenarios in real time.',
+  description: "Replay Guardian's fraud scenarios in real time.",
   robots: { index: false, follow: false },
   openGraph: {
     title: 'Guardian Demo',
-    description: 'Replay Guardian\'s fraud scenarios in real time.',
+    description: "Replay Guardian's fraud scenarios in real time.",
     images: ['/og-guardian-demo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Guardian Demo',
-    description: 'Replay Guardian\'s fraud scenarios in real time.',
+    description: "Replay Guardian's fraud scenarios in real time.",
     images: ['/og-guardian-demo.png'],
   },
 };
@@ -29,14 +30,20 @@ export default function GuardianDemo() {
       {/* Header Row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-          Stripe&nbsp;Guardian Live Demo <span className="text-sm font-normal text-gray-500">(Test‑mode)</span>
+          Stripe&nbsp;Guardian Live Demo{' '}
+          <span className="text-sm font-normal text-gray-500">(Test‑mode)</span>
         </h1>
-        <Link
-          href="/stripe-guardian"
-          className="text-[var(--accent-guardian)] hover:underline hover:opacity-90"
-        >
-          ← Back to Product
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button asChild size="sm">
+            <Link href="/login">Join the Free Beta</Link>
+          </Button>
+          <Link
+            href="/stripe-guardian"
+            className="text-sm text-[var(--accent-guardian)] hover:underline hover:opacity-90"
+          >
+            ← Back to Product
+          </Link>
+        </div>
       </div>
 
       {/* Subtitle */}
@@ -48,4 +55,4 @@ export default function GuardianDemo() {
       <DemoViewer />
     </Container>
   );
-} 
+}
