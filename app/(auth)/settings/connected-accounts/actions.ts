@@ -1,13 +1,12 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { Database } from '@/types/supabase.d';
 import { stripe } from '@/lib/stripe'; // Corrected path
 import { revalidatePath } from 'next/cache';
 import { Resend } from 'resend'; // Import Resend SDK
-import { createClient } from '@/lib/supabase/server';
-import { headers } from 'next/headers';
+// import { createClient } from '@/lib/supabase/server'; // Removed unused import
 
 // --- Notification Helpers ---
 // Basic Slack helper using fetch
@@ -96,8 +95,8 @@ export async function linkStripeAccountServerAction() {
   // Construct the URLs for Stripe callback
   // Ensure these URLs match your environment (localhost vs production)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const returnUrl = `${baseUrl}/settings/connected-accounts`;
-  const refreshUrl = `${baseUrl}/settings/connected-accounts`; // Refresh URL if user aborts/refreshes during OAuth
+  // const returnUrl = `${baseUrl}/settings/connected-accounts`; // Removed
+  // const refreshUrl = `${baseUrl}/settings/connected-accounts`; // Removed
 
   const origin = headers().get('origin');
   if (!origin) {

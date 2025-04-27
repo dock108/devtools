@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import useSWR, { mutate } from 'swr'; // For data fetching and optimistic updates
 import { linkStripeAccountServerAction } from '@/app/(auth)/settings/connected-accounts/actions'; // Reuse existing action
+import { createClient } from '@supabase/supabase-js';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -80,7 +81,9 @@ export function ConnectedAccountsManager({
   userRole,
   availableRuleSets = [], // Default to empty if not admin/provided
 }: ConnectedAccountsManagerProps) {
-  const router = useRouter();
+  const supabase = createClient(); // Use client-side Supabase client
+  // const router = useRouter(); // Removed
+
   const { data: accounts = initialAccounts, error: accountsError } = useSWR<AccountWithStatus[]>(
     ACCOUNTS_API_ENDPOINT,
     fetcher,
@@ -98,7 +101,8 @@ export function ConnectedAccountsManager({
   const isAdmin = userRole === 'admin';
   const canAddAccount = accounts.length < 2;
 
-  const searchParams = useSearchParams();
+  // Get search params (e.g., for filtering, though not used currently)
+  // const searchParams = useSearchParams(); // Removed
 
   // --- Handlers ---
   const handleAddAccount = () => {

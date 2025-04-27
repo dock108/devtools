@@ -71,11 +71,16 @@ export async function GET(request: NextRequest) {
 // POST /api/accounts - Link a new Stripe account
 export async function POST(/* request: Request */) {
   console.log('POST /api/accounts called');
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (name) => cookies().get(name)?.value } },
-  );
+  // const supabase = createServerClient<Database>( // Removed unused variable
+  //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  //   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  //   { cookies: { get: (name) => cookies().get(name)?.value } },
+  // );
 
   // ... existing code ...
+  // The actual logic for POST (likely creating a Stripe connect link)
+  // should use a Supabase client if it needs user info or to store state.
+  // If the entire POST logic was removed, this function might be obsolete.
+  // For now, just removing the unused client.
+  return NextResponse.json({ message: 'POST handler needs implementation' }, { status: 501 });
 }

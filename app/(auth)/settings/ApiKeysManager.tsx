@@ -23,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
   Table,
@@ -48,7 +47,6 @@ export function ApiKeysManager({ initialApiKeys }: ApiKeysManagerProps) {
   const [newKeyName, setNewKeyName] = useState('');
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [isGenerating, startGeneratingTransition] = useTransition();
-  const [isRevoking, startRevokingTransition] = useTransition();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showRevokeDialog, setShowRevokeDialog] = useState(false);
   const [keyToRevoke, setKeyToRevoke] = useState<ApiKeyInfo | null>(null);
@@ -79,19 +77,19 @@ export function ApiKeysManager({ initialApiKeys }: ApiKeysManagerProps) {
   };
 
   const handleRevokeKey = (keyId: string) => {
-    startRevokingTransition(async () => {
+    const revoke = async () => {
       const formData = new FormData();
       formData.append('keyId', keyId);
       const result = await revokeApiKeyServerAction(formData);
 
       if (result.success) {
         toast.success('API Key revoked successfully!');
-        // Optimistically remove from local state
         setApiKeys((currentKeys) => currentKeys.filter((key) => key.id !== keyId));
       } else {
         toast.error(`Error revoking API key: ${result.error || 'Unknown error'}`);
       }
-    });
+    };
+    revoke();
   };
 
   const copyToClipboard = (text: string) => {

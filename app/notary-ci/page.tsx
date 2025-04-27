@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { productLD } from '@/lib/jsonld';
 import { Badge } from '@/components/ui/badge';
-import { Features } from '@/components/products/Features';
-import { Hero } from '@/components/products/Hero';
+// import { Features } from '@/components/products/Features'; // Commented out
+// import { Hero } from '@/components/products/Hero'; // Commented out
 import Image from 'next/image';
 
 // Placeholder components - replace or refine

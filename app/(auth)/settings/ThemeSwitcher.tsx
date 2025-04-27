@@ -3,10 +3,9 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
-import { Moon, Sun } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { updateThemeServerAction } from './actions'; // Import the real server action
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface ThemeSwitcherProps {
   currentTheme: string; // Passed from server component

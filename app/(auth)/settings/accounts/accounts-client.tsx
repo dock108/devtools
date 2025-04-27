@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCcw, Trash2, Loader2, UserX, ShieldAlert } from 'lucide-react';
+import { RefreshCcw, Loader2, UserX } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { RuleSetEditor } from '@/components/accounts/RuleSetEditor';
 

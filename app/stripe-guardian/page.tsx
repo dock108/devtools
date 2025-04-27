@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { Container } from '@/components/Container';
-import { ShieldCheck, CreditCard, ArrowRight, Zap } from 'lucide-react';
+import { ShieldCheck, CreditCard, ArrowRight, Zap, Check } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';

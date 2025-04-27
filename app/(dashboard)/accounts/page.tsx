@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+// import { Metadata } from 'next';
 // import { Suspense } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';

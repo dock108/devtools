@@ -2,21 +2,18 @@
 
 import { Metadata } from 'next';
 import { Container } from '@/components/Container';
-import Image from 'next/image';
+// import Image from 'next/image'; // Removed
 import { Badge } from '@/components/ui/badge';
-import CrondeckHero from '@/components/products/CrondeckHero';
-import { Features } from '@/components/products/Features';
+// import CrondeckHero from '@/components/products/CrondeckHero'; // Commented out
+// import { Features } from '@/components/products/Features'; // Commented out
 import { productLD } from '@/lib/jsonld';
+import { Clock, Check, ListChecks, BellRing, LineChart } from 'lucide-react';
+import { WaitlistForm } from '@/components/WaitlistForm';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 // Placeholder components - replace or refine
-const Badge = ({ children, colorVar }: { children: React.ReactNode; colorVar: string }) => (
-  <span
-    className="inline-flex items-center rounded-full px-3 py-0.5 text-sm font-medium"
-    style={{ backgroundColor: `color-mix(in srgb, ${colorVar} 10%, transparent)`, color: colorVar }}
-  >
-    {children}
-  </span>
-);
+// Removed local Badge component
 // Using a generic icon placeholder for now
 const ClockIcon = ({ className }: { className?: string }) => (
   <Clock className={cn('w-64 h-64 text-gray-300', className)} />

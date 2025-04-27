@@ -7,9 +7,9 @@ import SlackAlert from '../../components/guardian-demo/SlackAlert';
 import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
 import { getScenarios } from './getScenarios';
 import { useState, useEffect } from 'react';
-import { AlertTable } from './AlertTable';
-import { PayoutTable } from './PayoutTable';
-import { Timeline } from './Timeline';
+// import { AlertTable } from './AlertTable';
+// import { PayoutTable } from './PayoutTable';
+// import { Timeline } from './Timeline';
 // import { log } from '@/lib/logger';
 import toast from 'react-hot-toast';
 

@@ -18,8 +18,8 @@ import { useUser } from '@/lib/hooks/useUser'; // Assuming a hook to get user st
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { isPro } from '@/lib/guardian/plan'; // Import the plan helper
-import { getSubscription } from '@/lib/supabase/user';
-import ManageSubscriptionButton from './ManageSubscriptionButton';
+// import { getSubscription } from '@/lib/supabase/user'; // Removed
+// import ManageSubscriptionButton from './ManageSubscriptionButton'; // Commented out
 
 // Define settings type again or import
 interface SettingsRow {

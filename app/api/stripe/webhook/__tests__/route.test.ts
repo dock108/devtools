@@ -1,8 +1,8 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { POST, GET } from '../route';
-import { Readable } from 'stream';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+// import { Readable } from 'stream'; // Removed
+// import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'; // Removed
 // import Stripe from 'stripe'; // Removed unused import
 
 // Mock the stripe instance and supabase
@@ -47,9 +47,9 @@ describe.skip('Stripe webhook handler', () => {
   });
 
   it('returns 405 for GET method', async () => {
-    const req = new NextRequest('https://example.com/api/stripe/webhook', {
-      method: 'GET',
-    });
+    // const req = new NextRequest('https://example.com/api/stripe/webhook', { // Removed
+    //   method: 'GET',
+    // });
 
     const response = await GET();
     expect(response.status).toBe(405);

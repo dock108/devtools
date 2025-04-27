@@ -189,11 +189,11 @@ export default function EditRuleSetPage({ params }: { params: { id: string } }) 
 
       // Redirect to the rule set details page
       router.push(`/admin/rulesets/${params.id}`);
-    } catch (error) {
-      console.error('Error updating rule set:', error);
+    } catch (_error) {
+      console.error('Error updating rule set:', _error);
       toast({
         title: 'Error',
-        description: `Failed to update rule set: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to update rule set: ${_error instanceof Error ? _error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     } finally {

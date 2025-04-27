@@ -1,5 +1,5 @@
 // import { PostMeta } from '@/lib/mdx';
-import { getAllPosts } from '@/lib/mdx';
+import { getAllPosts } from '@/lib/blog';
 import { Container } from '@/components/Container';
 import BlogCard from '@/components/blog/BlogCard';
 import { Pagination } from '@/components/ui/Pagination';

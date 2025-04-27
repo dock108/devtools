@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       });
       console.log(`[API/Feedback] Sent feedback notification for user: ${userId}`);
       return NextResponse.json({ message: 'Feedback submitted' }, { status: 201 });
-    } catch (_e) {
+    } catch /* (_e) */ {
       // console.error('Feedback error:', e);
       return NextResponse.json({ error: 'Server error submitting feedback' }, { status: 500 });
     }

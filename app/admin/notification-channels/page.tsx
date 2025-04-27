@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { CreateNotificationChannel } from './create-notification-channel';
 import { NotificationChannelActions } from './notification-channel-actions';
-import DeleteChannelButton from '@/components/admin/DeleteChannelButton';
+// import DeleteChannelButton from '@/components/admin/DeleteChannelButton'; // Commented out
 
 export const metadata: Metadata = {
   title: 'Notification Channels | Admin Dashboard',

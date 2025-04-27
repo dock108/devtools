@@ -8,7 +8,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import { useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { updateAdminSettingsServerAction } from './actions';
+// import { updateAdminSettingsServerAction } from './actions'; // Commented out
 
 // Define form schema
 const formSchema = z.object({
@@ -61,7 +60,6 @@ export default function NotificationSettingsForm({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClientComponentClient<Database>();
-  const [isPending, startTransition] = useTransition();
 
   // Convert email_recipients array to string for form
   const emailRecipientsStr = initialSettings.email_recipients

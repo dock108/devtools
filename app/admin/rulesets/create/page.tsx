@@ -112,11 +112,11 @@ export default function CreateRuleSetPage() {
 
       // Redirect to the rule sets listing page
       router.push('/admin/rulesets');
-    } catch (error) {
-      console.error('Error creating rule set:', error);
+    } catch (_error) {
+      console.error('Error creating rule set:', _error);
       toast({
         title: 'Error',
-        description: `Failed to create rule set: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to create rule set: ${_error instanceof Error ? _error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     } finally {

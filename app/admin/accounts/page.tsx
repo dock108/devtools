@@ -15,9 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Eye, Search, CheckCircle, XCircle } from 'lucide-react';
-import AccountStatusToggle from '@/components/admin/AccountStatusToggle';
+import { Settings } from 'lucide-react';
+// import AccountStatusToggle from '@/components/admin/AccountStatusToggle'; // Commented out
 
 export const metadata: Metadata = {
   title: 'Connected Accounts | Guardian Admin',

@@ -18,8 +18,6 @@ import Link from 'next/link';
 
 export default function SignupPage() {
   const supabase = createClient();
-  const [view, setView] = useState('sign_in'); // Default to sign in
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

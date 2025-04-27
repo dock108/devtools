@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+// import { fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectedAccountsManager } from './ConnectedAccountsManager';
 import { SWRConfig } from 'swr';
+import { useSearchParams } from 'next/navigation';
 
 // Mocks
 vi.mock('next/navigation', () => ({

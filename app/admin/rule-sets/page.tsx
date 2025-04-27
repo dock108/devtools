@@ -15,22 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 
 export const metadata: Metadata = {
   title: 'Rule Sets | Guardian Admin',
   description: 'Create and manage rule sets for Stripe Guardian accounts',
 };
-
-interface RuleSet {
-  id: string;
-  name: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  account_count: number;
-}
 
 export default async function AdminRuleSetsPage() {
   const cookieStore = cookies();
