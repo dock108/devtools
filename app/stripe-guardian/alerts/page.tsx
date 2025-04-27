@@ -60,6 +60,7 @@ type Alert = {
   stripe_account_id: string;
   resolved: boolean;
   created_at: string;
+  risk_score: number | null;
 };
 
 // Alert channels type definition
@@ -268,7 +269,7 @@ function AlertsPageContent() {
         console.log(`Fetching alerts for ${selectedAccountId}...`);
         const { data: alertsData, error: alertsError } = await supabase
           .from('alerts')
-          .select('*')
+          .select('*, risk_score')
           .eq('stripe_account_id', selectedAccountId)
           .order('created_at', { ascending: false });
 
@@ -762,11 +763,25 @@ function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps)
     }
   };
 
+  // Function to get color class based on risk score
+  const getRiskScoreColor = (score: number | null) => {
+    if (score === null || score === undefined) return 'bg-gray-200 text-gray-700'; // Neutral for N/A
+    if (score > 60) return 'bg-red-100 text-red-700'; // Red for high risk
+    if (score >= 30) return 'bg-yellow-100 text-yellow-700'; // Yellow for medium risk
+    return 'bg-green-100 text-green-700'; // Green for low risk
+  };
+
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow">
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+            >
+              Risk Score
+            </th>
             <th
               scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
@@ -801,6 +816,15 @@ function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps)
         <tbody className="bg-white divide-y divide-slate-200">
           {alerts.map((alert) => (
             <tr key={alert.id}>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRiskScoreColor(alert.risk_score)}`}
+                >
+                  {alert.risk_score !== null && alert.risk_score !== undefined
+                    ? alert.risk_score.toFixed(0)
+                    : 'N/A'}
+                </span>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <Badge variant={getSeverityBadge(alert.severity)} className="capitalize">
                   {alert.severity}

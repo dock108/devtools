@@ -115,6 +115,10 @@ Guardian can send email and Slack notifications when new alerts are generated.
 
 See [docs/guardian/notifications.md](./docs/guardian/notifications.md) for setup instructions, required environment variables, and configuration details.
 
+### Risk Score
+
+Guardian calculates a numerical risk score (0-100) for each alert, blending rule weights with historical false positive feedback. This score is displayed in the UI and included in notifications. See [docs/guardian/risk-score.md](./docs/guardian/risk-score.md) for how the score is computed.
+
 ## Available Scripts
 
 - `npm run dev`: Starts the development server.

@@ -24,6 +24,7 @@ interface Database {
           severity: string | null;
           description: string | null;
           triggered_at: string;
+          risk_score: number | null;
           // Add other relevant fields
         };
       };
@@ -113,7 +114,7 @@ serve(async (req: Request) => {
     console.log(`Fetching alert ${alertId}...`);
     const { data: alert, error: alertError } = await supabase
       .from('alerts')
-      .select('id, stripe_account_id, type, severity, description, triggered_at')
+      .select('id, stripe_account_id, type, severity, description, triggered_at, risk_score')
       .eq('id', alertId)
       .single<AlertRow>();
 
@@ -147,17 +148,18 @@ serve(async (req: Request) => {
     );
 
     // --- 3. Email Notification --- //
-    const emailSubject = `Guardian alert - ${alert.type} (${alert.severity})`;
-    const emailText = `Hi – Guardian detected an alert:\n\nType: ${alert.type}\nSeverity: ${alert.severity}\nDescription: ${alert.description}\nAccount: ${alert.stripe_account_id}\nTime: ${new Date(alert.triggered_at).toUTCString()}\n\nView details in the Guardian Dashboard.`; // Added more detail
+    const emailSubject = `Guardian alert - ${alert.type} (${alert.severity}) - Risk: ${alert.risk_score?.toFixed(0) ?? 'N/A'}`;
+    const emailText = `Hi – Guardian detected an alert:\n\nType: ${alert.type}\nSeverity: ${alert.severity}\nRisk Score: ${alert.risk_score?.toFixed(0) ?? 'N/A'}\nDescription: ${alert.description}\nAccount: ${alert.stripe_account_id}\nTime: ${new Date(alert.triggered_at).toUTCString()}\n\nView details in the Guardian Dashboard.`;
     const emailHtml = `<p>Hi – Guardian detected an alert:</p>
                      <ul>
                        <li><b>Type:</b> ${alert.type}</li>
                        <li><b>Severity:</b> ${alert.severity}</li>
+                       <li><b>Risk Score:</b> ${alert.risk_score?.toFixed(0) ?? 'N/A'}</li>
                        <li><b>Description:</b> ${alert.description}</li>
                        <li><b>Account:</b> ${alert.stripe_account_id}</li>
                        <li><b>Time:</b> ${new Date(alert.triggered_at).toUTCString()}</li>
                      </ul>
-                     <p>View details in the Guardian Dashboard.</p>`; // HTML version
+                     <p>View details in the Guardian Dashboard.</p>`;
 
     // Check if email notifications are globally enabled in settings
     if (settings.email_notifications_enabled) {
@@ -198,7 +200,7 @@ serve(async (req: Request) => {
       console.log(`Sending Slack notification for alert ${alertId} (Pro tier & enabled).`);
       const slackPayload = {
         username: slackUsername,
-        text: `*Guardian Alert*\n*Type:* ${alert.type}\n*Severity:* ${alert.severity}\n*Description:* ${alert.description}\n*Account:* ${alert.stripe_account_id}\n*Time:* ${new Date(alert.triggered_at).toUTCString()}\n<fakelink.to.dashboard|View in Dashboard>`,
+        text: `*Guardian Alert*\n*Type:* ${alert.type}\n*Severity:* ${alert.severity}\n*Risk Score:* ${alert.risk_score?.toFixed(0) ?? 'N/A'}\n*Description:* ${alert.description}\n*Account:* ${alert.stripe_account_id}\n*Time:* ${new Date(alert.triggered_at).toUTCString()}\n<fakelink.to.dashboard|View in Dashboard>`,
       };
       const webhookUrl = settings.slack_webhook!;
 

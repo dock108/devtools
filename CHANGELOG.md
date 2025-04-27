@@ -206,6 +206,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added connected accounts management page
   - Added admin dashboard with metrics and quick links
   - Note: Execute `supabase/migrations/20250426_admin_rls.sql` after merging
+- G-28: Added `risk_score` column to `alerts` table, calculated via trigger based on rule weight and feedback.
+- G-28: Implemented `rule_fp_stats` materialized view to track global false positive rates.
+- G-28: Included risk score in Guardian notification templates (email, Slack).
+- G-28: Added colored risk score pill to Guardian alerts table UI.
+- G-28: Added documentation for risk score calculation (`docs/guardian/risk-score.md`).
 
 ### Changed
 
