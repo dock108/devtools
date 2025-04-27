@@ -1,3 +1,6 @@
+'use client'; // Need client component for QueryClientProvider state
+
+import React from 'react'; // Import React for useState
 import type { Metadata } from 'next';
 // Using standard CSS import instead of next/font
 import './globals.css';
@@ -9,6 +12,9 @@ import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/components/theme-provider';
 // Import the AlertNotificationsProvider
 import { AlertNotificationsProvider } from '@/app/context/useAlertNotifications';
+
+// Import React Query components
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export const metadata: Metadata = {
   title: 'DOCK108 Home',
@@ -32,27 +38,34 @@ export default function RootLayout({
   // For now, we pass an empty array or let the provider fetch them internally
   // const userStripeAccounts = await fetchUserAccounts();
 
+  // Create a client
+  const [queryClient] = React.useState(() => new QueryClient());
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>{/* Google Font preconnects removed as we're using self-hosted Inter */}</head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {/* Wrap the main layout content with the Alert provider */}
-          {/* Pass userStripeAccounts if fetched server-side */}
-          <AlertNotificationsProvider /* userStripeAccounts={userStripeAccounts} */>
-            <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-grow">{children}</main>
-              <Footer />
-              <Toaster position="bottom-right" />
-            </div>
-          </AlertNotificationsProvider>
-        </ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          {' '}
+          {/* Wrap with QueryClientProvider */}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {/* Wrap the main layout content with the Alert provider */}
+            {/* Pass userStripeAccounts if fetched server-side */}
+            <AlertNotificationsProvider /* userStripeAccounts={userStripeAccounts} */>
+              <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-grow">{children}</main>
+                <Footer />
+                <Toaster position="bottom-right" />
+              </div>
+            </AlertNotificationsProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );
