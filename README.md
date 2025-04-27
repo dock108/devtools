@@ -70,7 +70,7 @@ If you're working with the Stripe Guardian component, you'll need to set up the 
 1. **Start Supabase Local Development:**
 
    ```bash
-   pnpm supabase start
+   npm run supabase:start
    ```
 
 2. **Apply Migrations:**
@@ -216,7 +216,7 @@ For detailed information about the CI/CD pipeline, see [docs/guardian/ci-cd.md](
 2. Push the secrets to Vercel:
 
 ```bash
-pnpm vercel:env
+npm run vercel:env
 ```
 
 3. Deploy the app:
@@ -267,7 +267,7 @@ To add custom scenarios:
 After building the production bundle, you can run Lighthouse CI against key routes:
 
 ```bash
-pnpm build && pnpm lh-ci
+npm run build && npm lh-ci
 # Reports are saved in .lighthouseci/index.html
 ```
 

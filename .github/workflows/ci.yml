@@ -34,6 +34,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Disable corepack & ensure npm is default
+        run: corepack disable
+
       - name: Check required secrets
         run: |
           if [[ -z "${{ secrets.STRIPE_CLIENT_ID }}" ]]; then
@@ -67,7 +70,7 @@ jobs:
       - name: Type check (Strict)
         # This now runs tsc with strict settings enabled in tsconfig.json
         # If this fails, the build breaks.
-        run: pnpm tsc --noEmit
+        run: npm run tsc -- --noEmit
 
       # Jest unit tests with coverage
       # TODO (#<issue_number_for_step_3>): Re-enable this step after fixing Jest test suite failures.
