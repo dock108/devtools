@@ -1,22 +1,12 @@
 import Link from 'next/link';
 import { Container } from './Container';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 import RetentionStatusBadge from './admin/RetentionStatusBadge';
 import { RssIcon } from 'lucide-react';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function Footer() {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-      },
-    },
-  );
+  const supabase = createSupabaseServerClient();
 
   const {
     data: { session },
