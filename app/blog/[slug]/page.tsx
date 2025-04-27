@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/date';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
-import { siteConfig } from '@/config/site'; // Assuming site config for base URL
+// import { siteConfig } from '@/config/site'; // Assuming site config for base URL
 
 interface BlogPostPageProps {
   params: { slug: string };

@@ -215,6 +215,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - G-29: Created SQL views (`alerts_by_day`, `alerts_rule_rank`, `fp_rate_rule`, `avg_risk_score`) to power analytics.
 - G-29: Implemented basic Pro/Free tier UI gating (account selector for Pro, notice for Free) - data filtering TBD.
 - G-29: Added documentation for analytics dashboard (`docs/guardian/analytics.md`).
+- **feat(blog):** Add blog framework using MDX, Tailwind Typography, and contentlayer (Task 14).
+- **feat(blog):** Add initial blog posts for Monitor/Mitigate, Payout Trends, and Automation (Task 15).
+- **feat(blog):** Create reusable DemoCTA component (`components/blog/DemoCTA.tsx`) (Task 16).
 
 ### Changed
 
@@ -222,6 +225,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI now enforces a 15 MB maximum bundle size after seeder purge.
 - Temporarily disabled welcome email trigger for waitlist signups.
 - G-29: Added `QueryClientProvider` to root layout (`app/layout.tsx`) to support analytics page data fetching.
+- **chore(blog):** Clean up legacy "Stripe-Fraud-300LOC" blog post:
+  - Removed fabricated numbers and anecdotes.
+  - Ensured technical tone and heading structure.
+  - Added `updated` date and revised front matter.
+  - Integrated `DemoCTA` component at the end (Task 16).
 
 ### CI
 
@@ -240,6 +248,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix: Join Waitlist CTA functional on all pages.
 - Fix: Demo path break after scenario move.
 - **fix(settings):** add missing shadcn/ui components (form, radio-group, separator, alert-dialog, table) and fix syntax typo that broke Vercel build (2025-04-25)
+- **fix(deps):** Add missing `@next/mdx` dependency required for blog build.
 
 ### Removed
 
