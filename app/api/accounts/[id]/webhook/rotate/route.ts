@@ -10,13 +10,12 @@ async function getUser() {
   return await supabase.auth.getUser();
 }
 
-export async function POST(
-  req: Request, 
-  { params }: { params: { acct: string }}
-) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     // Verify user is authenticated
-    const { data: { user } } = await getUser();
+    const {
+      data: { user },
+    } = await getUser();
     if (!user) {
       return new Response('Unauthorized', { status: 401 });
     }
@@ -25,29 +24,32 @@ export async function POST(
     const { data: ca } = await supabaseAdmin
       .from('connected_accounts')
       .select('access_token')
-      .eq('stripe_account_id', params.acct)
+      .eq('stripe_account_id', params.id)
       .eq('user_id', user.id)
       .maybeSingle();
-    
+
     if (!ca) {
-      logger.warn({ userId: user.id, accountId: params.acct }, 'Unauthorized account access attempt');
+      logger.warn({ userId: user.id, accountId: params.id }, 'Unauthorized account access attempt');
       return new Response('Forbidden', { status: 403 });
     }
 
     // Rotate the webhook endpoint
-    const { id, secret } = await rotateAccountWebhook(params.acct, ca.access_token!);
-    
+    const { id: webhookId, secret } = await rotateAccountWebhook(params.id, ca.access_token!);
+
     // Update the webhook secret in the database
     await supabaseAdmin
       .from('connected_accounts')
       .update({ webhook_secret: secret })
-      .eq('stripe_account_id', params.acct);
-    
-    logger.info({ accountId: params.acct, webhookId: id }, 'Webhook secret rotated successfully');
-    
-    return Response.json({ id, success: true });
+      .eq('stripe_account_id', params.id);
+
+    logger.info(
+      { accountId: params.id, webhookId: webhookId },
+      'Webhook secret rotated successfully',
+    );
+
+    return Response.json({ id: webhookId, success: true });
   } catch (error) {
-    logger.error({ accountId: params.acct, error }, 'Error rotating webhook secret');
+    logger.error({ accountId: params.id, error }, 'Error rotating webhook secret');
     return new Response('Internal Server Error', { status: 500 });
   }
-} 
+}
