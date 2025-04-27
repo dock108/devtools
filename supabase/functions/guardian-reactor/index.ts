@@ -134,6 +134,49 @@ serve(async (req: Request) => {
       event_type: eventType,
     };
 
+    // --- Idempotency Check --- //
+    // Attempt to mark this event buffer ID as processed. If it fails due to
+    // unique constraint violation (23505), it means we've processed it before.
+    const { error: processedError } = await supabase
+      .from('processed_event_buffer_ids')
+      .insert({ event_buffer_id: eventBufferId })
+      .select('event_buffer_id') // Select minimal column
+      .maybeSingle(); // Use maybeSingle to detect conflict
+
+    if (processedError?.code === '23505') {
+      // PostgreSQL unique violation code
+      metricOutcome = 'skipped_duplicate'; // Use a distinct metric outcome
+      log.info(
+        { ...finalLogData, status: 200, metric_outcome: metricOutcome },
+        'Duplicate event buffer ID detected, skipping processing.',
+      );
+      status = 200; // Acknowledge receipt to caller (e.g., webhook handler) but do no work.
+      return new Response(JSON.stringify({ message: 'Event already processed' }), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } else if (processedError) {
+      // Any other error during the idempotency check is problematic
+      metricOutcome = 'idempotency_error';
+      log.error(
+        {
+          ...finalLogData,
+          db_error: processedError.message,
+          status: 500,
+          metric_outcome: metricOutcome,
+        },
+        'Failed idempotency check insertion',
+      );
+      // Treat this as an internal server error
+      throw new Error(`Failed idempotency check: ${processedError.message}`);
+    }
+    // If we reach here, insert succeeded, and this is the first time processing this ID.
+    log.debug(
+      { ...finalLogData },
+      'Idempotency check passed, event buffer ID marked as processed.',
+    );
+    // --- End Idempotency Check --- //
+
     // --- Fetch Rule Config BEFORE Transaction ---
     try {
       // Ensure stripeAccountId is not null before passing
@@ -223,29 +266,38 @@ serve(async (req: Request) => {
     if (alerts.length > 0) {
       // Ensure stripeAccountId and stripeEventId are valid before mapping
       if (!stripeAccountId || !stripeEventId) throw new Error('Missing account/event ID for alert insertion');
-      
+
       const alertsToInsert = alerts.map(alert => ({
-        ...alert, // Spread the result from evaluateRulesEdge
         stripe_account_id: stripeAccountId!, // Use non-null assertion after check
         event_id: stripeEventId!, // Use non-null assertion after check
+        alert_type: alert.alertType, // Map from rule output
+        severity: alert.severity,     // Map from rule output
+        message: alert.message,       // Map from rule output
+        stripe_payout_id: alert.payoutId, // Map from rule output
         resolved: false,
-        // Map fields correctly based on evaluateRulesEdge output and TablesInsert<'alerts'>
-        alert_type: alert.alert_type as AlertType, // Cast if necessary
-        severity: alert.severity as Severity, // Cast if necessary
-        message: alert.message, // Assuming message is string
-        stripe_payout_id: alert.stripe_payout_id, // Assuming optional payoutId
+        // risk_score is handled by BEFORE INSERT trigger
+        // triggered_at, created_at handled by DB defaults
       }));
 
       const { error: alertError } = await tx
         .from('alerts')
         .insert(alertsToInsert)
-        // .onConflict('stripe_account_id, alert_type, event_id') // Define conflict target if needed
-        // .ignore(); // Or handle conflict
+        .select('id') // Select minimal column to check if insert happened
+        // Use onConflict with the specific constraint name and ignore duplicates
+        .onConflict('alerts_event_id_alert_type_key')
+        .ignore(); // Ignore duplicates based on event_id + alert_type
 
       if (alertError) {
-        throw new Error(`Failed to insert alerts: ${alertError.message}`);
+        // Don't throw if it's just a unique constraint violation (code 23505) - that's expected now
+        if (alertError.code !== '23505') {
+            log.error({ ...finalLogData, db_error: alertError.message }, 'Failed to insert alerts');
+            throw new Error(`Failed to insert alerts: ${alertError.message}`);
+        } else {
+            log.info({ ...finalLogData, alert_count: alerts.length }, 'Attempted to insert alerts, duplicates ignored by constraint.');
+        }
+      } else {
+        log.info({ ...finalLogData, alert_count: alerts.length }, 'Alerts inserted or duplicates ignored');
       }
-      log.info({ ...finalLogData, alert_count: alerts.length }, 'Alerts inserted');
     }
 
     return {

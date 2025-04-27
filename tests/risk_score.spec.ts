@@ -137,6 +137,69 @@ describe('Risk Score Calculation', () => {
     expect(thirdScore).toBeCloseTo(40, 0);
   });
 
+  test('Score should be clamped between 0 and 100', async () => {
+    // Test clamping at 100
+    // High weight rule (e.g., high_risk_review, weight 50) should start at 100 (50 * 2)
+    const highRiskAlert = await insertAlert(testAccountId, 'high_risk_review', 'high');
+    createdAlertIds.push(highRiskAlert.id);
+    expect(highRiskAlert.risk_score).toBeCloseTo(100, 0);
+
+    // Test clamping at 0 (already covered by the second bank_swap test above where acct_fp=1)
+    // Can add an explicit test if needed:
+    // Insert alert, mark FP, insert second alert, expect score 0.
+  });
+
+  test('Global FP rate should lower score for a different account', async () => {
+    const account1 = `test_acct_${uuidv4()}`;
+    const account2 = `test_acct_${uuidv4()}`;
+
+    // 1. Account 1: Insert alert and mark FP
+    const alert1 = await insertAlert(account1, 'geo_mismatch'); // Weight 25 -> Initial score ~50
+    createdAlertIds.push(alert1.id);
+    await insertFeedback(alert1.id, 'false_positive');
+
+    // 2. Refresh the materialized view to update global FP rate
+    await refreshMatView();
+
+    // 3. Account 2: Insert alert of the same type
+    const alert2 = await insertAlert(account2, 'geo_mismatch');
+    createdAlertIds.push(alert2.id);
+
+    // 4. Fetch scores
+    const { data: fetchedAlert1 } = await supabase
+      .from('alerts')
+      .select('risk_score')
+      .eq('id', alert1.id)
+      .single();
+    const { data: fetchedAlert2 } = await supabase
+      .from('alerts')
+      .select('risk_score')
+      .eq('id', alert2.id)
+      .single();
+
+    const score1 = fetchedAlert1?.risk_score;
+    const score2 = fetchedAlert2?.risk_score;
+
+    console.log('Score 1 (Acct1, GeoMismatch, before refresh):', score1); // Should be ~50
+    console.log('Score 2 (Acct2, GeoMismatch, after refresh):', score2); // Should be < 50
+
+    expect(score1).toBeDefined();
+    expect(score2).toBeDefined();
+    // Score2 = 25 * (1 - acct2_fp=0) * (1 - global_fp > 0) * 2. Should be less than Score1.
+    expect(score2).toBeLessThan(score1!);
+
+    // Cleanup specific to this test's accounts if needed, or rely on afterAll
+    // await cleanup([alert1.id], account1);
+    // await cleanup([alert2.id], account2);
+  });
+
+  test('Unknown alert type should get default low score', async () => {
+    // Default weight 10 -> Score ~20
+    const unknownAlert = await insertAlert(testAccountId, 'some_future_alert_type');
+    createdAlertIds.push(unknownAlert.id);
+    expect(unknownAlert.risk_score).toBeCloseTo(20, 0);
+  });
+
   // TODO: Add more tests:
   // - Test global FP rate impact (requires refreshing view and using a different account)
   // - Test clamping (scores should stay between 0 and 100)
