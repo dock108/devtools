@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import RSS from 'rss';
-import { getAllPosts } from '../lib/blog.js'; // Adjust path if necessary, add .js extension
+import { getAllPosts } from '../lib/blog.ts'; // Add explicit .ts extension
+import { pathToFileURL } from 'url'; // Import necessary function
 
 // Export the core function for testing
 export async function generateRssFeed() {
@@ -44,8 +45,8 @@ export async function generateRssFeed() {
   return xmlContent; // Return content for testing
 }
 
-// Only run the generation automatically if the script is executed directly
-if (require.main === module) {
+// Use ES Module standard check for direct execution
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   generateRssFeed().catch((error) => {
     console.error('Error generating RSS feed:', error);
     process.exit(1);

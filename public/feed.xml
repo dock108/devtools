@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[Stripe Guardian Blog]]></title>
+        <description><![CDATA[Product updates & payout-fraud insights]]></description>
+        <link>http://localhost:3000</link>
+        <generator>RSS for Node</generator>
+        <lastBuildDate>Sun, 27 Apr 2025 15:56:19 GMT</lastBuildDate>
+        <atom:link href="http://localhost:3000/feed.xml" rel="self" type="application/rss+xml"/>
+        <pubDate>Sun, 27 Apr 2025 15:56:19 GMT</pubDate>
+        <copyright><![CDATA[© 2025 DOCK108]]></copyright>
+        <language><![CDATA[en]]></language>
+        <item>
+            <title><![CDATA[Automate Alert Reviews with Guardian]]></title>
+            <description><![CDATA[Integrate Guardian alerts with Slack or email to streamline your team's fraud-review workflow.]]></description>
+            <link>http://localhost:3000/blog/2025-04-automating-alerts-with-guardian</link>
+            <guid isPermaLink="false">2025-04-automating-alerts-with-guardian</guid>
+            <category><![CDATA[alerts]]></category>
+            <category><![CDATA[automation]]></category>
+            <category><![CDATA[workflow]]></category>
+            <dc:creator><![CDATA[Dock108 Dev Team]]></dc:creator>
+            <pubDate>Tue, 15 Apr 2025 00:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Public Beta Roadmap – Where Stripe Guardian Goes Next]]></title>
+            <description><![CDATA[Here's what beta users get today, what's shipping next quarter, and how pricing will work.]]></description>
+            <link>http://localhost:3000/blog/2025-03-beta-roadmap</link>
+            <guid isPermaLink="false">2025-03-beta-roadmap</guid>
+            <category><![CDATA[beta]]></category>
+            <category><![CDATA[roadmap]]></category>
+            <dc:creator><![CDATA[Dock108 Dev Team]]></dc:creator>
+            <pubDate>Sat, 01 Mar 2025 00:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[2025 Payout-Fraud Trends SaaS Platforms Can't Ignore]]></title>
+            <description><![CDATA[Key payout-fraud patterns we've observed across multiple Stripe Connect platforms—and practical mitigations.]]></description>
+            <link>http://localhost:3000/blog/2025-02-platform-payout-fraud-trends</link>
+            <guid isPermaLink="false">2025-02-platform-payout-fraud-trends</guid>
+            <category><![CDATA[fraud]]></category>
+            <category><![CDATA[trends]]></category>
+            <dc:creator><![CDATA[Dock108 Dev Team]]></dc:creator>
+            <pubDate>Mon, 10 Feb 2025 00:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Why We Built Stripe Guardian]]></title>
+            <description><![CDATA[The gap we found in Stripe Connect payout monitoring—and the principles that shaped Guardian.]]></description>
+            <link>http://localhost:3000/blog/2024-11-stripe-guardian-origin</link>
+            <guid isPermaLink="false">2024-11-stripe-guardian-origin</guid>
+            <category><![CDATA[origin]]></category>
+            <category><![CDATA[journey]]></category>
+            <dc:creator><![CDATA[Dock108 Dev Team]]></dc:creator>
+            <pubDate>Tue, 05 Nov 2024 00:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[No title]]></title>
+            <link>http://localhost:3000/blog/2025-04-Stripe-Fraud-300LOC</link>
+            <guid isPermaLink="false">2025-04-Stripe-Fraud-300LOC</guid>
+            <dc:creator><![CDATA[Dock108 Dev Team]]></dc:creator>
+            <pubDate>Invalid Date</pubDate>
+        </item>
+    </channel>
+</rss>

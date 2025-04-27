@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://www.dock108.ai
+Host: https://guardian.dock108.ai
 
 # Sitemaps
-Sitemap: https://www.dock108.ai/sitemap.xml
+Sitemap: https://guardian.dock108.ai/sitemap.xml
