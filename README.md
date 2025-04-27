@@ -419,9 +419,25 @@ Guardian provides structured logging and Prometheus metrics for monitoring and d
 
 - **Structured Logging**: All components emit JSON logs with consistent fields (`req_id`, `service`, etc.). See `docs/guardian/logging.md` for format details and configuration (`LOG_LEVEL`).
 - **Prometheus Metrics**: Key operational metrics are exposed:
-  - Next.js Webhook: Scrape `/api/metrics`.
+  - Next.js Webhook: Scrape `/api/metrics`. (TODO: Implement dedicated metrics endpoint)
   - Supabase Edge Functions: Use log-based metrics derived from structured logs.
   - Requires `METRICS_AUTH_TOKEN` for the Supabase `/guardian-metrics` endpoint (placeholder).
   - See `docs/guardian/metrics.md` for metric details and scraping instructions.
   - A starter Grafana dashboard is available at `docs/guardian/grafana.json`.
 - **Real-time Alert Badge**: The dashboard header includes a notification icon that displays a badge with the count of unread alerts, updated in real-time via Supabase subscriptions. Clicking the icon navigates to the alerts page and marks alerts as read.
+
+## Type Safety
+
+Guardian development enforces strict TypeScript settings to catch errors early and improve code reliability.
+
+- **Strict Compilation**: The `tsconfig.json` is configured with `"strict": true` and related flags. The CI pipeline includes a `pnpm tsc --noEmit` step that fails the build if any TypeScript errors are present.
+- **Supabase Type Generation**: Database types are generated directly from your Supabase schema.
+  - **To Regenerate**: After making schema changes (e.g., applying new migrations), run:
+    ```bash
+    # Replace YOUR_PROJECT_ID with your actual Supabase project ID
+    pnpm gen:types
+    # Or: npm run gen:types
+    ```
+  - This command executes `supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > types/supabase.ts`.
+  - Commit the updated `types/supabase.ts` file.
+- **Code Standards**: Avoid using `any` where possible. Use type guards, non-nullable assertions (`!`) sparingly, and leverage the generated Supabase types (`Tables<'table_name'>`, `TablesInsert<'table_name'>`, etc.) for database interactions.

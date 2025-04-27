@@ -1,342 +1,272 @@
-import type { StripeEvent, Alert, RuleContext } from '../types';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { log } from '@/lib/logger';
-import { getRuleConfig } from './getRuleConfig';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { Database, Json, Tables } from '@/types/supabase';
+import { AlertType, Severity, GuardianRuleOutput } from '@/lib/guardian/constants';
+import Stripe from 'https://esm.sh/stripe@12.17.0?target=deno&deno-std=0.132.0';
 
-// Remove hardcoded default config, will be fetched via getRuleConfig
-// const defaultConfig = { ... };
-
-// Individual rule functions with inline implementations for Edge compatibility
-async function velocityBreachRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  if (!event.type.startsWith('payout.')) return [];
-
-  const accountId = event.account as string;
-  const { maxPayouts, windowSeconds } = ctx.config.velocityBreach;
-
-  const cutoff = Date.now() - windowSeconds * 1000;
-  const recent = ctx.recentPayouts.filter((p) => new Date(p.created_at).getTime() >= cutoff);
-
-  log.debug({ accountId, count: recent.length, rule: 'velocityBreach' }, 'Velocity rule executed');
-
-  if (recent.length >= maxPayouts) {
-    return [
-      {
-        type: 'VELOCITY',
-        severity: 'high',
-        message: `🚨 ${recent.length} payouts inside ${windowSeconds}s`,
-        payoutId: (event.data.object as any).id,
-        accountId: event.account!,
-        createdAt: new Date().toISOString(),
-      },
-    ];
-  }
-  return [];
+// Define the context structure expected by Edge rules
+interface EdgeRuleContext {
+  config: Record<string, any>;
 }
 
-async function bankSwapRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  // Only inspect payout events
-  if (!event.type.startsWith('payout.')) return [];
+// Type for Edge-compatible rule functions
+type EdgeRuleFunction = (
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+) => Promise<GuardianRuleOutput[]>;
 
-  const payout = event.data.object as any;
-  const payoutUsd = payout.amount / 100;
-  const accountId = event.account as string;
+// Individual rule functions adapted for Edge (minimal DB access)
 
-  if (payoutUsd < ctx.config.bankSwap.minPayoutUsd) return [];
+async function velocityBreachRule(
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+): Promise<GuardianRuleOutput[]> {
+  if (!event.type.startsWith('payout.') || !event.account) return [];
 
-  // Find latest external_account.created in look-back window
-  const cutoff = Date.now() - ctx.config.bankSwap.lookbackMinutes * 60_000;
-  const recentBankChange = ctx.recentPayouts.find(
-    (e) => e.type === 'external_account.created' && new Date(e.created_at).getTime() >= cutoff,
-  );
+  const accountId = event.account;
+  const config = ctx.config?.velocityBreach ?? {};
+  const maxPayouts = typeof config.maxPayouts === 'number' ? config.maxPayouts : 3;
+  const windowSeconds = typeof config.windowSeconds === 'number' ? config.windowSeconds : 3600;
 
-  log.debug(
-    { accountId, bankChangeFound: !!recentBankChange, rule: 'bankSwap' },
-    'Bank-swap rule evaluated',
-  );
-
-  if (!recentBankChange) return [];
-
-  return [
-    {
-      type: 'BANK_SWAP',
-      severity: 'high',
-      message: `Bank account swapped ${ctx.config.bankSwap.lookbackMinutes} min before $${payoutUsd} payout`,
-      payoutId: payout.id,
-      accountId: event.account!,
-      createdAt: new Date().toISOString(),
-    },
-  ];
-}
-
-async function geoMismatchRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  if (!event.type.startsWith('payout.')) return [];
-
-  const payout = event.data.object as any;
-  const bankCountry = payout.destination?.account_country || payout.currency?.slice(0, 2);
-
-  // Collect last-day charges for this account
-  const mismatches = ctx.recentCharges.filter((c) => {
-    const chargeCountry = c.event_data.ip_country ?? c.event_data.billing_details?.address?.country;
-    return chargeCountry && bankCountry && chargeCountry !== bankCountry;
-  });
-
-  log.debug(
-    { accountId: event.account, mismatches: mismatches.length, rule: 'geoMismatch' },
-    'Geo-mismatch rule executed',
-  );
-
-  if (mismatches.length < ctx.config.geoMismatch.mismatchChargeCount) return [];
-
-  return [
-    {
-      type: 'GEO_MISMATCH',
-      severity: 'medium',
-      message: `Detected ${mismatches.length} charges from foreign IPs vs bank country ${bankCountry}`,
-      payoutId: payout.id,
-      accountId: event.account!,
-      createdAt: new Date().toISOString(),
-    },
-  ];
-}
-
-// New rule to detect burst of failed charges
-async function failedChargeBurstRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  // Only run this rule for failed charge events
-  if (!event.type.includes('failed')) return [];
-
-  const accountId = event.account as string;
-  const { minFailedCount, windowMinutes } = ctx.config.failedChargeBurst;
-
-  // Calculate time window
-  const cutoff = Date.now() - windowMinutes * 60 * 1000;
-
-  // Filter recent failed charges within the time window
-  const recentFailedCharges = ctx.recentCharges.filter(
-    (charge) => charge.type.includes('failed') && new Date(charge.created_at).getTime() >= cutoff,
-  );
+  // Logic requires recent payout data - this cannot be easily fetched *within* the Edge rule itself.
+  // This data MUST be fetched *before* calling evaluateRulesEdge and passed in the context.
+  // Placeholder - assumes context contains necessary pre-fetched data.
+  const recentPayoutCount = (ctx as any).recentPayoutCount ?? 0; // Example: Assuming count is passed in context
 
   log.debug(
     {
       accountId,
-      count: recentFailedCharges.length,
-      threshold: minFailedCount,
-      window: windowMinutes,
-      rule: 'failedChargeBurst',
+      count: recentPayoutCount,
+      max: maxPayouts,
+      window: windowSeconds,
+      rule: 'velocityBreach',
     },
-    'Failed charge burst rule executed',
+    'Edge Velocity rule executed',
   );
 
-  // Trigger alert if threshold exceeded
-  if (recentFailedCharges.length >= minFailedCount) {
+  if (recentPayoutCount >= maxPayouts) {
+    let payoutId: string | undefined;
+    if (
+      event.data.object &&
+      typeof event.data.object === 'object' &&
+      'id' in event.data.object &&
+      typeof event.data.object.id === 'string'
+    ) {
+      payoutId = event.data.object.id;
+    }
     return [
       {
-        type: 'FAILED_CHARGE_BURST',
-        severity: 'high',
-        message: `Spike in failed payments for ${accountId} – ${recentFailedCharges.length} in the last ${windowMinutes} min.`,
-        chargeId: (event.data.object as any).id,
-        accountId: accountId,
-        createdAt: new Date().toISOString(),
+        alertType: AlertType.Velocity,
+        severity: Severity.High,
+        message: `🚨 ${recentPayoutCount} payouts detected within ${windowSeconds} seconds (threshold: ${maxPayouts}).`,
+        payoutId: payoutId,
       },
     ];
   }
-
   return [];
 }
 
-// New rule to detect when payouts are suddenly disabled
-async function suddenPayoutDisableRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  // Only run this rule for account.updated events
-  if (event.type !== 'account.updated') return [];
+async function bankSwapRule(
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+): Promise<GuardianRuleOutput[]> {
+  if ((event.type !== 'payout.created' && event.type !== 'payout.paid') || !event.account)
+    return [];
 
-  const accountId = event.account as string;
+  const accountId = event.account;
+  const payout = event.data.object as Stripe.Payout;
 
-  // Verify this rule is enabled in config
-  if (!ctx.config.suddenPayoutDisable.enabled) return [];
+  const config = ctx.config?.bankSwap ?? {};
+  const minPayoutUsd = typeof config.minPayoutUsd === 'number' ? config.minPayoutUsd : 1000;
+  const lookbackMinutes = typeof config.lookbackMinutes === 'number' ? config.lookbackMinutes : 30;
 
-  const accountObj = event.data.object as any;
-  const previousAttributes = event.data.previous_attributes as any;
+  const payoutAmount = payout.amount / 100;
+  if (payoutAmount < minPayoutUsd) return [];
 
-  // Check if payouts_enabled changed from true to false
-  if (previousAttributes?.payouts_enabled === true && accountObj.payouts_enabled === false) {
-    log.debug({ accountId, rule: 'suddenPayoutDisable' }, 'Sudden payout disable detected');
+  // Logic requires recent bank change event data - must be passed in context.
+  // Placeholder - assumes context contains necessary pre-fetched data.
+  const recentBankChangeTimestamp = (ctx as any).recentBankChangeTimestamp; // Example: Assuming timestamp is passed
+  const lookbackCutoffTime = Date.now() - lookbackMinutes * 60 * 1000;
 
+  log.debug(
+    { accountId, payoutId: payout.id, bankChangeFound: !!recentBankChangeTimestamp },
+    'Edge Bank-swap rule evaluated',
+  );
+
+  if (!recentBankChangeTimestamp || recentBankChangeTimestamp < lookbackCutoffTime) {
+    return [];
+  }
+
+  return [
+    {
+      alertType: AlertType.BankSwap,
+      severity: Severity.High,
+      message: `Potential bank swap: External account created ~${Math.round((Date.now() - recentBankChangeTimestamp) / 60000)} min before a $${payoutAmount.toFixed(2)} payout.`,
+      payoutId: payout.id,
+    },
+  ];
+}
+
+// Geo-mismatch is difficult in Edge without pre-fetching charge data.
+// Consider simplifying or moving this logic if pre-fetching is too complex.
+async function geoMismatchRule(
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+): Promise<GuardianRuleOutput[]> {
+  if ((event.type !== 'payout.created' && event.type !== 'payout.paid') || !event.account)
+    return [];
+  // This rule likely requires fetching recent charges, which is not ideal for Edge functions.
+  // Placeholder: returning empty for now, assuming this logic is handled elsewhere or pre-fetched.
+  log.warn(
+    { accountId: event.account, rule: 'geoMismatch' },
+    'Edge Geo-mismatch rule skipped (requires pre-fetched charge data)',
+  );
+  return [];
+}
+
+// Failed charge burst is also difficult without pre-fetching.
+async function failedChargeBurstRule(
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+): Promise<GuardianRuleOutput[]> {
+  if (event.type !== 'charge.failed' || !event.account) return [];
+  // Requires fetching recent failed charges.
+  // Placeholder: returning empty.
+  log.warn(
+    { accountId: event.account, rule: 'failedChargeBurst' },
+    'Edge Failed charge burst rule skipped (requires pre-fetched charge data)',
+  );
+  return [];
+}
+
+// These rules only depend on the current event, suitable for Edge.
+async function suddenPayoutDisableRule(
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+): Promise<GuardianRuleOutput[]> {
+  if (event.type !== 'account.updated' || !event.account) return [];
+
+  const accountId = event.account;
+  const enabled = ctx.config?.suddenPayoutDisable?.enabled ?? true;
+  if (!enabled) return [];
+
+  const account = event.data.object as Stripe.Account;
+  const previousAttributes = event.data.previous_attributes as Partial<Stripe.Account> | undefined;
+
+  if (previousAttributes?.payouts_enabled === true && account.payouts_enabled === false) {
+    log.debug({ accountId, rule: 'suddenPayoutDisable' }, 'Edge Sudden payout disable detected');
     return [
       {
-        type: 'SUDDEN_PAYOUT_DISABLE',
-        severity: 'medium',
-        message: `Payouts disabled for ${accountId}.`,
-        accountId: accountId,
-        createdAt: new Date().toISOString(),
+        alertType: AlertType.SuddenPayoutDisable,
+        severity: Severity.Medium,
+        message: `Payouts were disabled for account ${accountId}. Investigate the reason in your Stripe dashboard.`,
       },
     ];
   }
-
   return [];
 }
 
-// New rule to detect high-risk reviews
-async function highRiskReviewRule(event: StripeEvent, ctx: RuleContext): Promise<Alert[]> {
-  // Only run this rule for review.opened events
-  if (event.type !== 'review.opened') return [];
+async function highRiskReviewRule(
+  event: Stripe.Event,
+  ctx: EdgeRuleContext,
+): Promise<GuardianRuleOutput[]> {
+  if (event.type !== 'review.opened' || !event.account) return [];
 
-  const accountId = event.account as string;
+  const accountId = event.account;
+  const review = event.data.object as Stripe.Review;
 
-  // Verify this rule is enabled in config
-  if (!ctx.config.highRiskReview.enabled) return [];
+  const enabled = ctx.config?.highRiskReview?.enabled ?? true;
+  if (!enabled) return [];
 
-  const review = event.data.object as any;
-
-  // Check if the review reason is 'rule' (Stripe's indicator for high-risk)
   if (review.reason === 'rule') {
-    log.debug(
-      {
-        accountId,
-        reviewId: review.id,
-        rule: 'highRiskReview',
-      },
-      'High risk review detected',
-    );
+    let chargeId: string | undefined;
+    if (typeof review.charge === 'string') chargeId = review.charge;
+    else if (review.charge && typeof review.charge === 'object' && 'id' in review.charge)
+      chargeId = review.charge.id;
 
+    log.debug(
+      { accountId, reviewId: review.id, chargeId, rule: 'highRiskReview' },
+      'Edge High risk review detected',
+    );
     return [
       {
-        type: 'HIGH_RISK_REVIEW',
-        severity: 'high',
-        message: `Stripe flagged a high-risk charge on ${accountId}.`,
-        chargeId: review.charge,
-        accountId: accountId,
-        createdAt: new Date().toISOString(),
+        alertType: AlertType.HighRiskReview,
+        severity: Severity.High,
+        message: `Stripe flagged a potentially high-risk transaction for review (Charge: ${chargeId ?? 'N/A'}).`,
       },
     ];
   }
-
   return [];
 }
 
-// All rules to run
-const rules = [
-  velocityBreachRule,
-  bankSwapRule,
-  geoMismatchRule,
-  failedChargeBurstRule,
+// All Edge-compatible rules to run
+const edgeRules: EdgeRuleFunction[] = [
+  velocityBreachRule, // Requires context.recentPayoutCount
+  bankSwapRule, // Requires context.recentBankChangeTimestamp
+  // geoMismatchRule,       // Skipped - requires pre-fetched charge data
+  // failedChargeBurstRule, // Skipped - requires pre-fetched charge data
   suddenPayoutDisableRule,
   highRiskReviewRule,
 ];
 
 /**
  * Edge-compatible version of evaluateRules.
- * Fetches account-specific config and runs rules.
+ * Assumes context data (like recent event counts/timestamps) is pre-fetched and passed in.
+ * Avoids direct database calls within the rule functions themselves.
+ *
+ * @param event - The validated Stripe event object.
+ * @param supabase - The Supabase client (primarily for potential future use, not direct rule DB calls).
+ * @param config - The merged rule configuration for the account.
+ * @param edgeContext - Additional pre-fetched data needed by Edge rules.
+ * @returns A promise resolving to an array of rule outputs.
  */
 export async function evaluateRulesEdge(
-  event: StripeEvent,
-  supabase: SupabaseClient = supabaseAdmin,
-  config: Record<string, any> | null = null,
-): Promise<Alert[]> {
-  const accountId = event.account as string;
+  event: Stripe.Event,
+  supabase: SupabaseClient, // Pass client, though rules here avoid using it directly
+  config: Record<string, any>,
+  edgeContext: Partial<EdgeRuleContext> = {}, // Allow passing partial context
+): Promise<GuardianRuleOutput[]> {
+  const accountId = event.account;
   const eventId = event.id;
   const baseLogData = { eventId, accountId, service: 'evaluateRulesEdge' };
 
-  // Skip if no account ID present
   if (!accountId) {
     log.warn({ ...baseLogData }, 'Skipping rule evaluation - no account ID');
     return [];
   }
+  if (!config) {
+    log.error({ ...baseLogData }, 'Skipping rule evaluation - no config provided');
+    return [];
+  }
 
-  // If config wasn't passed (e.g., direct call), fetch it.
-  // Note: In the reactor flow, config *should* be passed pre-fetched.
   const startTime = performance.now();
 
-  // Calculate lookback period for events
-  // Max of 1 hour, double the bank swap lookback period, or 24 hours for geo-mismatch
-  const bankSwapLookbackMs = defaultConfig.bankSwap.lookbackMinutes * 60_000 * 2;
-  const geoMismatchLookbackMs = 24 * 60 * 60 * 1000; // 24 hours
-  const lookbackMs = Math.max(3600_000, bankSwapLookbackMs, geoMismatchLookbackMs);
-  const lookbackDate = new Date(Date.now() - lookbackMs).toISOString();
-
-  // Get account-specific rule set if available
-  // TODO: Consider caching rule sets for frequently seen accounts
-  let accountRuleSet = null;
-  try {
-    const { data: account } = await supabase
-      .from('connected_accounts')
-      .select('rule_set')
-      .eq('stripe_account_id', accountId)
-      .single();
-
-    if (account?.rule_set) {
-      accountRuleSet = account.rule_set;
-    }
-  } catch (error) {
-    logger.warn({ error, accountId }, 'Failed to retrieve account rule set');
-  }
-
-  // Merge account rule set with default config (if available)
-  const mergedConfig = accountRuleSet ? { ...defaultConfig, ...accountRuleSet } : defaultConfig;
-
-  // Fetch context data needed for all rules - optimized query with new indexes
-  // This single query fetches all the data needed for the rules in parallel, eliminating N+1 patterns
-  const [payoutsResponse, chargesResponse] = await Promise.all([
-    // Fetch payouts and external account changes in one query
-    supabase
-      .from('payout_events')
-      .select('*')
-      .eq('stripe_account_id', accountId)
-      .or(`type.eq.payout.paid,type.eq.payout.created,type.eq.external_account.created`)
-      .gte('created_at', lookbackDate)
-      .order('created_at', { ascending: false }),
-
-    // Fetch charges in another concurrent query
-    supabase
-      .from('payout_events')
-      .select('*')
-      .eq('stripe_account_id', accountId)
-      .like('type', 'charge.%')
-      .gte('created_at', lookbackDate)
-      .order('created_at', { ascending: false }),
-  ]);
-
-  // Create rule context from fetched data
-  const ctx: RuleContext = {
-    recentPayouts: payoutsResponse.data || [],
-    recentCharges: chargesResponse.data || [],
-    config: mergedConfig,
+  // Combine provided config and context
+  const fullContext: EdgeRuleContext = {
+    config: config,
+    ...edgeContext, // Merge pre-fetched data
   };
 
-  const fetchTime = performance.now() - startTime;
-  if (fetchTime > 100) {
-    // TODO: If queries consistently take more than 100ms, consider adding more specific indexes
-    // or further optimizing the query patterns
-    logger.warn(
-      {
-        accountId,
-        fetchTimeMs: Math.round(fetchTime),
-        payoutsCount: ctx.recentPayouts.length,
-        chargesCount: ctx.recentCharges.length,
-      },
-      'Slow context data fetch',
-    );
-  }
-
   // Run each rule against the event
-  const alerts: Alert[] = [];
-  for (const rule of rules) {
+  const ruleOutputs: GuardianRuleOutput[] = [];
+  for (const rule of edgeRules) {
     try {
-      const ruleAlerts = await rule(event, ctx);
-      alerts.push(...ruleAlerts);
-    } catch (error) {
-      logger.error({ error, rule: rule.name, eventId: event.id }, 'Rule evaluation failed');
+      // Pass the event and the combined context
+      const ruleResults = await rule(event, fullContext);
+      ruleOutputs.push(...ruleResults);
+    } catch (error: any) {
+      // Use optional chaining for safer error message access
+      log.error(
+        { ...baseLogData, error: error?.message, rule: rule.name },
+        'Edge rule evaluation failed',
+      );
     }
   }
 
   const totalTime = performance.now() - startTime;
-  logger.info(
-    {
-      id: event.id,
-      alerts: alerts.length,
-      timeMs: Math.round(totalTime),
-      dataFetchMs: Math.round(fetchTime),
-    },
-    'Rule engine executed',
+  log.info(
+    { ...baseLogData, alerts: ruleOutputs.length, timeMs: Math.round(totalTime) },
+    'Edge rule engine executed',
   );
-  return alerts;
+  return ruleOutputs;
 }

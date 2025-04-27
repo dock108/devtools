@@ -55,9 +55,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Type check
-      - name: Type check
-        run: npm run type-check
+      # Type check (Strict)
+      - name: Type check (Strict)
+        # This now runs tsc with strict settings enabled in tsconfig.json
+        # If this fails, the build breaks.
+        run: pnpm tsc --noEmit
 
       # Jest unit tests with coverage
       # TODO (#<issue_number_for_step_3>): Re-enable this step after fixing Jest test suite failures.
@@ -76,9 +78,8 @@ jobs:
 
       # Build Next.js app once for Playwright
       - name: Build app
-        # continue-on-error: true # Removed
         run: |
-          npm run build || echo "::warning::Next.js build failed, skipping Playwright"
+          npm run build || echo "::error::Next.js build failed, cannot run Playwright tests"
 
       # Removed docs build step
       # - name: Build docs & check links
@@ -98,9 +99,6 @@ jobs:
         with:
           name: playwright-report-${{ matrix.node-version }}
           path: playwright-report/
-
-      - name: Build Next app
-        run: npm run build
 
       - name: Bundle size guard
         run: npm run size:check

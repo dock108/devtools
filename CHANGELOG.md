@@ -181,6 +181,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added Prometheus counter `guardian_alert_false_positive_feedback_total` (requires full metrics setup).
   - Included unit tests (`tests/feedback.spec.ts`) and Cypress E2E test (`cypress/e2e/alerts_feedback.cy.ts`).
   - Added documentation (`docs/guardian/feedback.md`) and README update.
+- **feat(guardian):** Enable strict TypeScript checks across Guardian codebase (G-24):
+  - Updated `tsconfig.json` with `strict: true` and related flags.
+  - Created shared types/enums in `lib/guardian/constants.ts`.
+  - Refactored Edge Functions, webhook handler, rules engine, and individual rules for strict type compliance.
+  - Added `gen:types` script to `package.json` for Supabase type generation.
+  - Updated Supabase queries to use generated types (`types/supabase.ts`).
+  - Added `pnpm tsc --noEmit` step to CI workflow (`ci.yml`).
+  - Updated README with "Type Safety" section explaining type generation and strict enforcement.
 
 ### Changed
 

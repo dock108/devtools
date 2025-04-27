@@ -5,6 +5,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 // --- Test Setup --- //
+// Note: Strict type checking may require ensuring mock data and function signatures align perfectly.
 
 const MOCK_SUPABASE_URL = 'http://localhost:54321'; // Mock Supabase URL
 const MOCK_SUPABASE_KEY = 'mock-service-role-key';
@@ -13,6 +14,7 @@ const MOCK_ACCOUNT_ID = 'acct_mock_backfill_123';
 const MOCK_REACTOR_URL = `${MOCK_SUPABASE_URL}/functions/v1/guardian-reactor`;
 
 // Mock data
+// Ensure mock data types are consistent (e.g., use Stripe types if possible)
 const createMockStripeEvent = (id: string, type: string, created: number, account: string) => ({
   id: `evt_${id}`,
   object: 'event' as const,
@@ -22,9 +24,9 @@ const createMockStripeEvent = (id: string, type: string, created: number, accoun
   pending_webhooks: 0,
   request: { id: null, idempotency_key: null },
   type,
-  // @ts-ignore - Simplify data object for testing
-  data: { object: { id: `obj_${id}`, object: type.split('.')[0] || 'charge', amount: 1000 } },
-  account: account, // Include account ID in the event mock
+  // @ts-ignore - Simplify data object for testing - This might cause issues with strict checks if not handled
+  data: { object: { id: `obj_${id}`, object: type.split('.')[0] ?? 'charge', amount: 1000 } },
+  account: account,
 });
 
 // Generate ~250 mock events (e.g., 3 pages)
@@ -55,7 +57,7 @@ const mockEventsPage3 = Array.from({ length: 50 }, (_, i) =>
 );
 
 describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
-  let runtime: EdgeRuntime;
+  let runtime: EdgeRuntime | undefined; // Initialize as possibly undefined
   let backfillFunctionCode: string;
 
   beforeAll(async () => {
@@ -79,17 +81,19 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
       throw new Error(`Could not load function code from ${functionPath}.`);
     }
 
-    // Mock the isGuardianSupportedEvent import - adjust path as needed!
+    // Mock the isGuardianSupportedEvent import
+    // Ensure the mock function signature matches the original
     vi.mock('../../lib/guardian/stripeEvents.ts', () => ({
-      isGuardianSupportedEvent: (type: string) => {
-        // Mock logic: consider all events relevant for this test
-        // Or implement specific logic matching your actual function
-        return !type.startsWith('customer.'); // Example: ignore customer events
+      isGuardianSupportedEvent: (type: string): boolean => {
+        // Add explicit return type
+        return !type.startsWith('customer.');
       },
     }));
 
+    // Runtime setup - ensure context types are correct
     runtime = new EdgeRuntime({
       extend: (context) => {
+        // Explicitly type the env object if possible
         context.env = {
           SUPABASE_URL: MOCK_SUPABASE_URL,
           SUPABASE_SERVICE_ROLE_KEY: MOCK_SUPABASE_KEY,
@@ -97,8 +101,8 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
           BACKFILL_DAYS: '90',
           BACKFILL_BATCH: '100',
         };
-        // Deno.env is used inside the function, so we mock it here
-        context.Deno = { env: { get: (key: string) => context.env[key] } };
+        // Ensure Deno mock aligns with actual Deno types used
+        context.Deno = { env: { get: (key: string): string | undefined => context.env[key] } }; // Add undefined possibility
         return context;
       },
       initialCode: backfillFunctionCode,
@@ -154,8 +158,9 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
       .post(`/rest/v1/event_buffer?on_conflict=stripe_event_id`)
       .times(expectedBatches) // Expect calls = total relevant events / batch size
       .reply(200, (uri, requestBody) => {
-        // Return mock IDs based on input batch size
-        const batch = requestBody as any[];
+        // Ensure requestBody typing is handled (e.g., using unknown -> validation or explicit cast)
+        const batch = requestBody as any[]; // Cast carefully, validate if possible
+        // Ensure returned IDs match expected { id: number | string }[] structure
         return batch.map((e) => ({ id: `buf_${e.stripe_event_id}` }));
       });
 
@@ -175,9 +180,10 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
     // 6. Final status update to success
     const statusSuccessScope = nock(MOCK_SUPABASE_URL)
       .patch(`/rest/v1/backfill_status?stripe_account_id=eq.${MOCK_ACCOUNT_ID}`)
-      .reply(200, (uri, body) => {
+      .reply(200, (uri, body: Record<string, any>) => {
+        // Type the body
         expect(body.status).toBe('success');
-        expect(body.completed_at).toBeDefined();
+        expect(body.completed_at).toBeDefined(); // Check for existence, type check happens implicitly
         expect(body.last_event_id).toBe(mockEventsPage3[mockEventsPage3.length - 1].id); // Last event of last page
         return {};
       });
@@ -198,6 +204,7 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
       .reply(200, { object: 'list', data: mockEventsPage3, has_more: false, url: '/v1/events' }); // has_more: false
 
     // --- Execute Function --- //
+    if (!runtime) throw new Error('Runtime not initialized'); // Type guard
     const response = await runtime.dispatchFetch('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -283,7 +290,8 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
     // Mock final status update to error
     const statusErrorScope = nock(MOCK_SUPABASE_URL)
       .patch(`/rest/v1/backfill_status?stripe_account_id=eq.${MOCK_ACCOUNT_ID}`)
-      .reply(200, (uri, body) => {
+      .reply(200, (uri, body: Record<string, any>) => {
+        // Type the body
         expect(body.status).toBe('error');
         expect(body.completed_at).toBeDefined();
         expect(body.last_error).toContain('Invalid API Key provided');
@@ -291,6 +299,7 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
       });
 
     // Execute
+    if (!runtime) throw new Error('Runtime not initialized'); // Type guard
     const response = await runtime.dispatchFetch('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

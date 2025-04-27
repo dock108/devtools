@@ -15,6 +15,7 @@
     "postbuild": "next-sitemap",
     "type-check": "tsc --noEmit",
     "test": "jest --detectOpenHandles",
+    "test:unit": "vitest run",
     "test:e2e": "cross-env NODE_ENV=test playwright test",
     "test:e2e:oauth": "cross-env NODE_ENV=test playwright test tests/e2e/stripe-oauth.test.ts",
     "lint-staged": "lint-staged",
@@ -25,7 +26,8 @@
     "lh-ci": "lhci autorun",
     "size:check": "node scripts/size-check.js",
     "stripe:setup-webhook": "ts-node scripts/setup_webhook.ts",
-    "stripe:verify-webhook": "ts-node -e \"require('./lib/guardian/webhookVerifier').verifyWebhookConfiguration()\""
+    "stripe:verify-webhook": "ts-node -e \"require('./lib/guardian/webhookVerifier').verifyWebhookConfiguration()\"",
+    "gen:types": "supabase gen types typescript --project-id \"YOUR_PROJECT_ID\" --schema public > types/supabase.ts"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,json,md,mdx,yml}": [

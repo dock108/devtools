@@ -2,6 +2,7 @@ import { test, expect, describe, beforeAll, afterAll, vi } from 'vitest';
 import { POST, GET } from '../../app/api/guardian/alerts/feedback/route'; // Adjust path as needed
 
 // --- Mocking --- //
+// Note: With strict TypeScript, ensure mock implementations and return types match signatures accurately.
 vi.mock('@/lib/supabase-admin', () => ({
   supabaseAdmin: {
     from: vi.fn().mockReturnThis(),
@@ -72,8 +73,9 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
   describe('POST /api/guardian/alerts/feedback', () => {
     test('should insert new feedback successfully', async () => {
       const { supabaseAdmin } = await import('@/lib/supabase-admin');
+      // Ensure mockResolvedValue types match the expected return type from the actual function
       vi.mocked(supabaseAdmin.upsert).mockResolvedValueOnce({
-        data: [{ id: 'feedback-uuid-1' }],
+        data: [{ id: 'feedback-uuid-1' }], // Ensure this structure matches Supabase response
         error: null,
       });
       vi.mocked(supabaseAdmin.select).mockReturnThis(); // Chain .select()
@@ -194,10 +196,12 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
   describe('GET /api/guardian/alerts/feedback', () => {
     test('should return aggregated feedback counts successfully', async () => {
       const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      const mockCounts = [
+      // Ensure mock data structure and types match expected Supabase result
+      const mockCounts: { verdict: string; count: number }[] = [
         { verdict: 'false_positive', count: 3 },
         { verdict: 'legit', count: 7 },
       ];
+      // Ensure the mock for .returns matches the expected structure
       vi.mocked(supabaseAdmin.returns).mockResolvedValueOnce({ data: mockCounts, error: null });
 
       const request = new Request(
