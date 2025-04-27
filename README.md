@@ -213,6 +213,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines on how to get started, branch naming, commit formatting, and the PR process.
 
+**Contributing to Accuracy**: Help improve Guardian by providing feedback on alerts. See [Alert Feedback documentation](docs/guardian/feedback.md).
+
 ## Interactive Demos
 
 ### Guardian Demo

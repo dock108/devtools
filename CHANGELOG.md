@@ -173,6 +173,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Included unit tests (`tests/backfill.spec.ts`) with mocks.
   - Added documentation (`docs/guardian/backfill.md`) and README update.
   - Logs required (`STRIPE_API_KEY_PLATFORM`) and optional (`BACKFILL_DAYS`, `BACKFILL_BATCH`) env vars on cold start.
+- **feat(guardian):** Implement alert feedback mechanism (G-23):
+  - Added `alert_feedback` table to store user verdicts (False Positive/Legit).
+  - Created API route (`/api/guardian/alerts/feedback`) for submitting (POST) and retrieving counts (GET).
+  - Added feedback buttons and comment field to Alert Details UI (`/guardian/alerts/[id]`).
+  - Implemented Analytics Card on `/guardian/analytics` showing FP rates per rule.
+  - Added Prometheus counter `guardian_alert_false_positive_feedback_total` (requires full metrics setup).
+  - Included unit tests (`tests/feedback.spec.ts`) and Cypress E2E test (`cypress/e2e/alerts_feedback.cy.ts`).
+  - Added documentation (`docs/guardian/feedback.md`) and README update.
 
 ### Changed
 
