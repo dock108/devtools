@@ -1,0 +1,73 @@
+name: Documentation Tests
+
+on:
+  push:
+    branches: [main, content/docs-core-guides]
+    paths:
+      - 'content/docs/**'
+      - 'app/docs/**'
+      - 'components/docs/**'
+      - 'lib/docs.config.ts'
+      - 'lib/mdx/**'
+      - 'scripts/docs-*.js'
+      - 'scripts/check-links.js'
+      - 'tests/mdx/**'
+      - '.github/workflows/docs-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'content/docs/**'
+      - 'app/docs/**'
+      - 'components/docs/**'
+      - 'lib/docs.config.ts'
+      - 'lib/mdx/**'
+      - 'scripts/docs-*.js'
+      - 'scripts/check-links.js'
+      - 'tests/mdx/**'
+      - '.github/workflows/docs-tests.yml'
+
+jobs:
+  tests:
+    name: Run Documentation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint docs for sensitive content
+        run: npm run docs:lint
+
+      - name: Check documentation links
+        run: npm run check:links
+
+      - name: Run unit tests
+        run: npm run test:unit -- --run ./tests/mdx/getAllDocs.test.mjs
+
+      - name: Run e2e tests for documentation pages
+        run: npm run test:e2e -- --project=chromium tests/e2e/docs.test.ts
+
+      - name: Bundle size analysis
+        run: |
+          npm run build
+          npx next-bundle-analyzer
+
+          # Check that docs don't add more than 1MB to the bundle
+          DOCS_SIZE=$(find .next/analyze -name "*.html" -exec grep -l "content/docs" {} \; | xargs cat | grep -o "Size: [0-9.]* [KM]B" | head -1)
+          DOCS_SIZE_KB=$(echo $DOCS_SIZE | grep -o "[0-9.]*" | head -1)
+          DOCS_UNIT=$(echo $DOCS_SIZE | grep -o "[KM]B" | head -1)
+
+          if [ "$DOCS_UNIT" = "MB" ] && (( $(echo "$DOCS_SIZE_KB > 1" | bc -l) )); then
+            echo "Documentation bundle size exceeds 1MB: $DOCS_SIZE"
+            exit 1
+          elif [ "$DOCS_UNIT" = "KB" ]; then
+            echo "Documentation bundle size is acceptable: $DOCS_SIZE"
+          fi

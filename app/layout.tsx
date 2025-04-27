@@ -10,6 +10,7 @@ import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
 import { Providers } from './providers'; // Import the new client component
 import BetaBanner from '@/components/ui/BetaBanner'; // Import BetaBanner
+import { BlogFooterSnippets } from '@/components/blog/BlogFooterSnippets'; // Import the new component
 
 // Metadata export is allowed here
 export const metadata: Metadata = {
@@ -43,6 +44,8 @@ export default function RootLayout({
           <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
             <Header />
             <main className="flex-grow">{children}</main>
+            {/* Add Blog Snippets before the main Footer */}
+            <BlogFooterSnippets />
             <Footer />
             <Toaster position="bottom-right" />
           </div>

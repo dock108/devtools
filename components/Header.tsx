@@ -90,6 +90,13 @@ export function Header() {
           >
             Blog
           </Link>
+          <Link
+            href="/docs/getting-started"
+            data-current={pathname.startsWith('/docs')}
+            className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
+          >
+            Docs
+          </Link>
 
           {loading || (session && connectedAccounts === null) ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-slate-700"></div>

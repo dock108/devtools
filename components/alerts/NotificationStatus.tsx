@@ -3,7 +3,7 @@
 import React from 'react';
 import useSWR, { mutate } from 'swr';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2, RefreshCw, TriangleAlert, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw, AlertTriangle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 
@@ -72,7 +72,7 @@ const NotificationStatus: React.FC<NotificationStatusProps> = ({ alertId, isAdmi
         };
       default:
         return {
-          icon: <TriangleAlert className="h-4 w-4 text-slate-400" />,
+          icon: <AlertTriangle className="h-4 w-4 text-slate-400" />,
           text: 'Unknown',
           color: 'text-slate-500',
         };

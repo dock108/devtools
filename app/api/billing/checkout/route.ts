@@ -16,14 +16,17 @@ const siteUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
 // Log required env vars on cold start (will log once per instance)
 if (!stripePriceIdPro || !stripeWebhookSecretBilling) {
-  console.warn(`
-    ************************************************************
-    * WARNING: Missing Stripe Billing Environment Variables!   *
-    * Please add the following to your .env.local file:        *
-    * STRIPE_PRICE_PRO=<your_stripe_pro_plan_price_id>         *
-    * STRIPE_WEBHOOK_BILLING=<your_stripe_billing_webhook_secret> *
-    ************************************************************
-    `);
+  // Only show warning in production, not in development or preview
+  if (process.env.VERCEL_ENV === 'production') {
+    console.warn(`
+      ************************************************************
+      * WARNING: Missing Stripe Billing Environment Variables!   *
+      * Please add the following to your .env.local file:        *
+      * STRIPE_PRICE_PRO=<your_stripe_pro_plan_price_id>         *
+      * STRIPE_WEBHOOK_BILLING=<your_stripe_billing_webhook_secret> *
+      ************************************************************
+      `);
+  }
 }
 
 export async function POST(request: Request) {

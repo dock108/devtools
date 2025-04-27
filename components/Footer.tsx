@@ -1,21 +1,12 @@
 import Link from 'next/link';
 import { Container } from './Container';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 import RetentionStatusBadge from './admin/RetentionStatusBadge';
+import { RssIcon } from 'lucide-react';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function Footer() {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-      },
-    },
-  );
+  const supabase = createSupabaseServerClient();
 
   const {
     data: { session },
@@ -41,10 +32,30 @@ export async function Footer() {
             Twitter
           </Link>
           <Link
+            href="/docs/getting-started"
+            className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Docs
+          </Link>
+          <Link
+            href="/contact"
+            className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Contact
+          </Link>
+          <Link
             href="/rss.xml"
             className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
           >
             RSS
+          </Link>
+          <Link
+            href="/feed.xml"
+            aria-label="RSS Feed"
+            title="RSS Feed"
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <RssIcon className="h-5 w-5" />
           </Link>
         </div>
       </Container>
