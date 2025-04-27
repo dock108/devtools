@@ -1,10 +1,16 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: process.env.SITE_URL || 'https://guardian.dock108.ai', // Default to production URL
-  generateRobotsTxt: true, // Generate robots.txt
+  siteUrl: process.env.SITE_URL || 'https://dock108.com',
+  generateRobotsTxt: true,
+  exclude: ['/admin/*', '/api/*', '/settings/*', '/callback', '/login', '/sign-up'],
   robotsTxtOptions: {
-    // Optional: Add policies if needed, e.g., disallow certain paths
-    policies: [{ userAgent: '*', allow: '/' }],
+    policies: [
+      {
+        userAgent: '*',
+        allow: '/',
+        disallow: ['/admin/', '/api/', '/settings/'],
+      },
+    ],
   },
   // Optional: Exclude specific routes if necessary
   // exclude: ['/admin/*', '/api/*'],

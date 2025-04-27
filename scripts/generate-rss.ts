@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import RSS from 'rss';
-import { getAllPosts } from '../lib/blog.ts'; // Add explicit .ts extension
+import { getAllPosts } from '../lib/blog'; // Remove .ts extension again
 import { pathToFileURL } from 'url'; // Import necessary function
 
 // Export the core function for testing
 export async function generateRssFeed() {
   console.log('Generating RSS feed...');
 
-  const siteUrl = process.env.SITE_URL || 'http://localhost:3000';
+  const siteUrl = process.env['SITE_URL'] || 'http://localhost:3000';
   const allPosts = getAllPosts(); // Assuming this returns metadata including slug, title, excerpt, date, tags
 
   const feedOptions = {
