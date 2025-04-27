@@ -202,7 +202,7 @@ function AlertsPageContent() {
     }; // Cleanup
   }, [supabase]); // Only depends on supabase client
 
-  // Fetch alerts and channel settings when selectedAccountId changes
+  // Fetch alerts and user settings when selectedAccountId changes
   useEffect(() => {
     if (!selectedAccountId) {
       console.log('No account selected, clearing data.');
@@ -221,15 +221,52 @@ function AlertsPageContent() {
       setMonthlyAlertCount(0); // Reset alert count
 
       try {
-        // Fetch global settings to check plan tier
-        const { data: settingsData, error: settingsError } = await supabase
+        // Get current user ID first
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          throw new Error(sessionError?.message || 'User not authenticated');
+        }
+        const userId = session.user.id;
+
+        // Fetch USER settings, check plan tier
+        let { data: settingsData, error: settingsError } = await supabase
           .from('settings')
           .select('*')
-          .eq('id', 'global_settings')
+          .eq('user_id', userId) // Use user_id
           .maybeSingle();
 
+        // Lazy-create user settings if they don't exist
+        if (!settingsData && settingsError && settingsError.code === 'PGRST116') {
+          // Row not found
+          console.log(`No settings found for user ${userId}, creating defaults.`);
+          const { data: newSettings, error: insertError } = await supabase
+            .from('settings')
+            .insert({
+              user_id: userId,
+              // Add reasonable defaults for other settings columns here
+              slack_notifications_enabled: false,
+              email_notifications_enabled: true,
+              // ... other defaults
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creating default user settings:', insertError);
+            // Decide how to handle - maybe proceed without settings or show error
+            settingsError = insertError; // Use the insert error
+          } else {
+            settingsData = newSettings; // Use the newly created settings
+            settingsError = null; // Clear the row not found error
+          }
+        }
+
         if (settingsError) throw settingsError;
-        console.log('Fetched settings:', settingsData);
+
+        console.log('Fetched user settings:', settingsData);
         if (isMounted && settingsData) {
           setSettings(settingsData);
         }

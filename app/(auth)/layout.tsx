@@ -1,15 +1,9 @@
-import { AuthGuard } from '@/components/AuthGuard';
+import React from 'react';
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <main className="flex-grow min-h-screen">
-        <AuthGuard>{children}</AuthGuard>
-      </main>
+      <main className="flex-grow min-h-screen">{children}</main>
     </>
   );
-} 
+}

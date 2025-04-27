@@ -33,13 +33,40 @@ export default async function AdminSettingsPage() {
   const cookieStore = cookies();
   const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore });
 
-  // Fetch global settings
+  // Get current admin user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    // Handle not logged in or error fetching user
+    console.error('Admin settings page: Error fetching user', userError);
+    // Redirect or show error - appropriate handling needed
+    return <p>Error loading user information.</p>; // Placeholder
+  }
+
+  // Fetch the single global settings row
+  // Note: RLS policy should grant access based on admin role
   const { data: settings, error } = await supabase
     .from('settings')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+    .eq('id', 'global_settings') // Filter by the known global ID
+    .maybeSingle(); // Use maybeSingle as it might not exist initially
+
+  // Remove the lazy-create logic, as the global row should ideally exist
+  // or be seeded separately. If it doesn't exist, the form will show empty/defaults.
+  if (error) {
+    // Log error if it's not just a missing row
+    if (error.code !== 'PGRST116') {
+      // PGRST116 = Row not found
+      console.error('Error fetching global settings:', error);
+    } else {
+      console.log('Global settings row not found (id=global_settings).');
+    }
+    // Pass null or empty object to form if fetch fails or row missing
+    // settings = null; // Variable already holds null if maybeSingle returns null
+  }
 
   // Fetch available notification channels
   const { data: notificationChannels, error: channelsError } = await supabase

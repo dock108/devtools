@@ -93,7 +93,7 @@ export default function NotificationSettingsForm({
     setError(null);
 
     try {
-      // Process email recipients from comma-separated string to array
+      // Process email recipients
       const emailRecipients = values.email_recipients
         ? values.email_recipients.split(',').map((email) => email.trim())
         : null;
@@ -104,22 +104,15 @@ export default function NotificationSettingsForm({
         updated_at: new Date().toISOString(),
       };
 
-      // If we have an existing settings record, update it
-      if (initialSettings && initialSettings.id) {
-        const { error } = await supabase
-          .from('settings')
-          .update(settingsData)
-          .eq('id', initialSettings.id);
+      // Always UPSERT the global settings row
+      const { error: upsertError } = await supabase
+        .from('settings')
+        .upsert({ ...settingsData, id: 'global_settings' })
+        .eq('id', 'global_settings'); // Match on ID for upsert
 
-        if (error) throw error;
-      } else {
-        // Otherwise, insert a new record
-        const { error } = await supabase.from('settings').insert([settingsData]);
+      if (upsertError) throw upsertError;
 
-        if (error) throw error;
-      }
-
-      toast.success('Settings updated successfully');
+      toast.success('Global settings updated successfully');
       router.refresh();
     } catch (err: any) {
       console.error('Error saving settings:', err);

@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { updateSession } from '@/utils/supabase/middleware';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 // Log NODE_ENV once at the top level
 console.log('[Middleware] NODE_ENV:', process.env.NODE_ENV);
@@ -49,104 +48,133 @@ const corsHeaders = (origin: string | null): Record<string, string> => {
 
 // Define paths that require authentication
 const protectedPaths = [
-  '/settings/',
-  '/stripe-guardian/settings/',
-  '/(auth)/', // Assuming this is an auth-related group
-  '/stripe-guardian/onboard', // Add onboarding path
+  '/settings', // Note: Covers /settings/*
+  '/stripe-guardian', // Note: Covers /stripe-guardian/*
+  // '/admin', // Assuming admin routes handle their own auth/layout
+  // Add other specific protected routes if needed
 ];
 
 export async function middleware(request: NextRequest) {
   const requestPath = request.nextUrl.pathname;
   console.log(`[Middleware] Handling request for: ${requestPath}`); // Log path
   const requestOrigin = request.headers.get('origin');
-  console.log(`[Middleware] Request Origin header: ${requestOrigin}`); // Log origin header
 
-  const currentCorsHeaders = corsHeaders(requestOrigin);
-  const currentSecurityHeaders = securityHeaders(requestOrigin);
-  console.log('[Middleware] Calculated CORS Headers:', currentCorsHeaders); // Log calculated headers
+  // Create an outgoing response object based on the incoming request
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-  // Handle CORS pre-flight
+  // Handle CORS pre-flight first
   if (request.method === 'OPTIONS') {
     console.log('[Middleware] Handling OPTIONS pre-flight');
+    const corsPreflightHeaders = corsHeaders(requestOrigin);
     return new Response(null, {
       status: 204,
-      headers: currentCorsHeaders, // Use dynamic CORS headers
+      headers: corsPreflightHeaders,
     });
   }
 
-  // Update the Supabase session first
-  console.log('[Middleware] Calling updateSession...');
-  const response = await updateSession(request);
-  const { pathname } = request.nextUrl; // pathname is already available from requestPath
-
-  // --- Authentication/Authorization Logic ---
-  let session = null;
-  try {
-    console.log('[Middleware] Creating Supabase client to check auth...');
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
+  // Create a Supabase client configured to use cookies
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          // If the cookie is set, update the request cookies and response object
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          // If the cookie is removed, update the request cookies and response object
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
         },
       },
-    );
-    const { data } = await supabase.auth.getSession();
-    session = data.session; // Assign session data
+    },
+  );
+
+  // Refresh session if expired - important!
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // *** Debug Logging ***
+  console.log('[Middleware] Session Check Result:', !!session, 'Path:', requestPath);
+
+  // --- Authentication Logic ---
+  const isProtectedRoute = protectedPaths.some((path) => requestPath.startsWith(path));
+
+  if (!session && isProtectedRoute) {
     console.log(
-      `[Middleware] Session check complete. User is ${session ? 'logged in' : 'not logged in'}.`,
+      `[Middleware] Redirecting unauthenticated user from protected path: ${requestPath}`,
     );
-  } catch (e) {
-    console.error('[Middleware] Error checking session:', e);
-  }
-
-  // Redirect logged-in users from /login
-  if (session && pathname === '/login') {
-    console.log('[Middleware] Redirecting logged-in user from /login');
-    const redirectUrl = new URL('/stripe-guardian/alerts', request.url);
-    return NextResponse.redirect(redirectUrl); // Note: Headers aren't automatically added to this redirect currently
-  }
-
-  // Redirect unauthenticated users from protected paths
-  const requiresAuth = protectedPaths.some((path) => pathname.startsWith(path));
-  if (requiresAuth && !session) {
-    console.log(`[Middleware] Redirecting unauthenticated user from protected path: ${pathname}`);
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    const redirectResponse = NextResponse.redirect(loginUrl);
-    // Add headers to the redirect response
-    Object.entries(currentSecurityHeaders).forEach(([k, v]) => redirectResponse.headers.set(k, v));
-    Object.entries(currentCorsHeaders).forEach(([k, v]) => redirectResponse.headers.set(k, v));
-    console.log('[Middleware] Returning redirect response with headers.');
-    return redirectResponse;
+    loginUrl.searchParams.set('next', requestPath); // Use 'next' query param
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Redirect logged-in users away from /login or /sign-up
+  if (session && (requestPath === '/login' || requestPath === '/sign-up')) {
+    console.log(`[Middleware] Redirecting logged-in user from ${requestPath}`);
+    const redirectUrl = new URL('/stripe-guardian/alerts', request.url); // Redirect to alerts page
+    return NextResponse.redirect(redirectUrl);
   }
   // --- End Auth Logic ---
 
-  // Add security and CORS headers to the main response
-  console.log('[Middleware] Applying headers to main response...');
-  Object.entries(currentSecurityHeaders).forEach(([k, v]) => response.headers.set(k, v));
-  Object.entries(currentCorsHeaders).forEach(([k, v]) => response.headers.set(k, v));
+  // Add security and CORS headers to the final response
+  const finalCorsHeaders = corsHeaders(requestOrigin);
+  const finalSecurityHeaders = securityHeaders(requestOrigin);
+  Object.entries(finalSecurityHeaders).forEach(([k, v]) => response.headers.set(k, v));
+  Object.entries(finalCorsHeaders).forEach(([k, v]) => response.headers.set(k, v));
 
-  // console.log('[Middleware] Final Response Headers:', Object.fromEntries(response.headers.entries())); // Log final headers
-  console.log('[Middleware] Applied security and CORS headers to response.'); // Quieter log
-
-  // Return the response (potentially modified by updateSession)
-  console.log('[Middleware] Returning main response.');
+  console.log('[Middleware] Returning final response.');
   return response;
 }
 
+// Update matcher to exclude static assets and API routes
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
+     * - images/ (public images)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - various static file extensions.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
