@@ -22,6 +22,7 @@ const logger = pino({
 // const contextLogger = (context: Record<string, any>) => logger.child(context);
 
 export const log = logger;
+export { logger }; // Add direct export for logger
 
 // Helper to generate request IDs (can be moved to middleware or utils)
 import { v4 as uuidv4 } from 'uuid';

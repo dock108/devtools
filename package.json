@@ -13,7 +13,7 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx,yml}\"",
-    "postbuild": "npx next-sitemap --config next-sitemap.config.cjs && npx ts-node --esm scripts/generate-rss.ts",
+    "postbuild": "npx next-sitemap --config next-sitemap.config.cjs && node --loader ts-node/esm scripts/generate-rss.ts",
     "type-check": "tsc --noEmit",
     "test": "jest --detectOpenHandles",
     "test:unit": "vitest run",
