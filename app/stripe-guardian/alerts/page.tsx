@@ -392,10 +392,11 @@ function AlertsPageContent() {
     }
 
     fetchAccountData();
+
     return () => {
       console.log(`Unmounting data fetch effect for ${selectedAccountId}`);
       isMounted = false;
-    }; // Cleanup
+    }; // Cleanup effect
   }, [supabase, selectedAccountId]); // Added selectedAccountId
 
   // Set up real-time subscription based on selectedAccountId
@@ -685,208 +686,214 @@ function AlertsPageContent() {
                     {/* Wrap Switch in a div to attach tooltip trigger easily */}
                     <div className="flex items-center">
                       <Switch
-                        id={`payout-switch-dashboard-${selectedAccountData.stripe_account_id}`}
-                        checked={!selectedAccountData.payouts_paused} // ON when NOT paused
-                        onCheckedChange={handleTogglePayouts} // No need to pass value, handler uses state
+                        id={`payout-toggle-${selectedAccountId}`}
+                        checked={selectedAccountData.payouts_paused}
+                        onCheckedChange={handleTogglePayouts}
                         disabled={isTogglingPayouts}
-                        aria-label={
-                          selectedAccountData.payouts_paused ? 'Resume payouts' : 'Pause payouts'
-                        }
+                        aria-label="Toggle Payouts"
                       />
-                      {isTogglingPayouts && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                      {isTogglingPayouts && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>{getPauseTooltipContent(selectedAccountData)}</TooltipContent>
                 </Tooltip>
               </div>
-              {/* Existing Auto-pause Alerts Toggle */}
+              {/* Auto Pause Toggle */}
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-slate-600">Auto-pause alerts</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-sm font-medium text-slate-600 flex items-center">
+                      Auto-Pause Payouts
+                      <Info className="h-3 w-3 ml-1 text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Automatically pause payouts on this account when a high-severity alert is
+                    triggered. Recommended for enhanced security.
+                  </TooltipContent>
+                </Tooltip>
                 <Switch
-                  id={`auto-pause-switch-${selectedAccountData.stripe_account_id}`}
+                  id={`auto-pause-toggle-${selectedAccountId}`}
                   checked={autoPause}
                   onCheckedChange={toggleAutoPause}
                   disabled={updatingAutoPause}
-                  aria-label="Toggle auto-pause for selected account"
+                  aria-label="Toggle Auto-Pause"
                 />
-                {updatingAutoPause && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                {updatingAutoPause && <Loader2 className="h-4 w-4 ml-2 animate-spin" />}
               </div>
             </div>
           </TooltipProvider>
 
-          <Tabs defaultValue="active" className="mt-6">
-            <TabsList className="mb-6">
-              <TabsTrigger value="active">Active ({activeAlerts.length})</TabsTrigger>
-              <TabsTrigger value="resolved">Resolved ({resolvedAlerts.length})</TabsTrigger>
+          {/* Alert Tabs */}
+          <Tabs defaultValue="active">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active">Active Alerts ({activeAlerts.length})</TabsTrigger>
+              <TabsTrigger value="resolved">Resolved Alerts ({resolvedAlerts.length})</TabsTrigger>
             </TabsList>
             <TabsContent value="active">
               {loadingAlerts ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" />{' '}
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
                   <span className="ml-2">Loading alerts...</span>
                 </div>
+              ) : activeAlerts.length > 0 ? (
+                <AlertTable alerts={activeAlerts} onMarkResolved={markResolved} />
               ) : (
-                <AlertsTable
-                  alerts={activeAlerts}
-                  onResolve={markResolved}
-                  showResolveAction={true}
-                />
+                <div className="text-center py-10 text-slate-500">
+                  No active alerts for this account.
+                </div>
               )}
             </TabsContent>
             <TabsContent value="resolved">
               {loadingAlerts ? (
                 <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" />{' '}
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
                   <span className="ml-2">Loading alerts...</span>
                 </div>
+              ) : resolvedAlerts.length > 0 ? (
+                <AlertTable alerts={resolvedAlerts} />
               ) : (
-                <AlertsTable
-                  alerts={resolvedAlerts}
-                  onResolve={markResolved}
-                  showResolveAction={false}
-                />
+                <div className="text-center py-10 text-slate-500">
+                  No resolved alerts for this account yet.
+                </div>
               )}
             </TabsContent>
           </Tabs>
         </>
       )}
-      {!selectedAccountId && !initialLoading && (
-        <div className="text-center text-slate-500 py-10">
-          Please select an account to view alerts.
+      {/* Show loading spinner when switching accounts but not initial load */}
+      {!selectedAccountId && !initialLoading && allAccounts.length > 0 && (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+          <span className="ml-2">Selecting account...</span>
         </div>
       )}
     </Container>
   );
 }
 
-// New top-level export that uses Suspense
-export default function AlertsPage() {
-  return (
-    <Suspense
-      fallback={
-        <Container className="py-10">
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-500" />{' '}
-            <span className="ml-2">Loading page...</span>
-          </div>
-        </Container>
-      }
-    >
-      <AlertsPageContent />
-    </Suspense>
-  );
-}
-
-type AlertsTableProps = {
+// Alert table component
+function AlertTable({
+  alerts,
+  onMarkResolved,
+}: {
   alerts: Alert[];
-  onResolve: (id: number) => void;
-  showResolveAction: boolean;
-};
-
-function AlertsTable({ alerts, onResolve, showResolveAction }: AlertsTableProps) {
-  if (alerts.length === 0) {
-    return <div className="text-center text-slate-500 py-10">No alerts here.</div>;
-  }
-
+  onMarkResolved?: (id: number) => void;
+}) {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'high':
-        return 'destructive';
+        return (
+          <Badge variant="destructive" className="capitalize">
+            {severity}
+          </Badge>
+        );
       case 'medium':
-        return 'warning';
+        return (
+          <Badge variant="warning" className="capitalize">
+            {severity}
+          </Badge>
+        );
+      case 'low':
       default:
-        return 'secondary';
+        return (
+          <Badge variant="secondary" className="capitalize">
+            {severity}
+          </Badge>
+        );
     }
   };
 
-  // Function to get color class based on risk score
-  const getRiskScoreColor = (score: number | null) => {
-    if (score === null || score === undefined) return 'bg-gray-200 text-gray-700'; // Neutral for N/A
-    if (score > 60) return 'bg-red-100 text-red-700'; // Red for high risk
-    if (score >= 30) return 'bg-yellow-100 text-yellow-700'; // Yellow for medium risk
-    return 'bg-green-100 text-green-700'; // Green for low risk
-  };
-
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow">
+    <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-            >
-              Risk Score
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Timestamp
             </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Type
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
               Severity
             </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
               Message
             </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-            >
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Risk Score
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
               Payout ID
             </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
-            >
-              Time
+            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              Actions
             </th>
-            {showResolveAction && (
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Resolve</span>
-              </th>
-            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
           {alerts.map((alert) => (
             <tr key={alert.id}>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRiskScoreColor(alert.risk_score)}`}
-                >
-                  {alert.risk_score !== null && alert.risk_score !== undefined
-                    ? alert.risk_score.toFixed(0)
-                    : 'N/A'}
-                </span>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                {format(new Date(alert.created_at), 'MMM d, yyyy, h:mm a')}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <Badge variant={getSeverityBadge(alert.severity)} className="capitalize">
-                  {alert.severity}
-                </Badge>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                {alert.alert_type}
               </td>
-              <td className="px-6 py-4 text-sm text-slate-700">{alert.message}</td>
+              <td className="px-6 py-4 whitespace-nowrap">{getSeverityBadge(alert.severity)}</td>
+              <td className="px-6 py-4 text-sm text-slate-900 max-w-md truncate">
+                {alert.message}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                {alert.risk_score ?? 'N/A'}
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">
-                {alert.stripe_payout_id || 'N/A'}
+                {alert.stripe_payout_id ? (
+                  <a
+                    href={`https://dashboard.stripe.com/payouts/${alert.stripe_payout_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {alert.stripe_payout_id.substring(0, 15)}...
+                  </a>
+                ) : (
+                  'N/A'
+                )}
               </td>
-              <td
-                className="px-6 py-4 whitespace-nowrap text-sm text-slate-500"
-                title={new Date(alert.created_at).toISOString()}
-              >
-                {format(new Date(alert.created_at), 'PP pp')}
-              </td>
-              {showResolveAction && (
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Button variant="outline" size="sm" onClick={() => onResolve(alert.id)}>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                {!alert.resolved && onMarkResolved && (
+                  <Button variant="outline" size="sm" onClick={() => onMarkResolved(alert.id)}>
                     Mark Resolved
                   </Button>
-                </td>
-              )}
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Need to export the component wrapped in Suspense
+export default function AlertsPage() {
+  return (
+    <Suspense fallback={<AlertsLoadingFallback />}>
+      <AlertsPageContent />
+    </Suspense>
+  );
+}
+
+// Fallback component for Suspense
+function AlertsLoadingFallback() {
+  return (
+    <Container className="py-10">
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+        <span className="ml-2">Loading page...</span>
+      </div>
+    </Container>
   );
 }

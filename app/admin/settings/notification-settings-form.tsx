@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { toast } from 'sonner';
+import { useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,17 +22,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { updateAdminSettingsServerAction } from './actions';
 
 // Define form schema
 const formSchema = z.object({
@@ -55,17 +50,18 @@ export type NotificationChannel = {
 
 interface NotificationSettingsFormProps {
   initialSettings: any;
-  notificationChannels: NotificationChannel[];
+  // notificationChannels: NotificationChannel[]; // Commented out unused prop
 }
 
 export default function NotificationSettingsForm({
   initialSettings,
-  notificationChannels,
+  // notificationChannels, // Commented out unused prop
 }: NotificationSettingsFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClientComponentClient<Database>();
+  const [isPending, startTransition] = useTransition();
 
   // Convert email_recipients array to string for form
   const emailRecipientsStr = initialSettings.email_recipients

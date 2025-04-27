@@ -10,7 +10,6 @@ import NotificationStatus from '@/components/alerts/NotificationStatus'; // Impo
 async function getAlertDetails(
   supabase: any,
   alertId: string,
-  userId: string,
 ): Promise<Database['public']['Tables']['alerts']['Row'] | null> {
   // TODO: Add RLS check or ensure this query respects user's access to the alert's account
   const { data: alert, error } = await supabase
@@ -54,7 +53,7 @@ export default async function AlertDetailPage({ params }: { params: { id: string
     notFound(); // Or redirect
   }
 
-  const alert = await getAlertDetails(supabase, params.id, session.user.id);
+  const alert = await getAlertDetails(supabase, params.id);
 
   if (!alert) {
     notFound();

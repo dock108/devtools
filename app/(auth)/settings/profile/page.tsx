@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
-import { Database } from '@/types/supabase.schema';
+import { Database } from '@/types/supabase.d';
 import { getProfile } from '@/lib/supabase/user'; // Import helper
 
 // Import Client Components (assuming they are in the same directory or adjusted path)

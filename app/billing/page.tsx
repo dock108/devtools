@@ -13,11 +13,13 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { toast } from 'react-hot-toast';
-import { Loader2, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, ExternalLink, CheckCircle } from 'lucide-react';
 import { useUser } from '@/lib/hooks/useUser'; // Assuming a hook to get user state
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { isPro } from '@/lib/guardian/plan'; // Import the plan helper
+import { getSubscription } from '@/lib/supabase/user';
+import ManageSubscriptionButton from './ManageSubscriptionButton';
 
 // Define settings type again or import
 interface SettingsRow {

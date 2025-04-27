@@ -1,21 +1,7 @@
-import type { Metadata } from 'next';
-import { Container } from '@/components/Container'; // Import Container
-import {
-  Zap,
-  Gauge,
-  ShieldCheck,
-  Banknote,
-  SlidersHorizontal,
-  AlertTriangle,
-  Users,
-  Settings,
-  BarChart2,
-  Sparkles,
-  Eye,
-  Shield,
-} from 'lucide-react'; // Import icons
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Removed unused CardFooter
-import { Check, Info } from 'lucide-react';
+import { Metadata } from 'next';
+import { Container } from '@/components/Container';
+import { ShieldCheck, CreditCard, ArrowRight, Zap } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';
 import { productLD } from '@/lib/jsonld';
@@ -100,6 +86,7 @@ const features = [
     name: 'Comprehensive Fraud Detection',
     description:
       'Utilizes multiple heuristics like velocity checks, bank swap detection, and geo-location analysis.',
+    icon: ShieldCheck,
     icon: Shield,
   },
   {

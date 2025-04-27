@@ -107,6 +107,12 @@ export default function EditRuleSetPage({ params }: { params: { id: string } }) 
           .eq('rule_set_id', params.id)
           .maybeSingle();
 
+        if (currentChannelError) {
+          console.error('Error fetching current channel:', currentChannelError);
+          // Handle error appropriately, maybe show a toast or set an error state
+          // For now, log it and potentially proceed without pre-selecting
+        }
+
         // Set form values
         form.reset({
           name: ruleSet.name,

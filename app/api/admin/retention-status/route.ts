@@ -5,7 +5,7 @@ import { Database } from '@/types/supabase';
 
 const JOB_NAME = 'guardian_retention'; // Match the job name used in the procedure
 
-export async function GET(request: Request) {
+export async function GET(/* request: Request */) {
   const cookieStore = cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

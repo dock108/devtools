@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { Profile } from '@/lib/supabase/user'; // Import type
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -41,8 +40,6 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ profile }: ProfileFormProps) {
-  const [isPending, startTransition] = useTransition();
-
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     // Use profile data for defaults only if profile exists
@@ -53,20 +50,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   });
 
   const onSubmit: SubmitHandler<ProfileFormValues> = (data) => {
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append('display_name', data.display_name || '');
-      formData.append('avatar_url', data.avatar_url || '');
+    const formData = new FormData();
+    formData.append('display_name', data.display_name || '');
+    formData.append('avatar_url', data.avatar_url || '');
 
-      // Use the imported server action
-      const result = await updateProfileServerAction(formData);
+    // Use the imported server action
+    const result = updateProfileServerAction(formData);
 
-      if (result.success) {
-        toast.success('Profile updated successfully!');
-      } else {
-        toast.error(`Error updating profile: ${result.error || 'Unknown error'}`);
-      }
-    });
+    if (result.success) {
+      toast.success('Profile updated successfully!');
+    } else {
+      toast.error(`Error updating profile: ${result.error || 'Unknown error'}`);
+    }
   };
 
   return (
@@ -79,7 +74,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Display Name</FormLabel>
               <FormControl>
-                <Input placeholder="Your display name" {...field} disabled={isPending} />
+                <Input placeholder="Your display name" {...field} />
               </FormControl>
               <FormDescription>This will be shown publicly on the platform.</FormDescription>
               <FormMessage />
@@ -94,7 +89,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Avatar URL</FormLabel>
               <FormControl>
-                <Input placeholder="https://..." {...field} disabled={isPending} />
+                <Input placeholder="https://..." {...field} />
               </FormControl>
               <FormDescription>Enter the URL of your desired avatar image.</FormDescription>
               <FormMessage />
@@ -102,9 +97,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isPending || !form.formState.isDirty}>
-          {isPending ? 'Saving...' : 'Save Changes'}
-        </Button>
+        <Button type="submit">Save Changes</Button>
       </form>
     </Form>
   );

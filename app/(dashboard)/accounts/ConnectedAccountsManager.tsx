@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // For potential revalidation
+import React, { useState, useTransition } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import useSWR, { mutate } from 'swr'; // For data fetching and optimistic updates
-import { Database } from '@/types/supabase';
 import { linkStripeAccountServerAction } from '@/app/(auth)/settings/connected-accounts/actions'; // Reuse existing action
 
 import { Button } from '@/components/ui/button';
@@ -37,8 +36,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Loader2, Trash2, Copy, PlusCircle, Info, Settings } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, Trash2, Copy, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { BackfillProgress } from '@/components/progress/BackfillProgress';
 
 // --- Types (assuming structure from GET /api/accounts) ---
@@ -98,6 +97,8 @@ export function ConnectedAccountsManager({
 
   const isAdmin = userRole === 'admin';
   const canAddAccount = accounts.length < 2;
+
+  const searchParams = useSearchParams();
 
   // --- Handlers ---
   const handleAddAccount = () => {

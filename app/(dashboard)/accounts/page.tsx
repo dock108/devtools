@@ -1,9 +1,9 @@
-import { Suspense } from 'react';
+import { Metadata } from 'next';
+// import { Suspense } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 import { ConnectedAccountsManager } from './ConnectedAccountsManager'; // We'll create this client component
-import { Skeleton } from '@/components/ui/skeleton';
 
 // Re-use the query from the API route for consistency
 const ACCOUNTS_QUERY = `
@@ -49,17 +49,6 @@ async function getConnectedAccounts(supabase: ReturnType<typeof createServerClie
     })) ?? [];
 
   return transformedAccounts;
-}
-
-// Loading Skeleton Component
-function AccountsLoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-1/4" />
-      <Skeleton className="h-40 w-full" />
-      <Skeleton className="h-40 w-full" />
-    </div>
-  );
 }
 
 // The Page Component (Server Component)

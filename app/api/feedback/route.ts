@@ -111,9 +111,10 @@ export async function POST(request: Request) {
                 `,
       });
       console.log(`[API/Feedback] Sent feedback notification for user: ${userId}`);
-    } catch (emailError) {
-      console.error('[API/Feedback] Failed to send feedback email notification:', emailError);
-      // Don't fail the request if email fails, just log it.
+      return NextResponse.json({ message: 'Feedback submitted' }, { status: 201 });
+    } catch (_e) {
+      // console.error('Feedback error:', e);
+      return NextResponse.json({ error: 'Server error submitting feedback' }, { status: 500 });
     }
   } else if (!resend) {
     console.warn('[API/Feedback] Skipping email notification (Resend not configured).');

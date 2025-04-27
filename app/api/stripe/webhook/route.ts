@@ -6,7 +6,10 @@ import { log, generateRequestId } from '@/lib/logger';
 import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
 import { validateStripeEvent, isStrictValidationEnabled } from '@/lib/guardian/validateStripeEvent';
 import { ZodError } from 'zod';
-import { Database, TablesInsert } from '@/types/supabase'; // Use generated types
+import { createClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
+import { processWebhookEvent } from '@/lib/guardian/webhookHandler';
+import { buffer } from 'node:stream/consumers';
 
 export const runtime = 'edge';
 export const maxDuration = 5; // 5 seconds maximum for the webhook handler

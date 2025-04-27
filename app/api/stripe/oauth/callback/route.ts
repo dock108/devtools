@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import { cookies, headers } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+// import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { createServerClient } from '@supabase/ssr';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@/lib/supabase/admin';
 // import { createAccountWebhook } from '@/lib/stripe-webhook'; // Removed as we don't create webhooks programmatically per account
 // import { logger } from '@/lib/logger'; // Temporarily commented out
 
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     console.log('OAuth state validated successfully.'); // Replaced logger.info
 
     // --- 1️⃣ Read session from cookie (server-side) ---
-    const supabase = createServerClient(
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -108,7 +108,7 @@ export async function GET(req: Request) {
       business_name: businessName, // Use the existing business_name column
     };
     console.log('Attempting to upsert connected_accounts record...', { accountData }); // Replaced logger.info
-    const { error: upsertAccountError } = await supabaseAdmin
+    const { error: upsertAccountError } = await createAdminClient
       .from('connected_accounts')
       .upsert(accountData);
 
@@ -129,7 +129,7 @@ export async function GET(req: Request) {
       email_to: session.user.email,
     };
     console.log('Attempting to upsert alert_channels record...', { channelData }); // Replaced logger.info
-    const { error: upsertChannelError } = await supabaseAdmin
+    const { error: upsertChannelError } = await createAdminClient
       .from('alert_channels')
       .upsert(channelData);
 
@@ -152,7 +152,7 @@ export async function GET(req: Request) {
       console.log(`Initiating backfill process for account: ${acctId}`);
       try {
         // 1. Create/update the status record
-        const { error: statusUpsertError } = await supabaseAdmin.from('backfill_status').upsert(
+        const { error: statusUpsertError } = await createAdminClient.from('backfill_status').upsert(
           {
             stripe_account_id: acctId,
             status: 'pending',

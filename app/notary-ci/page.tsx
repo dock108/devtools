@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { productLD } from '@/lib/jsonld';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Features } from '@/components/products/Features';
+import { Hero } from '@/components/products/Hero';
+import Image from 'next/image';
 
 // Placeholder components - replace or refine
 const Laptop = ({ className }: { className?: string }) => (

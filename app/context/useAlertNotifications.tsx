@@ -8,7 +8,8 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
-import { createClientComponentClient, SupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/client';
+// import { SupabaseClient } from '@supabase/supabase-js'; // Removed
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Database } from '@/types/supabase'; // Assuming your generated types
@@ -37,7 +38,7 @@ export const AlertNotificationsProvider: React.FC<AlertNotificationsProviderProp
   children,
   userStripeAccounts = [],
 }) => {
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClient();
   const router = useRouter();
   const [unreadAlerts, setUnreadAlerts] = useState<AlertPayload[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);

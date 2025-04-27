@@ -1,16 +1,18 @@
+import { Metadata } from 'next';
+// import { Post, compileMDX } from '@/lib/mdx';
+import { getPost } from '@/lib/mdx';
 import { notFound } from 'next/navigation';
-import { getAllPosts, getPostBySlug, getPrevNextPosts, Post } from '@/lib/blog';
-import { MDXRemote , compileMDX } from 'next-mdx-remote/rsc';
+// import Image from 'next/image';
+// import { format } from 'date-fns';
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import { getAllPosts, getPostBySlug, getPrevNextPosts } from '@/lib/blog';
 import mdxComponents from '@/components/mdx'; // Import custom components
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/date';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
-import type { Metadata } from 'next';
 import siteConfig from '@/lib/siteConfig';
-import Image from 'next/image';
-import { format } from 'date-fns';
 import DemoCTA from '@/components/mdx/DemoCTA';
 
 interface BlogPostPageProps {

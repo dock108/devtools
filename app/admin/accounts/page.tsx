@@ -4,17 +4,9 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import Link from 'next/link';
 import { Database } from '@/types/supabase';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Settings } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -23,6 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Eye, Search, CheckCircle, XCircle } from 'lucide-react';
+import AccountStatusToggle from '@/components/admin/AccountStatusToggle';
 
 export const metadata: Metadata = {
   title: 'Connected Accounts | Guardian Admin',

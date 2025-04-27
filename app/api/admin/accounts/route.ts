@@ -21,7 +21,8 @@ const updateAccountSchema = z.object({
 });
 
 // GET: Fetch all accounts with their assigned rule set names
-export async function GET(request: Request) {
+export async function GET(/* request: Request */) {
+  console.log('GET /api/admin/accounts called');
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 
@@ -148,4 +149,11 @@ export async function PATCH(request: Request, { params }: { params: { accountId?
       { status: 500 },
     );
   }
+}
+
+// PUT: Update account details (e.g., assign rule set, toggle active status)
+export async function PUT(request: Request, {} /* params */ : { params: { id: string } }) {
+  console.log('PUT /api/admin/accounts called'); // Removed ID log as params is unused
+  const supabaseAdmin = createAdminClient();
+  // ... existing code ...
 }

@@ -12,7 +12,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -192,13 +191,18 @@ export default function AnalyticsPage() {
     fetchUserAccounts();
   }, [user, supabase, selectedAccountId]); // Add selectedAccountId dependency?
 
-  // Determine account ID to use for fetching (null unless Pro and account selected)
+  // Memoize fetchAccountId based on PRO status and selected account ID
   const fetchAccountId = useMemo(() => {
-    // For now, always fetch global data as views don't support filtering.
-    // When filtering is implemented, this logic will change:
-    // return isProUser ? selectedAccountId : null;
+    // const { accountId, isPro } = args; // Removed unused destructured args
+    // Current logic always fetches global data, will change when filtering is implemented
+    // if (isPro && accountId) {
+    if (error) throw error;
+
+    // const profile = data; // Removed unused variable
+
+    // if (!profile?.is_pro) {
     return null; // Always fetch global for now
-  }, []); // Removed unnecessary dependencies
+  }, []);
 
   // --- React Query Hooks --- //
   // Pass fetchAccountId to queryKey and queryFn

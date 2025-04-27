@@ -11,14 +11,40 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 // Import the Next.js plugin
 import nextPlugin from '@next/eslint-plugin-next';
+// Potentially add jest plugin if needed for env: { jest: true }
+// import eslintPluginJest from 'eslint-plugin-jest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const eslintConfig = [
   {
-    // Base config applied FIRST to all JS/TS files
-    files: ['**/*.{js,jsx,ts,tsx}'],
+    // Define ignores globally
+    ignores: [
+      'node_modules/',
+      '.next/',
+      '*.d.ts',
+      'coverage/',
+      '.contentlayer/',
+      'supabase/functions/**',
+      'public/', // Ignore public assets
+      '*.config.js', // Ignore JS config files at root
+      '*.config.cjs',
+      'lighthouserc.js',
+      'jest.config.js',
+      'tailwind.config.js',
+    ],
+  },
+  {
+    // Config for JS/JSX files (non-TS)
+    files: ['**/*.{js,jsx}'],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
     plugins: {
       import: eslintPluginImport,
       react: eslintPluginReact,
@@ -26,33 +52,25 @@ const eslintConfig = [
       '@next/next': nextPlugin,
     },
     settings: {
-      'import/resolver': {
-        typescript: { project: './tsconfig.json' }, // Resolver needs project path
-        node: true,
-      },
-      react: {
-        version: 'detect',
-      },
+      // JS-only settings if needed
+      react: { version: 'detect' },
     },
     rules: {
-      // Apply general rules (non-type-aware) here
-      ...eslintPluginImport.configs['recommended'].rules,
+      // Apply general JS/React rules here
       ...eslintPluginReact.configs['recommended'].rules,
       ...eslintPluginReactHooks.configs['recommended'].rules,
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
 
-      'import/order': 'off',
-      'import/no-unresolved': 'error',
-      'import/no-duplicates': 'error',
       'react/display-name': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/no-unescaped-entities': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      'react/prop-types': 'off',
     },
   },
   {
-    // TypeScript specific config (type-aware rules)
+    // Config for TS/TSX files (including type-aware rules)
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,
@@ -60,63 +78,75 @@ const eslintConfig = [
         ecmaFeatures: { jsx: true },
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: ['./tsconfig.json'], // Apply project setting only for TS files
+        project: ['./tsconfig.eslint.json'], // Project config ONLY for TS files
       },
     },
     plugins: {
-      '@typescript-eslint': tsPlugin,
-      // Need import plugin here too for type-aware import rules
       import: eslintPluginImport,
+      react: eslintPluginReact,
+      'react-hooks': eslintPluginReactHooks,
+      '@next/next': nextPlugin,
+      '@typescript-eslint': tsPlugin,
+    },
+    settings: {
+      'import/resolver': {
+        typescript: { project: './tsconfig.eslint.json' },
+        node: true,
+      },
+      react: { version: 'detect' },
     },
     rules: {
-      // Apply TS-specific and type-aware rules
+      // Base React/Next rules (can be inherited or repeated)
+      ...eslintPluginReact.configs['recommended'].rules,
+      ...eslintPluginReactHooks.configs['recommended'].rules,
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+      // Base TS rules
       ...tsPlugin.configs['recommended'].rules,
-      ...eslintPluginImport.configs['typescript'].rules, // Type-aware import rules
+      // Type-aware import rules
+      ...eslintPluginImport.configs['typescript'].rules,
 
+      // Rule Overrides/Customizations for TS files
+      'react/display-name': 'off',
+      'react/react-in-jsx-scope': 'off',
+      'react/no-unescaped-entities': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react/prop-types': 'off',
+      'import/no-unresolved': 'error', // Keep error for TS files initially
+      'import/no-duplicates': 'error',
+      'import/order': 'off',
+
+      // TS Specific Rule Overrides
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/ban-ts-comment': 'error',
+      '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/no-require-imports': 'warn',
-      '@typescript-eslint/ban-ts-comment': 'error',
-      // Disable non-type-aware import/no-unresolved here as it's handled above
-      // and the type-aware version is included via plugin configs
-      'import/no-unresolved': 'off',
+      'react/no-unknown-property': 'off',
     },
   },
   {
-    // Override for test files
+    // Override for Test files
     files: ['**/__tests__/**', 'tests/**/*.{ts,tsx}', '**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
-      // 'import/no-unresolved': 'off', // Already off from TS specific config?
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-require-imports': 'off', // Allow require in tests
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      'import/no-unresolved': 'off', // Allow unresolved imports in tests
     },
   },
   {
-    // Override for script files
+    // Override for Scripts
     files: ['scripts/**'],
     rules: {
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-require-imports': 'off',
-    },
-  },
-  {
-    // Override for JS config files
-    files: [
-      '**/*.config.js',
-      '**/*.config.cjs',
-      'lighthouserc.js',
-      'jest.config.js',
-      'tailwind.config.js',
-    ],
-    rules: {
-      '@typescript-eslint/no-require-imports': 'off',
       'import/no-unresolved': 'off',
     },
   },
-  // Apply Prettier last
+  // Prettier must be last
   eslintConfigPrettier,
 ];
 

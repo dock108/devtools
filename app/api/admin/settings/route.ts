@@ -34,7 +34,8 @@ async function checkAdmin(
 const SETTINGS_ROW_ID = 'global_settings'; // Define a constant for the settings row ID
 
 // GET: Fetch global settings
-export async function GET(request: Request) {
+export async function GET(/* request: Request */) {
+  console.log('GET /api/admin/settings called');
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 

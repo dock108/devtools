@@ -34,7 +34,8 @@ async function checkAdmin(
 }
 
 // GET: Fetch all rule sets
-export async function GET(request: Request) {
+export async function GET(/* request: Request */) {
+  console.log('GET /api/admin/rule-sets called');
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 

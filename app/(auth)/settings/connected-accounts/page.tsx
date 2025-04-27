@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
-import { Database } from '@/types/supabase.schema';
+import { Database } from '@/types/supabase.d';
 import { ConnectedAccountsManager } from './ConnectedAccountsManager'; // Client component
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Terminal } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 // Revalidate data for this page every 0 seconds (dynamic rendering)
 export const revalidate = 0;
@@ -20,10 +20,12 @@ export default async function ConnectedAccountsPage() {
           return cookieStore.get(name)?.value;
         },
       },
-    }
+    },
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session) {
     redirect('/login?next=/settings/connected-accounts');
@@ -32,7 +34,9 @@ export default async function ConnectedAccountsPage() {
   // Fetch connected accounts for the current user
   const { data: accounts, error } = await supabase
     .from('connected_accounts')
-    .select('id, stripe_account_id, business_name, created_at, payouts_paused, paused_by, paused_reason')
+    .select(
+      'id, stripe_account_id, business_name, created_at, payouts_paused, paused_by, paused_reason',
+    )
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: true });
 
@@ -50,7 +54,5 @@ export default async function ConnectedAccountsPage() {
     );
   }
 
-  return (
-    <ConnectedAccountsManager initialAccounts={accounts || []} />
-  );
-} 
+  return <ConnectedAccountsManager initialAccounts={accounts || []} />;
+}

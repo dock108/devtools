@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { Database } from '@/types/supabase';
-import { format } from 'date-fns';
+import { Database } from '@/types/supabase.d';
+// import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -13,12 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Edit } from 'lucide-react';
-import Link from 'next/link';
+// import { Button } from '@/components/ui/button';
+// import { Plus, Trash2, Edit } from 'lucide-react';
+// import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { CreateNotificationChannel } from './create-notification-channel';
 import { NotificationChannelActions } from './notification-channel-actions';
+import DeleteChannelButton from '@/components/admin/DeleteChannelButton';
 
 export const metadata: Metadata = {
   title: 'Notification Channels | Admin Dashboard',

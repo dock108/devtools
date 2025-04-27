@@ -26,7 +26,8 @@ if (!process.env.STRIPE_PRICE_PRO || !process.env.STRIPE_WEBHOOK_BILLING) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(/* request: Request */) {
+  console.log('POST /api/billing/portal called');
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 

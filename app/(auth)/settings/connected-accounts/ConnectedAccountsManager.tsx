@@ -41,17 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
-import {
-  Loader2,
-  Trash2,
-  Copy,
-  PlusCircle,
-  Info,
-  BellOff,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-} from 'lucide-react';
+import { Loader2, Trash2, Copy, PlusCircle, Info, BellOff, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BackfillProgress } from '@/components/progress/BackfillProgress';
 
@@ -235,7 +225,7 @@ export function ConnectedAccountsManager({
     navigator.clipboard
       .writeText(text)
       .then(() => toast.success('Stripe ID copied to clipboard!'))
-      .catch((err) => toast.error('Failed to copy ID.'));
+      .catch((_err) => toast.error('Failed to copy ID.'));
   };
 
   const getPauseTooltipContent = (account: ConnectedAccount): string => {
@@ -441,13 +431,13 @@ export function ConnectedAccountsManager({
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogTitle>
+                                  Disconnect {accountToDisconnect?.business_name}?
+                                </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will disconnect the Stripe account{' '}
-                                  <span className="font-medium">
-                                    {account.business_name || account.stripe_account_id}
-                                  </span>{' '}
-                                  from DOCK108. This action cannot be undone.
+                                  Are you sure you want to disconnect this Stripe account? You
+                                  won&apos;t be able to monitor its payouts or receive alerts until
+                                  reconnected.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -511,13 +501,13 @@ export function ConnectedAccountsManager({
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogTitle>
+                              Disconnect {accountToDisconnect?.business_name}?
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will disconnect the Stripe account{' '}
-                              <span className="font-medium">
-                                {account.business_name || account.stripe_account_id}
-                              </span>{' '}
-                              from DOCK108. This action cannot be undone.
+                              Are you sure you want to disconnect this Stripe account? You
+                              won&apos;t be able to monitor its payouts or receive alerts until
+                              reconnected.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

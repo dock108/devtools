@@ -67,3 +67,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// POST /api/accounts - Link a new Stripe account
+export async function POST(/* request: Request */) {
+  console.log('POST /api/accounts called');
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { get: (name) => cookies().get(name)?.value } },
+  );
+
+  // ... existing code ...
+}

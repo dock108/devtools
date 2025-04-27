@@ -1,24 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import {
-  ExternalLink,
-  Info,
-  PlayCircle,
-  PauseCircle,
-  ListChecks,
-  BellRing,
-  LineChart,
-  Check,
-  Clock,
-} from 'lucide-react';
-import type { Metadata } from 'next';
+import { Metadata } from 'next';
 import { Container } from '@/components/Container';
-import { cn } from '@/lib/utils';
-import { WaitlistForm } from '@/components/WaitlistForm';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
+import CrondeckHero from '@/components/products/CrondeckHero';
+import { Features } from '@/components/products/Features';
 import { productLD } from '@/lib/jsonld';
-import { Button } from '@/components/ui/button';
 
 // Placeholder components - replace or refine
 const Badge = ({ children, colorVar }: { children: React.ReactNode; colorVar: string }) => (

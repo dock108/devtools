@@ -1,33 +1,34 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
-import { Database } from '@/types/supabase.schema';
+import { Database } from '@/types/supabase.d';
 import { stripe } from '@/lib/stripe'; // Corrected path
 import { revalidatePath } from 'next/cache';
 import { Resend } from 'resend'; // Import Resend SDK
+import { createClient } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
 
 // --- Notification Helpers ---
 // Basic Slack helper using fetch
 async function sendSlackNotificationAction(message: string) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
-    console.warn("SLACK_WEBHOOK_URL not set, skipping Slack notification.");
+    console.warn('SLACK_WEBHOOK_URL not set, skipping Slack notification.');
     return;
   }
   try {
     const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: message }),
     });
     if (!response.ok) {
       throw new Error(`Slack webhook failed: ${response.status} ${await response.text()}`);
     }
-    console.log("Slack notification sent successfully via Server Action helper.");
+    console.log('Slack notification sent successfully via Server Action helper.');
   } catch (error) {
-    console.error("Error sending Slack notification via Server Action helper:", error);
+    console.error('Error sending Slack notification via Server Action helper:', error);
     // Don't throw from helper, just log the error
   }
 }
@@ -36,19 +37,22 @@ async function sendSlackNotificationAction(message: string) {
 async function sendEmailNotificationAction(to: string, subject: string, body: string) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
-    console.warn("RESEND_API_KEY not set, skipping Email notification.");
+    console.warn('RESEND_API_KEY not set, skipping Email notification.');
     return;
   }
   try {
     const resend = new Resend(resendApiKey);
     const { data, error } = await resend.emails.send({
-      from: "DOCK108 Guardian <guardian@dock108.ai>", // Replace with your verified sender
+      from: 'DOCK108 Guardian <guardian@dock108.ai>', // Replace with your verified sender
       to: [to],
       subject: subject,
       text: body,
     });
     if (error) throw error;
-    console.log(`Email notification sent successfully via Server Action helper to ${to}. ID:`, data?.id);
+    console.log(
+      `Email notification sent successfully via Server Action helper to ${to}. ID:`,
+      data?.id,
+    );
   } catch (error) {
     console.error(`Error sending email notification via Server Action helper to ${to}:`, error);
     // Don't throw from helper, just log the error
@@ -73,7 +77,7 @@ const createSupabaseServerClient = () => {
           cookieStore.set({ name, value: '', ...options });
         },
       },
-    }
+    },
   );
 };
 
@@ -81,7 +85,9 @@ const createSupabaseServerClient = () => {
 
 export async function linkStripeAccountServerAction() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     throw new Error('Unauthorized: User not logged in');
@@ -93,6 +99,11 @@ export async function linkStripeAccountServerAction() {
   const returnUrl = `${baseUrl}/settings/connected-accounts`;
   const refreshUrl = `${baseUrl}/settings/connected-accounts`; // Refresh URL if user aborts/refreshes during OAuth
 
+  const origin = headers().get('origin');
+  if (!origin) {
+    return { success: false, error: 'Could not determine request origin' };
+  }
+
   try {
     const accountLink = await stripe.accountLinks.create({
       // Note: Stripe needs an actual account ID to create a link.
@@ -103,7 +114,7 @@ export async function linkStripeAccountServerAction() {
       // to a pre-constructed Stripe Connect OAuth URL, often using stripe.oauth.authorizeUrl()
       // Let's assume we are using stripe.oauth.authorizeUrl() instead.
 
-      // type: 'account_onboarding', 
+      // type: 'account_onboarding',
       // account: 'acct_xyz' // Needs an actual account ID, which we don't have yet for a new link
 
       // Redirecting to Stripe Connect OAuth URL construction:
@@ -122,7 +133,6 @@ export async function linkStripeAccountServerAction() {
 
     console.log('Generated Stripe Connect OAuth URL:', authorizeUrl);
     return { url: authorizeUrl };
-
   } catch (error) {
     console.error('Error creating Stripe account link:', error);
     throw new Error('Could not initiate Stripe connection.');
@@ -135,7 +145,9 @@ export async function disconnectStripeAccountServerAction(stripeAccountId: strin
   }
 
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     throw new Error('Unauthorized: User not logged in');
@@ -168,16 +180,15 @@ export async function disconnectStripeAccountServerAction(stripeAccountId: strin
     revalidatePath('/settings/connected-accounts');
 
     return { success: true };
-
   } catch (error) {
     console.error(`Error disconnecting Stripe account ${stripeAccountId}:`, error);
     // Determine if the error came from Stripe or DB deletion for better messaging
     if (error instanceof Error && error.message.includes('database')) {
-       throw new Error('Failed to remove account locally after disconnecting from Stripe.');
+      throw new Error('Failed to remove account locally after disconnecting from Stripe.');
     }
-    if (error instanceof Error && error.message.includes('deauthorize')){
-        throw new Error('Failed to disconnect account from Stripe.');
-    } 
+    if (error instanceof Error && error.message.includes('deauthorize')) {
+      throw new Error('Failed to disconnect account from Stripe.');
+    }
     throw new Error('Could not disconnect Stripe account.');
   }
 }
@@ -188,9 +199,12 @@ export async function resumePayoutsServerAction(stripeAccountId: string) {
   }
 
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user || !user.email) { // Ensure user and email exist
+  if (!user || !user.email) {
+    // Ensure user and email exist
     throw new Error('Unauthorized or user email missing.');
   }
 
@@ -229,7 +243,10 @@ export async function resumePayoutsServerAction(stripeAccountId: string) {
       .eq('stripe_account_id', stripeAccountId);
 
     if (dbError) {
-      console.error(`Error updating connected_accounts for resume payout for ${stripeAccountId}:`, dbError);
+      console.error(
+        `Error updating connected_accounts for resume payout for ${stripeAccountId}:`,
+        dbError,
+      );
       throw new Error('Failed to update account status in database.');
     }
     console.log(`Updated connected_accounts for resume payout for ${stripeAccountId}`);
@@ -237,17 +254,18 @@ export async function resumePayoutsServerAction(stripeAccountId: string) {
     // 3. Trigger notification (Manual resume by user)
     const subject = `✅ Payouts Resumed for ${accountDisplayName}`;
     const messageBody = `Payouts have been manually resumed for Stripe account ${accountDisplayName} (${stripeAccountId}) by user ${user.email}.`;
-    
+
     // Send notifications (fire and forget, don't block response on these)
     sendEmailNotificationAction(user.email, subject, messageBody);
-    sendSlackNotificationAction(`✅ Payouts Resumed: Account ${accountDisplayName} (${stripeAccountId}) by user ${user.email}.`);
-    
+    sendSlackNotificationAction(
+      `✅ Payouts Resumed: Account ${accountDisplayName} (${stripeAccountId}) by user ${user.email}.`,
+    );
+
     // 4. Revalidate path
     revalidatePath('/settings/connected-accounts');
     revalidatePath('/stripe-guardian/alerts'); // Also revalidate dashboard
 
     return { success: true };
-
   } catch (error) {
     console.error(`Error resuming payouts for ${stripeAccountId}:`, error);
     throw new Error('Could not resume payouts. Please try again.');
@@ -260,7 +278,9 @@ export async function pausePayoutsServerAction(stripeAccountId: string) {
   }
 
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     throw new Error('Unauthorized: User not logged in');
@@ -287,7 +307,10 @@ export async function pausePayoutsServerAction(stripeAccountId: string) {
       .eq('stripe_account_id', stripeAccountId);
 
     if (dbError) {
-      console.error(`Error updating connected_accounts for manual pause for ${stripeAccountId}:`, dbError);
+      console.error(
+        `Error updating connected_accounts for manual pause for ${stripeAccountId}:`,
+        dbError,
+      );
       throw new Error('Failed to update account status in database.');
     }
     console.log(`Updated connected_accounts for manual pause for ${stripeAccountId}`);
@@ -298,7 +321,6 @@ export async function pausePayoutsServerAction(stripeAccountId: string) {
     // No notification needed for manual pause by user?
 
     return { success: true };
-
   } catch (error) {
     console.error(`Error manually pausing payouts for ${stripeAccountId}:`, error);
     throw new Error('Could not pause payouts. Please try again.');
@@ -319,31 +341,38 @@ export async function toggleAlertsServerAction({
   }
 
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     throw new Error('Unauthorized: User not logged in');
   }
 
-  console.log(`User ${user.id} attempting to ${action} alerts for ${stripeAccountId} for ${durationMinutes || 'indefinite'} minutes.`);
+  console.log(
+    `User ${user.id} attempting to ${action} alerts for ${stripeAccountId} for ${durationMinutes || 'indefinite'} minutes.`,
+  );
 
   let newMutedUntil: string | null = null;
   if (action === 'mute') {
     if (durationMinutes === Infinity || durationMinutes === undefined || durationMinutes === null) {
       // PostgreSQL 'infinity' literal for timestamp
-      newMutedUntil = 'infinity'; 
+      newMutedUntil = 'infinity';
     } else if (typeof durationMinutes === 'number' && durationMinutes > 0) {
       const now = new Date();
       now.setMinutes(now.getMinutes() + durationMinutes);
       newMutedUntil = now.toISOString();
     } else {
       // Default to a reasonable time if duration is invalid (e.g., 6 hours)
-      console.warn(`Invalid durationMinutes (${durationMinutes}) provided for mute, defaulting to 360 minutes.`);
+      console.warn(
+        `Invalid durationMinutes (${durationMinutes}) provided for mute, defaulting to 360 minutes.`,
+      );
       const now = new Date();
       now.setMinutes(now.getMinutes() + 360);
       newMutedUntil = now.toISOString();
     }
-  } else { // unmute
+  } else {
+    // unmute
     newMutedUntil = null;
   }
 
@@ -357,19 +386,23 @@ export async function toggleAlertsServerAction({
       .eq('stripe_account_id', stripeAccountId);
 
     if (dbError) {
-      console.error(`Error updating connected_accounts for alert toggle (${action}) for ${stripeAccountId}:`, dbError);
+      console.error(
+        `Error updating connected_accounts for alert toggle (${action}) for ${stripeAccountId}:`,
+        dbError,
+      );
       throw new Error('Failed to update account alert status in database.');
     }
-    console.log(`Updated connected_accounts for alert toggle (${action}) for ${stripeAccountId} until ${newMutedUntil || 'NULL'}.`);
+    console.log(
+      `Updated connected_accounts for alert toggle (${action}) for ${stripeAccountId} until ${newMutedUntil || 'NULL'}.`,
+    );
 
     revalidatePath('/settings/connected-accounts');
     // Optionally revalidate dashboard if it displays mute status
-    // revalidatePath('/stripe-guardian/alerts'); 
+    // revalidatePath('/stripe-guardian/alerts');
 
     return { success: true, mutedUntil: newMutedUntil };
-
   } catch (error) {
     console.error(`Error toggling alerts (${action}) for ${stripeAccountId}:`, error);
     throw new Error(`Could not ${action} alerts. Please try again.`);
   }
-} 
+}
