@@ -1,54 +1,53 @@
+import { Feed } from 'feed';
 import fs from 'fs';
-import path from 'path';
-import RSS from 'rss';
-import { getAllPosts } from '../lib/blog'; // Remove .ts extension again
-import { pathToFileURL } from 'url'; // Import necessary function
+import { getAllPosts } from '../lib/blog';
 
-// Export the core function for testing
 export async function generateRssFeed() {
-  console.log('Generating RSS feed...');
-
-  const siteUrl = process.env['SITE_URL'] || 'http://localhost:3000';
-  const allPosts = getAllPosts(); // Assuming this returns metadata including slug, title, excerpt, date, tags
+  const site_url = process.env['NEXT_PUBLIC_APP_URL'] || 'https://www.dock108.com';
 
   const feedOptions = {
-    title: 'Stripe Guardian Blog',
-    description: 'Product updates & payout-fraud insights',
-    site_url: siteUrl,
-    feed_url: `${siteUrl}/feed.xml`,
-    language: 'en',
-    pubDate: new Date(), // Use current date for feed publication
-    copyright: `© ${new Date().getFullYear()} DOCK108`,
+    title: 'Dock108 Blog | RSS Feed',
+    description: 'Stay updated with the latest insights from Dock108',
+    id: site_url,
+    link: site_url,
+    image: `${site_url}/images/og-image.jpg`,
+    favicon: `${site_url}/favicon.ico`,
+    copyright: `All rights reserved ${new Date().getFullYear()}, Dock108`,
+    feedLinks: {
+      rss: `${site_url}/feed.xml`,
+    },
+    author: {
+      name: 'Dock108 Team',
+      email: 'team@dock108.com',
+      link: site_url,
+    },
   };
 
-  const feed = new RSS(feedOptions);
+  const feed = new Feed(feedOptions);
 
-  allPosts.forEach((post) => {
-    feed.item({
-      title: post.title,
-      description: post.excerpt, // Use excerpt as description
-      url: `${siteUrl}/blog/${post.slug}`, // Link to the post
-      guid: post.slug, // Use slug as unique identifier
-      categories: post.tags || [], // Use tags as categories
-      author: 'Dock108 Dev Team', // Static author
-      date: new Date(post.date), // Use post date
+  // Load posts
+  const allPosts = await getAllPosts();
+
+  // Add each post to the feed
+  allPosts.forEach((post: any) => {
+    feed.addItem({
+      title: post.frontmatter.title,
+      id: `${site_url}/blog/${post.slug}`,
+      link: `${site_url}/blog/${post.slug}`,
+      description: post.frontmatter.excerpt,
+      date: new Date(post.frontmatter.date),
+      image: post.frontmatter.image ? `${site_url}${post.frontmatter.image}` : (undefined as any),
     });
   });
 
-  const xmlContent = feed.xml({ indent: true });
-
-  // Write the XML to public/feed.xml
-  const outputPath = path.join(process.cwd(), 'public', 'feed.xml');
-  fs.writeFileSync(outputPath, xmlContent);
-
-  console.log(`RSS feed generated successfully at ${outputPath}`);
-  return xmlContent; // Return content for testing
+  // Write the RSS feed to a file
+  fs.writeFileSync('./public/feed.xml', feed.rss2());
+  console.log('✅ RSS feed generated!');
 }
 
-// Use ES Module standard check for direct execution
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  generateRssFeed().catch((error) => {
-    console.error('Error generating RSS feed:', error);
-    process.exit(1);
-  });
+// Run the function if this script is executed directly
+if (process.argv[1] === import.meta.url) {
+  generateRssFeed()
+    .then(() => console.log('RSS feed generation complete'))
+    .catch((error) => console.error('Error generating RSS feed:', error));
 }
