@@ -189,7 +189,10 @@ jobs:
         id: e2e_tests
         continue-on-error: true
         run: |
-          CYPRESS_BASE_URL=${{ needs.deploy-staging.outputs.PREVIEW_URL }} \
+          # Remove CYPRESS_BASE_URL - Playwright uses baseURL in config or --headed
+          # CYPRESS_BASE_URL=${{ needs.deploy-staging.outputs.PREVIEW_URL }} \
+          # Set Playwright base URL via env var (if config doesn't use it)
+          PLAYWRIGHT_BASE_URL=${{ needs.deploy-staging.outputs.PREVIEW_URL }} \
           SUPABASE_URL=${{ needs.deploy-staging.outputs.SUPABASE_URL }} \
           SUPABASE_ANON_KEY=${{ needs.deploy-staging.outputs.SUPABASE_ANON_KEY }} \
           SUPABASE_SERVICE_ROLE_KEY=${{ needs.deploy-staging.outputs.SUPABASE_SERVICE_ROLE_KEY }} \
@@ -198,12 +201,22 @@ jobs:
           # Store exit code for next step
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
-      - name: Upload Cypress artifacts
+      # Remove Cypress artifact upload
+      # - name: Upload Cypress artifacts
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: cypress-artifacts
+      #     path: cypress/screenshots/
+      #     retention-days: 7
+
+      # Upload Playwright report instead
+      - name: Upload Playwright report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() # Upload report regardless of test outcome
         with:
-          name: cypress-artifacts
-          path: cypress/screenshots/
+          name: playwright-report-staging
+          path: playwright-report/ # Default Playwright report dir
           retention-days: 7
 
       - name: Clean up on failure

@@ -158,13 +158,13 @@ A comprehensive end-to-end test harness runs in GitHub Actions (`.github/workflo
 4.  **App Start**: Starts the Next.js application locally.
 5.  **Stripe Replay**: Uses the Stripe CLI to replay a fixture file (`test/fixtures/full_day.jsonl`) containing ~50 realistic events against the local application's webhook endpoint.
 6.  **Processing Wait**: Waits for the backend (Reactor, etc.) to process the events (currently uses a fixed delay, ideally would check metrics).
-7.  **Cypress Test**: Runs the `cypress/e2e/full_stack.cy.ts` spec:
+7.  **Playwright Test**: Runs the relevant Playwright test spec (e.g., `e2e/alerts-dashboard.spec.ts`):
     - Verifies the real-time alert badge appears in the header.
     - Navigates to the alerts dashboard by clicking the badge.
     - Checks that expected alert types (from the fixture) are present in the alerts table.
     - Confirms the alert badge clears after navigation (marking as read).
-    - Uses Cypress tasks to verify that alerts were marked as read in the database.
-8.  **Artifacts**: Uploads Cypress screenshots (on failure) and Stripe CLI logs for debugging.
+    - Can interact with the database via API calls if needed for verification.
+8.  **Artifacts**: Uploads Playwright reports (`playwright-report/`) and Stripe CLI logs for debugging.
 
 This workflow acts as a critical regression gate before deployments.
 
@@ -178,7 +178,7 @@ While the full flow relies on GitHub Actions secrets and setup, you can simulate
 4.  Ensure your `.env.local` has Supabase/Stripe keys and `STRIPE_WEBHOOK_SECRET=whsec_test_fixture_secret` (matching the workflow).
 5.  Start the app: `npm run dev`.
 6.  In another terminal, run the fixture replay: `stripe listen --forward-to http://localhost:3000/api/stripe/webhook --events-from-file test/fixtures/full_day.jsonl`.
-7.  Run the specific Cypress spec: `npx cypress run --spec cypress/e2e/full_stack.cy.ts` (ensure `CYPRESS_BASE_URL` is set or configured).
+7.  Run the specific Playwright spec: `npx playwright test e2e/alerts-dashboard.spec.ts` (ensure relevant env vars like `PLAYWRIGHT_BASE_URL=http://localhost:3000` are set or configured in `playwright.config.ts`).
 
 ## Deployment
 
@@ -311,6 +311,196 @@ When applying database migrations:
 Note: Vercel builds no longer run `supabase db push`. All migrations must be applied locally or through Supabase Studio before pushing code.
 
 ## Local development
+
+1.  Install dependencies:
+    ```bash
+    npm install
+    ```
+2.  Copy `.env.example` to `.env.local` and fill in your API keys (Supabase, Stripe, Resend):
+    ```bash
+    cp .env.example .env.local
+    ```
+3.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+
+### Running tests
+
+```bash
+# Run in headless mode
+npm run test:e2e
+
+# Run in debug mode with browser UI
+PWDEBUG=1 npm run test:e2e
+```
+
+See `/tests/e2e/README.md` for more details on e2e tests.
+
+## User Settings (/settings)
+
+Authenticated users can manage their account settings at the [/settings](/settings) page.
+
+<img width="800" alt="Screenshot of the user settings page showing profile, password, theme, and API key sections." src="https://via.placeholder.com/800x400.png?text=User+Settings+Page+Screenshot+Placeholder">
+
+### Features:
+
+- **Profile**: Update display name and avatar URL.
+- **Password**: Change account password (requires meeting complexity rules).
+- **Theme**: Choose between Light, Dark, or System default themes.
+- **API Keys**: Generate and revoke API keys for programmatic access.
+  - **Note**: Generated API keys are shown only **once** upon creation. Store them securely.
+
+### Development Notes:
+
+- **Route**: `app/(auth)/settings/page.tsx` (Server Component)
+- **UI Components**: Client components (`ProfileForm`, `PasswordForm`, etc.) located in the same directory.
+- **Data**: Fetched server-side via `getProfile` from `lib/supabase/user.ts`.
+- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`.
+- **Database**: Uses the `public.profiles` table (linked to `auth.users`). RLS policies restrict access to the owner.
+
+## For Stripe Guardian Development
+
+### Setting Up Stripe Webhooks
+
+Guardian processes Stripe events through a centralized webhook system:
+
+1. **Run the webhook setup script:**
+
+   ```bash
+   npm run stripe:setup-webhook
+   ```
+
+   This script will:
+
+   - Find or create a webhook endpoint in your Stripe account
+   - Configure it to listen only to events needed by Guardian
+   - Print the necessary environment variables to add to your `.env.local`
+
+2. **Configure Environment:**
+
+   - Add the webhook secret printed by the script to your `.env.local`:
+
+   ```
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+
+3. **Verify Configuration:**
+   ```bash
+   npm run stripe:verify-webhook
+   ```
+4. **Local Testing:**
+
+   ```bash
+   # Start your development server
+   npm run dev
+
+   # In a separate terminal, forward events to your local webhook
+   stripe listen --forward-to http://localhost:3000/api/stripe/webhook
+
+   # In a third terminal, trigger test events
+   stripe trigger charge.failed
+   stripe trigger payout.paid
+   ```
+
+5. **Event Flow:**
+   - Events flow into the `event_buffer` table with the full payload preserved
+   - Guardian only accepts events defined in `lib/guardian/stripeEvents.ts`
+   - The guardian-reactor processes events asynchronously
+   - Failed processing attempts are tracked in `failed_event_dispatch` for retries
+   - **Historical Backfill**: Upon initial connection via OAuth callback (`/api/stripe/oauth/callback`), a background job (`guardian-backfill`) is triggered to fetch the last 90 days of relevant events for the account and process them via the `event_buffer` and `guardian-reactor`. See `docs/guardian/backfill.md` for details.
+
+### Validation
+
+Guardian implements strict schema validation for all Stripe events:
+
+1. **Strict Mode (Default):**
+
+   - All incoming webhook payloads are validated against Zod schemas
+   - Invalid payloads are rejected with a 400 response and clear error message
+   - Ensures the reactor never processes malformed data that could cause errors
+
+2. **Development Mode:**
+
+   - During local development, you can disable strict validation:
+
+   ```
+   STRICT_STRIPE_VALIDATION=false
+   ```
+
+   - This is useful when working with newer Stripe API versions or testing custom event shapes
+   - The environment variable hint is printed to console on startup
+
+3. **Error Handling:**
+   - `unsupported_event_type`: Event type not in GUARDIAN_EVENTS list
+   - `unsupported_event_shape`: Event payload doesn't match expected schema
+   - All validation errors are logged for debugging
+
+For more details on Guardian local development, see [Guardian Local Development](./docs/guardian/local-dev.md).
+
+## Operations
+
+Operational tasks and monitoring for the DOCK108 platform:
+
+- **Guardian Data Retention**: A nightly job (`guardian-retention-job`) automatically scrubs sensitive data from `event_buffer` payloads after 30 days (configurable via `EVENT_BUFFER_TTL_DAYS`) and purges the records entirely after 37 days. See `docs/guardian/retention.md` for details.
+
+## Observability
+
+Guardian provides structured logging and Prometheus metrics for monitoring and debugging.
+
+- **Structured Logging**: All components emit JSON logs with consistent fields (`req_id`, `service`, etc.). See `docs/guardian/logging.md` for format details and configuration (`LOG_LEVEL`).
+- **Prometheus Metrics**: Key operational metrics are exposed:
+  - Next.js Webhook: Scrape `/api/metrics`. (TODO: Implement dedicated metrics endpoint)
+  - Supabase Edge Functions: Use log-based metrics derived from structured logs.
+  - Requires `METRICS_AUTH_TOKEN` for the Supabase `/guardian-metrics` endpoint (placeholder).
+  - See `docs/guardian/metrics.md` for metric details and scraping instructions.
+  - A starter Grafana dashboard is available at `docs/guardian/grafana.json`.
+- **Real-time Alert Badge**: The dashboard header includes a notification icon that displays a badge with the count of unread alerts, updated in real-time via Supabase subscriptions. Clicking the icon navigates to the alerts page and marks alerts as read.
+
+## Type Safety
+
+Guardian development enforces strict TypeScript settings to catch errors early and improve code reliability.
+
+- **Strict Compilation**: The `tsconfig.json` is configured with `"strict": true` and related flags. The CI pipeline includes a `pnpm tsc --noEmit` step that fails the build if any TypeScript errors are present.
+- **Supabase Type Generation**: Database types are generated directly from your Supabase schema.
+  - **To Regenerate**: After making schema changes (e.g., applying new migrations), run:
+    ```bash
+    # Replace YOUR_PROJECT_ID with your actual Supabase project ID
+    pnpm gen:types
+    # Or: npm run gen:types
+    ```
+  - This command executes `supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > types/supabase.ts`.
+  - Commit the updated `types/supabase.ts` file.
+- **Code Standards**: Avoid using `any` where possible. Use type guards, non-nullable assertions (`!`) sparingly, and leverage the generated Supabase types (`Tables<'table_name'>`, `TablesInsert<'table_name'>`, etc.) for database interactions.
+
+## Admin UI
+
+The Admin UI allows users with the `admin` role to manage rule sets and notification settings for the application. Access is restricted via Row Level Security (RLS) policies in Supabase.
+
+### Features
+
+- **Dashboard**: View metrics and quick links to various admin sections
+- **Notification Channels**: Create and manage notification channels for alerts
+- **Rule Sets**: Manage rule sets that define which alerts are triggered for accounts
+- **Connected Accounts**: View and manage connected Stripe accounts and assign rule sets
+
+### Access Control
+
+The admin area is protected by role-based access control. Only users with the `admin` role in their JWT claims can access the admin pages. This is enforced in the `app/admin/layout.tsx` component.
+
+To grant admin access to a user, set the `app_metadata` in Supabase:
+
+```sql
+UPDATE auth.users
+SET raw_app_meta_data = jsonb_set(raw_app_meta_data, '{role}', '"admin"')
+WHERE email = 'admin@example.com';
+```
+
+### Row Level Security
+
+The admin UI enforces permissions through Row Level Security policies in Supabase. The SQL for these policies is located in `supabase/migrations/20250426_admin_rls.sql`. Make sure to execute this SQL after deploying the application.
+
+## Local Development
 
 1.  Install dependencies:
     ```bash
