@@ -63,12 +63,14 @@ jobs:
         run: |
           echo "Running SQL seed for CI user/account..."
           PGPASSWORD=$(echo $DB_URL | awk -F[:/@] '{print $4}') psql $DB_URL -U postgres -c "\
-          insert into public.users(id, email) values \
-            ('00000000-0000-0000-0000-000000000001', 'ci-tester@dock108.ai') \
+          insert into auth.users(id, email, encrypted_password, role) values \
+            ('00000000-0000-0000-0000-000000000001', 'ci-tester@dock108.ai', '', 'authenticated') \
           on conflict do nothing; \
           insert into public.connected_accounts(stripe_account_id, user_id) \
           values ('acct_ci123', '00000000-0000-0000-0000-000000000001') \
           on conflict do nothing;"
+          # Note: Inserting directly into auth.users might require setting other default fields 
+          # like encrypted_password and role='authenticated' as common defaults.
         env:
           DB_URL: ${{ env.DB_URL }}
 

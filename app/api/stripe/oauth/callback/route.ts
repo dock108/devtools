@@ -146,6 +146,57 @@ export async function GET(req: Request) {
       }); // Replaced logger.info
     }
 
+    // --- Trigger Backfill (G-22) --- //
+    const acctId = token.stripe_user_id;
+    if (acctId) {
+      console.log(`Initiating backfill process for account: ${acctId}`);
+      try {
+        // 1. Create/update the status record
+        const { error: statusUpsertError } = await supabaseAdmin.from('backfill_status').upsert(
+          {
+            stripe_account_id: acctId,
+            status: 'pending',
+            last_error: null, // Clear previous errors on new attempt
+            completed_at: null, // Clear completion time
+          },
+          {
+            onConflict: 'stripe_account_id',
+          },
+        );
+
+        if (statusUpsertError) {
+          throw new Error(`Failed to create/update backfill_status: ${statusUpsertError.message}`);
+        }
+        console.log(`Set backfill status to pending for ${acctId}`);
+
+        // 2. Trigger the backfill function (fire-and-forget)
+        // Ensure SUPABASE_URL is correctly set in environment for fetch
+        const edgeFunctionUrl = `${process.env.SUPABASE_URL}/functions/v1/guardian-backfill`;
+        console.log(`Calling edge function: ${edgeFunctionUrl}`);
+
+        fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Pass service role key for secure function invocation
+            Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ stripe_account_id: acctId }),
+        }).catch((fetchError) => {
+          // Log failure to trigger, but don't fail the main OAuth flow
+          console.error(`Failed to trigger guardian-backfill function for ${acctId}:`, fetchError);
+          // Optionally: update status back to error here? Or rely on retry cron?
+        });
+
+        console.log(`Successfully triggered guardian-backfill for ${acctId}`);
+      } catch (backfillTriggerError) {
+        // Log error initiating backfill, but don't fail the OAuth redirect
+        console.error(`Error initiating backfill process for ${acctId}:`, backfillTriggerError);
+      }
+    } else {
+      console.warn('Missing stripe_user_id, cannot trigger backfill.');
+    }
+
     // --- 4️⃣ Cleanup + redirect ---
     console.log('OAuth flow complete, preparing redirect.', { accountId: token.stripe_user_id }); // Replaced logger.info
     const redirectUrl = new URL('/stripe-guardian/alerts', url.origin);

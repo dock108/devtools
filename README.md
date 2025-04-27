@@ -375,6 +375,7 @@ Guardian processes Stripe events through a centralized webhook system:
    - Guardian only accepts events defined in `lib/guardian/stripeEvents.ts`
    - The guardian-reactor processes events asynchronously
    - Failed processing attempts are tracked in `failed_event_dispatch` for retries
+   - **Historical Backfill**: Upon initial connection via OAuth callback (`/api/stripe/oauth/callback`), a background job (`guardian-backfill`) is triggered to fetch the last 90 days of relevant events for the account and process them via the `event_buffer` and `guardian-reactor`. See `docs/guardian/backfill.md` for details.
 
 ### Validation
 

@@ -165,6 +165,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Includes script (`scripts/build_fixtures.sh`) to regenerate fixtures.
   - Uploads Cypress artifacts and Stripe logs on failure.
   - Added README section explaining the test harness.
+- **feat(guardian):** Back-fill last 90 days of Stripe events for new accounts (G-22):
+  - Added `backfill_status` table to track progress.
+  - Created `guardian-backfill` edge function to fetch historical events via Stripe API pagination and insert into `event_buffer`.
+  - Updated OAuth callback (`/api/stripe/oauth/callback`) to trigger the backfill function.
+  - Added `pg_cron` job SQL snippet to reset failed backfills to 'pending' for retry.
+  - Included unit tests (`tests/backfill.spec.ts`) with mocks.
+  - Added documentation (`docs/guardian/backfill.md`) and README update.
+  - Logs required (`STRIPE_API_KEY_PLATFORM`) and optional (`BACKFILL_DAYS`, `BACKFILL_BATCH`) env vars on cold start.
 
 ### Changed
 
