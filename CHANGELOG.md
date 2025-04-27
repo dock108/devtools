@@ -211,12 +211,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - G-28: Included risk score in Guardian notification templates (email, Slack).
 - G-28: Added colored risk score pill to Guardian alerts table UI.
 - G-28: Added documentation for risk score calculation (`docs/guardian/risk-score.md`).
+- G-29: Added Guardian Analytics page (`/stripe-guardian/analytics`) with charts for alerts/day, top rules, FP rate/rule, avg risk score.
+- G-29: Created SQL views (`alerts_by_day`, `alerts_rule_rank`, `fp_rate_rule`, `avg_risk_score`) to power analytics.
+- G-29: Implemented basic Pro/Free tier UI gating (account selector for Pro, notice for Free) - data filtering TBD.
+- G-29: Added documentation for analytics dashboard (`docs/guardian/analytics.md`).
 
 ### Changed
 
 - Removed dangling imports and logs that referenced the deleted Time-Warp seeder.
 - CI now enforces a 15 MB maximum bundle size after seeder purge.
 - Temporarily disabled welcome email trigger for waitlist signups.
+- G-29: Added `QueryClientProvider` to root layout (`app/layout.tsx`) to support analytics page data fetching.
 
 ### CI
 

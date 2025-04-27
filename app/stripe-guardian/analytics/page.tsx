@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/utils/supabase/client'; // Assuming client setup utility exists
+import { createClient } from '@/utils/supabase/client';
 import {
   LineChart,
   Line,
@@ -22,10 +22,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert as ShadcnAlert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns'; // For formatting dates on axes/tooltips
+import { useUser } from '@/lib/hooks/useUser'; // Assuming hook to get user/profile
+import { isPro } from '@/lib/guardian/plan'; // Assuming plan helper exists
+import StripeAccountSelect from '@/app/components/StripeAccountSelect'; // Import account selector
+import { Database } from '@/types/supabase'; // Import Database type
 
-// Assuming a way to get user/settings info, e.g., context or hook
-// import { useAuth } from '@/context/AuthContext';
-// import { isPro } from '@/lib/guardian/plan';
+// Define SettingsRow type locally or import if available elsewhere
+type SettingsRow = Database['public']['Tables']['settings']['Row'];
+type ConnectedAccount = Database['public']['Tables']['connected_accounts']['Row'];
 
 // Placeholder types for view data - adjust based on actual view structure
 type AlertsByDayData = { day: string; alerts: number }[];
@@ -39,13 +43,18 @@ type FpRateRuleData = {
 type AvgRiskScoreData = { day: string; avg_risk: number }[];
 
 // --- Data Fetching Functions --- //
-const fetchAnalyticsView = async (viewName: string, accountId?: string | null) => {
+const fetchAnalyticsView = async (viewName: string, accountId?: string | null, isPro?: boolean) => {
   const supabase = createClient();
+
+  // Note: Views currently DO NOT support account filtering.
+  // This function fetches global data regardless of accountId/isPro.
+  // Filtering logic needs to be added to the SQL views or use RPC functions.
+  // For now, the UI gating relies on the isPro flag passed to the component.
   let query = supabase.from(viewName).select('*');
 
-  // TODO: Implement Pro tier filtering if accountId is provided
-  // if (accountId) {
-  //   query = query.eq('stripe_account_id', accountId); // Example, view needs account id
+  // Placeholder for future filtering logic:
+  // if (isPro && accountId) {
+  //   // Need RPC or modified view: e.g., supabase.rpc('get_view_data_for_account', { view_name: viewName, p_account_id: accountId })
   // }
 
   const { data, error } = await query;
@@ -115,21 +124,93 @@ const ChartCard: React.FC<ChartCardProps> = ({
 
 // --- Main Analytics Page Component --- //
 export default function AnalyticsPage() {
-  // TODO: Get user settings to determine tier and potentially selected account
-  // const { settings, selectedAccountId } = useAuth(); // Example
-  const isProUser = false; // Placeholder
-  const selectedAccountId = null; // Placeholder
+  const supabase = createClient();
+  const { user, profile, isLoading: isLoadingUser } = useUser(); // Get user/profile info
+  const [allAccounts, setAllAccounts] = useState<ConnectedAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+  const [settings, setSettings] = useState<SettingsRow | null>(null); // State for settings
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
+  // Determine if user is Pro based on settings
+  const isProUser = useMemo(() => isPro(settings), [settings]);
+
+  // Fetch settings on mount or when user changes
+  useEffect(() => {
+    async function fetchSettingsData() {
+      if (!user) {
+        setIsLoadingSettings(false);
+        return;
+      }
+      setIsLoadingSettings(true);
+      try {
+        const { data, error } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('id', 'global_settings') // Assuming global for now, adjust if per-user/account
+          .maybeSingle();
+        if (error) throw error;
+        setSettings(data);
+      } catch (error: any) {
+        console.error('Error fetching settings:', error);
+        // Optionally show toast
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    }
+    fetchSettingsData();
+  }, [user, supabase]);
+
+  // Fetch connected accounts on mount or when user changes (needed for Pro dropdown)
+  useEffect(() => {
+    async function fetchUserAccounts() {
+      if (!user) {
+        setIsLoadingAccounts(false);
+        return;
+      }
+      setIsLoadingAccounts(true);
+      try {
+        const { data, error } = await supabase
+          .from('connected_accounts')
+          .select('*') // Select needed fields for dropdown
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+        setAllAccounts(data || []);
+        // Set initial selection if not already set and accounts exist
+        if (!selectedAccountId && data && data.length > 0) {
+          setSelectedAccountId(data[0].stripe_account_id);
+        }
+      } catch (error: any) {
+        console.error('Error fetching connected accounts:', error);
+        setAllAccounts([]); // Clear accounts on error
+        // Optionally show toast
+      } finally {
+        setIsLoadingAccounts(false);
+      }
+    }
+    fetchUserAccounts();
+  }, [user, supabase, selectedAccountId]); // Add selectedAccountId dependency?
+
+  // Determine account ID to use for fetching (null unless Pro and account selected)
+  const fetchAccountId = useMemo(() => {
+    // For now, always fetch global data as views don't support filtering.
+    // When filtering is implemented, this logic will change:
+    // return isProUser ? selectedAccountId : null;
+    return null; // Always fetch global for now
+  }, [isProUser, selectedAccountId]);
 
   // --- React Query Hooks --- //
+  // Pass fetchAccountId to queryKey and queryFn
   const {
     data: alertsByDay,
     isLoading: isLoadingAlertsByDay,
     isError: isErrorAlertsByDay,
     error: errorAlertsByDay,
   } = useQuery<AlertsByDayData>({
-    // Specify the type
-    queryKey: ['analytics', 'alerts_by_day', selectedAccountId], // Include account ID if used
-    queryFn: () => fetchAnalyticsView('alerts_by_day', selectedAccountId),
+    queryKey: ['analytics', 'alerts_by_day', fetchAccountId],
+    queryFn: () => fetchAnalyticsView('alerts_by_day', fetchAccountId, isProUser),
+    enabled: !isLoadingSettings && !isLoadingUser, // Only fetch when user/settings known
   });
 
   const {
@@ -138,9 +219,9 @@ export default function AnalyticsPage() {
     isError: isErrorRuleRank,
     error: errorRuleRank,
   } = useQuery<AlertsRuleRankData>({
-    // Specify the type
-    queryKey: ['analytics', 'alerts_rule_rank', selectedAccountId],
-    queryFn: () => fetchAnalyticsView('alerts_rule_rank', selectedAccountId),
+    queryKey: ['analytics', 'alerts_rule_rank', fetchAccountId],
+    queryFn: () => fetchAnalyticsView('alerts_rule_rank', fetchAccountId, isProUser),
+    enabled: !isLoadingSettings && !isLoadingUser,
   });
 
   const {
@@ -149,9 +230,9 @@ export default function AnalyticsPage() {
     isError: isErrorFpRate,
     error: errorFpRate,
   } = useQuery<FpRateRuleData>({
-    // Specify the type
-    queryKey: ['analytics', 'fp_rate_rule', selectedAccountId],
-    queryFn: () => fetchAnalyticsView('fp_rate_rule', selectedAccountId),
+    queryKey: ['analytics', 'fp_rate_rule', fetchAccountId],
+    queryFn: () => fetchAnalyticsView('fp_rate_rule', fetchAccountId, isProUser),
+    enabled: !isLoadingSettings && !isLoadingUser,
   });
 
   const {
@@ -160,9 +241,9 @@ export default function AnalyticsPage() {
     isError: isErrorAvgRisk,
     error: errorAvgRisk,
   } = useQuery<AvgRiskScoreData>({
-    // Specify the type
-    queryKey: ['analytics', 'avg_risk_score', selectedAccountId],
-    queryFn: () => fetchAnalyticsView('avg_risk_score', selectedAccountId),
+    queryKey: ['analytics', 'avg_risk_score', fetchAccountId],
+    queryFn: () => fetchAnalyticsView('avg_risk_score', fetchAccountId, isProUser),
+    enabled: !isLoadingSettings && !isLoadingUser,
   });
 
   // Memoize formatted data for charts to prevent re-renders
@@ -170,22 +251,55 @@ export default function AnalyticsPage() {
     return fpRateRule?.map((item) => ({ ...item, fp_percent: item.fp_rate * 100 })) || [];
   }, [fpRateRule]);
 
+  // Combined loading state
+  const isLoading = isLoadingUser || isLoadingSettings || isLoadingAccounts;
+
+  if (isLoading) {
+    return (
+      <Container className="py-10">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </Container>
+    );
+  }
+
   return (
     <Container className="py-10">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Guardian Analytics</h1>
-        {/* TODO: Add Account Selector for Pro users */}
-        {/* {isProUser && <AccountSelector />} */}
+        {isProUser && allAccounts.length > 0 && (
+          <div className="w-full md:w-auto md:min-w-[250px]">
+            <StripeAccountSelect
+              accounts={allAccounts}
+              selectedAccountId={selectedAccountId}
+              onAccountChange={setSelectedAccountId}
+            />
+          </div>
+        )}
       </div>
 
-      {/* TODO: Add Free Tier notice if applicable */}
-      {/* {!isProUser && <FreeTierNotice />} */}
+      {!isProUser && (
+        <ShadcnAlert className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Free Tier View</AlertTitle>
+          <AlertDescription>
+            You are viewing aggregated analytics data across all users. Upgrade to Pro to see data
+            specific to your connected accounts.
+            {/* Add link to billing page */}
+          </AlertDescription>
+        </ShadcnAlert>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card A: Alerts per day */}
         <ChartCard
           title="Alerts / Day (Last 30 Days)"
-          description="Daily alert volume trend."
+          description={
+            isProUser && selectedAccountId
+              ? `For account ${selectedAccountId}`
+              : 'Global daily alert volume.'
+          }
           isLoading={isLoadingAlertsByDay}
           isError={isErrorAlertsByDay}
           error={errorAlertsByDay as Error | null}
@@ -215,7 +329,11 @@ export default function AnalyticsPage() {
         {/* Card B: Top rules by count */}
         <ChartCard
           title="Top Rules by Count (Last 30 Days)"
-          description="Most frequently triggered alert types."
+          description={
+            isProUser && selectedAccountId
+              ? `For account ${selectedAccountId}`
+              : 'Global trigger frequency.'
+          }
           isLoading={isLoadingRuleRank}
           isError={isErrorRuleRank}
           error={errorRuleRank as Error | null}
@@ -246,7 +364,11 @@ export default function AnalyticsPage() {
         {/* Card C: False-positive % per rule */}
         <ChartCard
           title="False Positive Rate by Rule (Last 30 Days)"
-          description="Percentage of alerts marked as false positive for each rule type."
+          description={
+            isProUser && selectedAccountId
+              ? `For account ${selectedAccountId}`
+              : 'Global false positive rates.'
+          }
           isLoading={isLoadingFpRate}
           isError={isErrorFpRate}
           error={errorFpRate as Error | null}
@@ -280,7 +402,11 @@ export default function AnalyticsPage() {
         {/* Card D: Average risk score */}
         <ChartCard
           title="Average Risk Score (Last 7 Days)"
-          description="Daily average risk score of triggered alerts."
+          description={
+            isProUser && selectedAccountId
+              ? `For account ${selectedAccountId}`
+              : 'Global average daily risk score.'
+          }
           isLoading={isLoadingAvgRisk}
           isError={isErrorAvgRisk}
           error={errorAvgRisk as Error | null}

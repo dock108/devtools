@@ -11,6 +11,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase, 
 - **/ (Homepage)**: Overview and links to products.
 - **/stripe-guardian**: Stripe Connect payout fraud protection.
   - **/guardian-demo**: Interactive fraud detection demo with scenario selector.
+  - **/stripe-guardian/analytics**: Dashboard with alert trends, rule performance, and risk score KPIs.
   - **Supported fraud scenarios**:
     - Velocity breach (multiple payouts in short time)
     - Bank account swap before large payout
