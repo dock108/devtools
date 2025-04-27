@@ -198,163 +198,276 @@ serve(async (req: Request) => {
     }
 
     // --- Transactional Processing --- //
-    // Use the specific Supabase client type within the transaction for better type inference
-    const { data: txResult, error: txError } = await supabase.rpc('execute_sql_as_transaction', {
-      // Wrap the transaction logic in an SQL string or use a helper if Supabase Deno lib supports tx objects directly
-      // This part needs adjustment based on how Supabase Deno handles transactions.
-      // Placeholder: Assuming direct transaction object support for now.
-      sql: `
-        -- Placeholder: Transaction logic needs to be adapted for Deno Supabase
-        -- SELECT 'Simulating transaction success' as result;
-      `,
-      // --- Alternate if Supabase Deno supports transaction objects ---
-      // callback: async (tx: SupabaseClient<Database>) => { // Use typed client
-    });
+    // We don't use a client-side transaction here. Atomicity is handled by the RPC.
 
-    // --- TODO: Refactor Transaction Logic --- //
-    // The following logic needs to be adapted to work within the Supabase Deno transaction model
-    // (e.g., using RPC calls for each step or structuring differently if tx object is available)
-
-    /* 
-    // Example logic assuming a transaction object `tx` is available:
-    if (!stripeEventId) throw new Error('stripeEventId became null unexpectedly'); // Guard
-
-    // Idempotency check
-    const { error: dupError } = await tx
-      .from('processed_events')
-      .insert({ stripe_event_id: stripeEventId })
-      .select('stripe_event_id') // Select minimal data
-      .maybeSingle(); // Check if insert happened or conflict occurred
-
-    if (dupError?.code === '23505') { // PostgreSQL unique violation
-      log.info({ ...finalLogData }, 'Event already processed (idempotency check)');
-      metricOutcome = 'skipped';
-      return { skipped: true, alertCount: 0 }; // Ensure alertCount is defined
-    }
-    if (dupError) {
-      throw new Error(`Failed idempotency check: ${dupError.message}`);
-    }
-
-    // Validate the event payload (using Zod or similar, integrate here)
-    // const validationResult = validateStripeEvent(eventPayload);
-    // if (!validationResult.success) {
-    //   log.warn({ ...finalLogData, validation_error: validationResult.error }, 'Stripe event validation failed');
-    //   metricOutcome = 'invalid_event';
-    //   // Decide: skip or DLQ?
-    //   return { skipped: true, invalid: true, alertCount: 0 }; 
-    // }
-    // const validatedEvent = validationResult.data; // Use validated data
-
-    // Evaluate rules (pass validated event and config)
-    let alerts: TablesInsert<'alerts'>[] = []; // Use generated insert type
     try {
-      const ruleStart = performance.now();
-      // Ensure ruleConfig is not null
-      if (!ruleConfig) throw new Error ('Rule config is null'); 
-      // Pass validatedEvent instead of eventPayload if validation is added
-      alerts = await evaluateRulesEdge(eventPayload, tx, ruleConfig);
-      rulesEvalMs = Math.round(performance.now() - ruleStart);
-      log.info({ ...finalLogData, rules_eval_ms: rulesEvalMs, alert_count: alerts.length }, 'Rules evaluated');
-    } catch (ruleError: any) {
-      if (rulesEvalMs !== null) {
-        log.info({ ...finalLogData, rules_eval_ms: rulesEvalMs, error: ruleError?.message }, 'Rule evaluation timing before error');
+      // Idempotency Check (using processed_events table)
+      if (!stripeEventId) throw new Error('stripeEventId became null unexpectedly');
+
+      const { error: dupError } = await supabase
+        .from('processed_events')
+        .insert({ stripe_event_id: stripeEventId })
+        .select('stripe_event_id')
+        .maybeSingle();
+
+      if (dupError?.code === '23505') {
+        // PostgreSQL unique violation
+        log.info({ ...finalLogData }, 'Event already processed (idempotency check)');
+        metricOutcome = 'skipped';
+        status = 204; // No Content for skipped
+        const durationMs = Math.round(performance.now() - startTime);
+        log.info(
+          {
+            ...finalLogData,
+            duration_ms: durationMs,
+            status,
+            metric_event: 'reactor_events_total',
+            metric_outcome: metricOutcome,
+          },
+          'Event processing skipped (already processed)',
+        );
+        return new Response(null, { status, headers: { ...corsHeaders } });
       }
-      throw new Error(`Rule evaluation failed: ${ruleError?.message ?? String(ruleError)}`);
-    }
+      if (dupError) {
+        throw new Error(`Failed idempotency check: ${dupError.message}`);
+      }
+      log.debug({ ...finalLogData }, 'Idempotency check passed.');
 
-    // Insert alerts
-    if (alerts.length > 0) {
-      // Ensure stripeAccountId and stripeEventId are valid before mapping
-      if (!stripeAccountId || !stripeEventId) throw new Error('Missing account/event ID for alert insertion');
+      // TODO: Optional - Add event payload validation here if needed
+      // const validatedEvent = validateStripeEvent(eventPayload);
+      // if (!validationResult.success) { ... handle validation error ... }
 
-      const alertsToInsert = alerts.map(alert => ({
-        stripe_account_id: stripeAccountId!, // Use non-null assertion after check
-        event_id: stripeEventId!, // Use non-null assertion after check
-        alert_type: alert.alertType, // Map from rule output
-        severity: alert.severity,     // Map from rule output
-        message: alert.message,       // Map from rule output
-        stripe_payout_id: alert.payoutId, // Map from rule output
-        resolved: false,
-        // risk_score is handled by BEFORE INSERT trigger
-        // triggered_at, created_at handled by DB defaults
-      }));
+      // Evaluate rules
+      let alertsToCreate: { ruleId: string; userId: string }[] = []; // Store details needed for RPC
+      let evaluatedAlertCount = 0;
+      try {
+        const ruleStart = performance.now();
+        if (!ruleConfig) throw new Error('Rule config is null');
+        // NOTE: evaluateRulesEdge needs to return enough info to call the RPC
+        // Assuming it returns an array of objects like: { ruleId: '...', severity: '...', message: '...', etc. } AND the associated user_id.
+        // We need to adjust evaluateRulesEdge or how we map its results.
+        // FOR NOW: Assume evaluateRulesEdge gives us what we need, including ruleId and userId.
+        // Placeholder - this needs actual implementation in evaluateRulesEdge:
+        const evaluatedRulesResult = await evaluateRulesEdge(eventPayload, supabase, ruleConfig); // Pass supabase client
+        evaluatedAlertCount = evaluatedRulesResult.length;
 
-      const { error: alertError } = await tx
-        .from('alerts')
-        .insert(alertsToInsert)
-        .select('id') // Select minimal column to check if insert happened
-        // Use onConflict with the specific constraint name and ignore duplicates
-        .onConflict('alerts_event_id_alert_type_key')
-        .ignore(); // Ignore duplicates based on event_id + alert_type
+        if (!stripeAccountId) throw new Error('Missing stripeAccountId for user lookup');
+        // Fetch the user_id associated with the stripe_account_id
+        // This might be redundant if evaluateRulesEdge already has/returns the user_id
+        const { data: accountData, error: accountError } = await supabase
+          .from('connected_accounts')
+          .select('user_id')
+          .eq('stripe_account_id', stripeAccountId)
+          .single();
 
-      if (alertError) {
-        // Don't throw if it's just a unique constraint violation (code 23505) - that's expected now
-        if (alertError.code !== '23505') {
-            log.error({ ...finalLogData, db_error: alertError.message }, 'Failed to insert alerts');
-            throw new Error(`Failed to insert alerts: ${alertError.message}`);
-        } else {
-            log.info({ ...finalLogData, alert_count: alerts.length }, 'Attempted to insert alerts, duplicates ignored by constraint.');
+        if (accountError || !accountData?.user_id) {
+          throw new Error(
+            `Failed to get user_id for account ${stripeAccountId}: ${accountError?.message}`,
+          );
         }
-      } else {
-        log.info({ ...finalLogData, alert_count: alerts.length }, 'Alerts inserted or duplicates ignored');
+        const userId = accountData.user_id;
+
+        // Prepare alerts for the RPC call (simplified for now)
+        alertsToCreate = evaluatedRulesResult.map((ruleResult: any) => ({
+          // Use 'any' temporarily
+          ruleId: ruleResult.ruleId, // Assuming evaluateRulesEdge provides this
+          userId: userId, // Use the fetched userId
+        }));
+
+        rulesEvalMs = Math.round(performance.now() - ruleStart);
+        log.info(
+          {
+            ...finalLogData,
+            rules_eval_ms: rulesEvalMs,
+            evaluated_alert_count: evaluatedAlertCount,
+          },
+          'Rules evaluated',
+        );
+      } catch (ruleError: any) {
+        if (rulesEvalMs !== null) {
+          log.info(
+            { ...finalLogData, rules_eval_ms: rulesEvalMs, error: ruleError?.message },
+            'Rule evaluation timing before error',
+          );
+        }
+        throw new Error(`Rule evaluation failed: ${ruleError?.message ?? String(ruleError)}`);
       }
-    }
 
-    return {
-      processed: true,
-      alertCount: alerts.length,
-    };
-    */
-    // --- End of TODO: Refactor Transaction Logic --- //
+      // Insert alerts and enqueue notifications via RPC for each triggered rule
+      let createdAlertIds: string[] = [];
+      if (alertsToCreate.length > 0) {
+        if (!stripeEventId) throw new Error('Missing event ID for alert insertion');
+        log.info(
+          { ...finalLogData, count: alertsToCreate.length },
+          'Attempting to insert alerts and enqueue notifications via RPC...',
+        );
 
-    // --- Temporary response until transaction logic is refactored --- //
-    if (txError) {
-      metricOutcome = 'dlq_error';
-      throw txError;
-    }
-    log.warn({ ...finalLogData }, 'Transaction logic needs refactoring for Supabase Deno client.');
-    const durationMsTemp = Math.round(performance.now() - startTime);
-    metricOutcome = 'success'; // Assume success for now
-    status = 200;
-    return new Response(
-      JSON.stringify({
-        message: 'Processed (logic pending refactor)',
-        duration_ms: durationMsTemp,
-      }),
-      {
-        status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
-    // --- End Temporary Response --- //
+        const rpcCalls = alertsToCreate.map((alertInfo) =>
+          supabase.rpc('insert_alert_and_enqueue', {
+            p_event_id: stripeEventId!, // Assert non-null after check
+            p_rule_id: alertInfo.ruleId,
+            p_user_id: alertInfo.userId,
+            // p_channels: default is ['email', 'slack']
+          }),
+        );
 
-    /* // Original success/skip logic (keep for reference during refactor)
-    if (txResult?.skipped) {
-      status = 204;
+        const results = await Promise.allSettled(rpcCalls);
+
+        results.forEach((result, index) => {
+          const ruleId = alertsToCreate[index].ruleId;
+          if (result.status === 'fulfilled') {
+            if (result.value.error) {
+              log.error(
+                { ...finalLogData, rule_id: ruleId, rpc_error: result.value.error },
+                'RPC insert_alert_and_enqueue failed',
+              );
+              // Decide if one failure should fail the whole event? Maybe just log.
+            } else {
+              log.info(
+                { ...finalLogData, rule_id: ruleId, alert_id: result.value.data },
+                'RPC insert_alert_and_enqueue succeeded',
+              );
+              if (result.value.data) {
+                createdAlertIds.push(result.value.data);
+              }
+            }
+          } else {
+            log.error(
+              { ...finalLogData, rule_id: ruleId, error: result.reason },
+              'RPC insert_alert_and_enqueue call failed unexpectedly',
+            );
+          }
+        });
+        log.info(
+          { ...finalLogData, created_alert_count: createdAlertIds.length },
+          'Finished processing RPC calls for alerts.',
+        );
+      }
+
+      // Success
+      metricOutcome = 'success';
+      status = 200;
       const durationMs = Math.round(performance.now() - startTime);
-      log.info({ ...finalLogData, duration_ms: durationMs, status, metric_event: 'reactor_events_total', metric_outcome: metricOutcome }, 'Event processing skipped (already processed)');
-      return new Response(null, { status, headers: { ...corsHeaders } });
-    }
-
-    // Success
-    metricOutcome = 'success';
-    status = 200;
-    const durationMs = Math.round(performance.now() - startTime);
-    const responsePayload = {
+      const responsePayload = {
         message: 'Event processed successfully',
         processing_duration_ms: durationMs,
-        alerts_created: txResult?.alertCount ?? 0, // Use nullish coalescing
-    };
-    const successMetrics: Record<string, any> = { duration_ms: durationMs, alerts_created: responsePayload.alerts_created, status, metric_event: 'reactor_events_total', metric_outcome: metricOutcome };
-    if (rulesEvalMs !== null) {
+        alerts_created: createdAlertIds.length, // Report count of successfully created alerts
+        rules_evaluated: evaluatedAlertCount,
+      };
+      const successMetrics: Record<string, any> = {
+        duration_ms: durationMs,
+        alerts_created: responsePayload.alerts_created,
+        status,
+        metric_event: 'reactor_events_total',
+        metric_outcome: metricOutcome,
+      };
+      if (rulesEvalMs !== null) {
         successMetrics.metric_hist_reactor_eval_ms = rulesEvalMs;
+      }
+      log.info({ ...finalLogData, ...successMetrics }, 'Event processed successfully');
+      return new Response(JSON.stringify(responsePayload), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (error: any) {
+      // --- Error Handling (largely unchanged) --- //
+      status = status >= 400 ? status : 500; // Keep 4xx errors if already set
+      const errorMsg = error?.message ?? String(error);
+      // Ensure critical IDs are available for logging/DLQ
+      const finalLogData = {
+        ...baseLogData,
+        event_buffer_id: eventBufferId,
+        stripe_event_id: stripeEventId,
+        stripe_account_id: stripeAccountId,
+        event_type: eventType,
+      };
+      log.error({ ...finalLogData, err: errorMsg, status }, `Guardian Reactor error: ${errorMsg}`);
+
+      // Attempt to insert into DLQ
+      if (eventPayload && stripeEventId && eventBufferId) {
+        metricOutcome = 'dlq_error'; // Error led to DLQ attempt
+        try {
+          const supabase = getSupabaseClient();
+          const dlqData: TablesInsert<'failed_event_dispatch'> = {
+            event_buffer_id: eventBufferId, // Ensure type matches (number)
+            stripe_event_id: stripeEventId,
+            stripe_account_id: stripeAccountId ?? 'unknown', // Handle potential null
+            type: eventType ?? 'unknown', // Handle potential null
+            received_at: new Date().toISOString(), // Consider event.created_at if available
+            payload: eventPayload, // Should be Json type
+            last_error: errorMsg,
+          };
+          const { error: dlqError } = await supabase
+            .from('failed_event_dispatch')
+            .insert(dlqData)
+            .select('id') // Select minimal column
+            .maybeSingle();
+
+          if (dlqError) {
+            metricOutcome = 'critical_error'; // DLQ insert failed
+            log.error(
+              {
+                ...finalLogData,
+                dlq_error: dlqError.message,
+                metric_event: 'reactor_events_total',
+                metric_outcome: metricOutcome,
+              },
+              'Failed to insert into DLQ',
+            );
+            // Return original error status, not necessarily 500
+            return new Response(
+              JSON.stringify({ error: `Server error & DLQ failure: ${dlqError.message}` }),
+              {
+                status: 500, // Force 500 on DLQ failure
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              },
+            );
+          } else {
+            log.info(
+              {
+                ...finalLogData,
+                metric_event: 'reactor_events_total',
+                metric_outcome: metricOutcome,
+              },
+              'Event inserted into DLQ after error',
+            );
+            // Return the original error status that led to the DLQ
+            return new Response(
+              JSON.stringify({ error: `Event failed processing and sent to DLQ: ${errorMsg}` }),
+              {
+                status: status, // Return original status (e.g., 400 or 500)
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              },
+            );
+          }
+        } catch (dlqCatchError: any) {
+          metricOutcome = 'critical_error';
+          log.fatal(
+            { ...finalLogData, err: dlqCatchError?.message },
+            'CRITICAL: Unhandled exception during DLQ insertion',
+          );
+          // Return 500 on unexpected DLQ error
+          return new Response(
+            JSON.stringify({ error: 'Critical server error during DLQ processing' }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          );
+        }
+      } else {
+        // If essential data for DLQ is missing, return a generic server error
+        metricOutcome = 'critical_error';
+        log.error(
+          { ...finalLogData, metric_event: 'reactor_events_total', metric_outcome: metricOutcome },
+          'Cannot insert into DLQ due to missing event data',
+        );
+        return new Response(JSON.stringify({ error: `Server error: ${errorMsg}` }), {
+          status: status, // Return original status
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
-    log.info({ ...finalLogData, ...successMetrics }, 'Event processed successfully');
-    return new Response(JSON.stringify(responsePayload), {
-      status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-    */
   } catch (error: any) {
     status = status >= 400 ? status : 500; // Keep 4xx errors if already set
     const errorMsg = error?.message ?? String(error);

@@ -3,6 +3,8 @@ import { runRules, evaluateEvent } from '@/lib/guardian/rules';
 import { expectedAlerts } from '../fixtures/guardian/expectedAlerts';
 import { GuardianEventRow } from '@/types/supabase';
 import { loadScenario, scenarioEventToGuardianEvent } from '../utils/scenario-helpers';
+import { supabase } from '../../lib/supabase/client'; // Try relative path from tests/guardian/
+import { v4 as uuidv4 } from 'uuid';
 
 // Helper to log debug info only during test failures
 function debugLog(scenarioName: string, event: any, alert: any) {
@@ -148,4 +150,83 @@ describe.skip('Rule Engine Scenarios', () => {
       expect(alerts1[i].severity).toEqual(alerts2[i].severity);
     }
   });
+});
+
+describe('Database Functions', () => {
+  let testUserId: string;
+
+  beforeAll(async () => {
+    // Setup: Ensure a test user exists or create one
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1)
+      .single(); // Get one user ID for testing
+
+    if (userError || !userData) {
+      console.error('Failed to get a test user:', userError);
+      // Optionally create a test user if needed, or throw
+      const testEmail = `test-user-${uuidv4()}@example.com`;
+      const { data: newUser, error: createError } = await supabase.auth.signUp({
+        email: testEmail,
+        password: 'password123',
+      });
+      if (createError || !newUser?.user?.id) {
+        throw new Error(`Failed to create test user: ${createError?.message}`);
+      }
+      testUserId = newUser.user.id;
+      console.log('Created test user:', testUserId);
+    } else {
+      testUserId = userData.id;
+    }
+  });
+
+  test('insert_alert_and_enqueue adds queue rows atomically', async () => {
+    if (!testUserId) throw new Error('Test user ID not set');
+
+    const testEventId = uuidv4();
+    const testRuleId = 'payout_velocity'; // Example rule ID
+
+    const { data: alertId, error: rpcError } = await supabase.rpc('insert_alert_and_enqueue', {
+      p_event_id: testEventId,
+      p_rule_id: testRuleId,
+      p_user_id: testUserId,
+      // Using default channels [email, slack]
+    });
+
+    // Log RPC error if it occurs
+    if (rpcError) {
+      console.error('RPC Error:', rpcError);
+    }
+
+    expect(rpcError).toBeNull();
+    expect(alertId).toBeTruthy();
+    expect(typeof alertId).toBe('string'); // Should return UUID string
+
+    // Verify alert exists
+    const { data: alertData, error: alertError } = await supabase
+      .from('alerts')
+      .select('id')
+      .eq('id', alertId)
+      .single();
+    expect(alertError).toBeNull();
+    expect(alertData?.id).toBe(alertId);
+
+    // Verify notification queue entries exist
+    const {
+      data: queueData,
+      error: queueError,
+      count,
+    } = await supabase
+      .from('notification_queue')
+      .select('*', { count: 'exact' })
+      .eq('alert_id', alertId);
+
+    expect(queueError).toBeNull();
+    expect(count).toBe(2); // Default: email + slack
+    expect(queueData).toHaveLength(2);
+    expect(queueData?.map((q) => q.channel).sort()).toEqual(['email', 'slack']); // Check channels
+  });
+
+  // ... other potential DB tests ...
 });

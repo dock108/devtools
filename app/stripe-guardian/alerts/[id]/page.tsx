@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Database } from '@/types/supabase';
 import { Container } from '@/components/Container';
 import { AlertFeedback } from './AlertFeedback'; // Client component for feedback
+import NotificationStatus from '@/components/alerts/NotificationStatus'; // Import the new component
 
 // Fetch data server-side
 async function getAlertDetails(
@@ -59,6 +60,10 @@ export default async function AlertDetailPage({ params }: { params: { id: string
     notFound();
   }
 
+  // Check if the user is an admin (example assumes role is in user_metadata)
+  // Adjust based on where the role is actually stored (e.g., app_metadata or a separate table)
+  const isAdmin = session?.user?.user_metadata?.role === 'admin';
+
   // Format dates, etc.
   const createdAtFormatted = alert.created_at ? new Date(alert.created_at).toLocaleString() : 'N/A';
   const accountName =
@@ -102,6 +107,12 @@ export default async function AlertDetailPage({ params }: { params: { id: string
             <strong className="text-slate-600">Event ID:</strong> {alert.event_id || 'N/A'}
           </p>
         </div>
+
+        {/* --- Notification Status Component --- */}
+        <NotificationStatus
+          deliveryStatus={alert.delivery_status as Record<string, string> | null}
+          isAdmin={isAdmin}
+        />
 
         <hr className="my-6" />
 
