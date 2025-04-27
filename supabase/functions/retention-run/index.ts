@@ -1,6 +1,6 @@
 // @ts-ignore: Deno-specific globals
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
+import { createClient, SupabaseClient, User } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
 import { corsHeaders } from '../_shared/cors.ts';
 import { log, generateRequestId } from '../_shared/logger.ts'; // Assuming shared logger
 
@@ -14,20 +14,33 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   );
 }
 
-const getSupabaseClient = (): SupabaseClient => {
-  // Create a new client for each request to ensure isolation? Or reuse?
-  // For service role, reusing might be fine.
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      // Prevent storing user session when using service key
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-};
+// Function to get user from JWT
+async function getUserByJWT(supabase: SupabaseClient, req: Request): Promise<User | null> {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+  const jwt = authHeader.substring(7); // Extract JWT
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(jwt);
+  if (error) {
+    log.warn({ req_id: (req as any).req_id, err: error.message }, 'Failed to get user from JWT');
+    return null;
+  }
+  return user;
+}
+
+// Function to check if user is admin
+function isAdminUser(user: User | null): boolean {
+  // Adjust based on where admin role is stored (e.g., app_metadata, user_metadata, or a custom table)
+  return user?.user_metadata?.role === 'admin';
+}
 
 serve(async (req: Request) => {
   const reqId = generateRequestId();
+  (req as any).req_id = reqId; // Attach reqId for use in helper functions
   const baseLogData = { req_id: reqId, service: 'retention-run' };
   log.info({ ...baseLogData, method: req.method }, 'Incoming retention run request');
 
@@ -46,20 +59,45 @@ serve(async (req: Request) => {
     });
   }
 
-  // Optional: Add authentication/authorization here if needed
-  // e.g., check for a specific API key or admin user role
+  // Authentication & Authorization Check
+  const supabaseAuthClient = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+    // Use service key for getUser
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const user = await getUserByJWT(supabaseAuthClient, req);
 
+  if (!user) {
+    log.warn({ ...baseLogData, status: 401 }, 'Unauthorized: No valid user session found');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!isAdminUser(user)) {
+    log.warn({ ...baseLogData, user_id: user.id, status: 403 }, 'Forbidden: User is not an admin');
+    return new Response(JSON.stringify({ error: 'Forbidden: Admin privileges required' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  log.info(
+    { ...baseLogData, user_id: user.id },
+    'Admin user authorized. Proceeding with retention run.',
+  );
+
+  // --- Proceed with job execution ---
   const startTime = performance.now();
   let status = 500;
+  const supabaseService = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+    // Separate client for RPC
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
   try {
-    const supabase = getSupabaseClient();
     log.info({ ...baseLogData }, 'Attempting to call guardian_run_retention procedure...');
-
-    // Call the stored procedure
-    // Note: CALL procedure doesn't return data like SELECT function()
-    // We just check for errors.
-    const { error: rpcError } = await supabase.rpc('guardian_run_retention');
+    const { error: rpcError } = await supabaseService.rpc('guardian_run_retention');
 
     const durationMs = Math.round(performance.now() - startTime);
 
