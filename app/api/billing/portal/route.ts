@@ -14,13 +14,16 @@ const siteUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
 // Log required env vars on cold start (duplicate from checkout, but ok)
 if (!process.env.STRIPE_PRICE_PRO || !process.env.STRIPE_WEBHOOK_BILLING) {
-  console.warn(`
-    ************************************************************
-    * WARNING: Missing Stripe Billing Environment Variables!   *
-    * (STRIPE_PRICE_PRO, STRIPE_WEBHOOK_BILLING)               *
-    * See console logs from /api/billing/checkout for details. *
-    ************************************************************
-    `);
+  // Only show warning in production, not in development or preview
+  if (process.env.VERCEL_ENV === 'production') {
+    console.warn(`
+      ************************************************************
+      * WARNING: Missing Stripe Billing Environment Variables!   *
+      * (STRIPE_PRICE_PRO, STRIPE_WEBHOOK_BILLING)               *
+      * See console logs from /api/billing/checkout for details. *
+      ************************************************************
+      `);
+  }
 }
 
 export async function POST(request: Request) {
