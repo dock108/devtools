@@ -1,6 +1,5 @@
-'use client'; // Need client component for QueryClientProvider state
+// Remove 'use client' - Keep as Server Component
 
-import React from 'react'; // Import React for useState
 import type { Metadata } from 'next';
 // Using standard CSS import instead of next/font
 import './globals.css';
@@ -9,13 +8,9 @@ import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
-import { ThemeProvider } from '@/components/theme-provider';
-// Import the AlertNotificationsProvider
-import { AlertNotificationsProvider } from '@/app/context/useAlertNotifications';
+import { Providers } from './providers'; // Import the new client component
 
-// Import React Query components
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
+// Metadata export is allowed here
 export const metadata: Metadata = {
   title: 'DOCK108 Home',
   description: 'Developer-first tools that solve real dev pain.',
@@ -34,38 +29,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // TODO: Fetch userStripeAccounts server-side here if possible/needed for the provider
-  // For now, we pass an empty array or let the provider fetch them internally
-  // const userStripeAccounts = await fetchUserAccounts();
-
-  // Create a client
-  const [queryClient] = React.useState(() => new QueryClient());
+  // Removed useState and QueryClient creation
 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>{/* Google Font preconnects removed as we're using self-hosted Inter */}</head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          {' '}
-          {/* Wrap with QueryClientProvider */}
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {/* Wrap the main layout content with the Alert provider */}
-            {/* Pass userStripeAccounts if fetched server-side */}
-            <AlertNotificationsProvider /* userStripeAccounts={userStripeAccounts} */>
-              <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">{children}</main>
-                <Footer />
-                <Toaster position="bottom-right" />
-              </div>
-            </AlertNotificationsProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
+        {/* Use the Providers client component to wrap content */}
+        <Providers>
+          <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+            <Toaster position="bottom-right" />
+          </div>
+        </Providers>
       </body>
     </html>
   );
