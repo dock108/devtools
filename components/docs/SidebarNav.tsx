@@ -39,3 +39,6 @@ export function SidebarNav() {
     </nav>
   );
 }
+
+// Create a renamed export for the client component
+export const SidebarNavClient = SidebarNav;

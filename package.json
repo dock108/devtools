@@ -11,7 +11,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "next lint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,mdx,yml}\"",
     "postbuild": "npx next-sitemap --config next-sitemap.config.cjs && npx tsx scripts/generate-rss.ts",
     "type-check": "tsc --noEmit",
@@ -30,7 +30,9 @@
     "stripe:verify-webhook": "ts-node -e \"require('./lib/guardian/webhookVerifier').verifyWebhookConfiguration()\"",
     "gen:types": "supabase gen types typescript --project-id \"YOUR_PROJECT_ID\" --schema public > types/supabase.ts",
     "blog:rss": "node --loader ts-node/esm scripts/generate-rss.ts",
-    "docs:audit": "tsx scripts/docs-audit.ts"
+    "docs:audit": "tsx scripts/docs-audit.ts",
+    "docs:lint": "node scripts/docs-lint.js",
+    "check:links": "node scripts/check-links.js"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,json,md,mdx,yml}": [

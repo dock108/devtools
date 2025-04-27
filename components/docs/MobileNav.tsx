@@ -23,3 +23,6 @@ export function MobileNav() {
     </Sheet>
   );
 }
+
+// Create a renamed export for the client component
+export const MobileNavClient = MobileNav;

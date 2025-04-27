@@ -7,6 +7,7 @@ export interface DocLink {
   title: string;
   href: string;
   description?: string;
+  slug?: string;
 }
 
 export interface DocGroup {
@@ -16,78 +17,70 @@ export interface DocGroup {
 
 export const docsConfig: DocGroup[] = [
   {
-    title: 'Getting Started',
+    title: 'Start',
     items: [
       {
-        title: 'Introduction',
-        href: '/docs',
-        description: 'What is Stripe Guardian and how it helps your platform',
-      },
-      {
-        title: 'Quick Start',
+        title: 'Getting Started',
         href: '/docs/getting-started',
         description: 'Get up and running with Stripe Guardian',
+        slug: 'getting-started',
       },
     ],
   },
   {
-    title: 'Core Concepts',
+    title: 'Concepts',
     items: [
       {
-        title: 'Content Guidelines',
-        href: '/docs/content-guidelines',
-        description: 'Guidelines for creating content with Stripe Guardian',
+        title: 'How Alerts Work',
+        href: '/docs/alerts',
+        description:
+          'Learn how Guardian turns Stripe events into actionable alerts with risk scores',
+        slug: 'alerts',
       },
       {
-        title: 'Feedback',
-        href: '/docs/feedback',
-        description: 'How to provide feedback on alerts',
+        title: 'Rules & Risk Scoring',
+        href: '/docs/rules-and-risk',
+        description: 'Understanding detection rules and how risk scores are calculated',
+        slug: 'rules-and-risk',
       },
+    ],
+  },
+  {
+    title: 'Operations',
+    items: [
       {
         title: 'Notifications',
         href: '/docs/notifications',
-        description: 'Configure alert notifications (mixed - will be redacted)',
+        description: 'Configure alert notifications for your team',
+        slug: 'notifications',
       },
       {
-        title: 'Rules',
-        href: '/docs/rules',
-        description: 'Understanding detection rules (mixed - will be redacted)',
+        title: 'FAQ',
+        href: '/docs/faq',
+        description: 'Frequently asked questions about Stripe Guardian',
+        slug: 'faq',
       },
     ],
   },
+];
+
+export const docsNav = [
   {
-    title: 'Features',
-    items: [
-      {
-        title: 'Alerts',
-        href: '/docs/alerts',
-        description: 'Managing and responding to alerts (mixed - will be redacted)',
-      },
-      {
-        title: 'Analytics',
-        href: '/docs/analytics',
-        description: 'Understanding your alert data (mixed - will be redacted)',
-      },
-      {
-        title: 'Risk Scoring',
-        href: '/docs/risk-score',
-        description: 'How risk scores are calculated (mixed - will be redacted)',
-      },
+    heading: 'Start',
+    links: [{ title: 'Getting Started', slug: 'getting-started' }],
+  },
+  {
+    heading: 'Concepts',
+    links: [
+      { title: 'How Alerts Work', slug: 'alerts' },
+      { title: 'Rules & Risk Scoring', slug: 'rules-and-risk' },
     ],
   },
   {
-    title: 'Administration',
-    items: [
-      {
-        title: 'Admin UI',
-        href: '/docs/admin-ui',
-        description: 'Admin interface overview (mixed - will be redacted)',
-      },
-      {
-        title: 'Onboarding',
-        href: '/docs/onboarding',
-        description: 'Onboarding process (mixed - will be redacted)',
-      },
+    heading: 'Operations',
+    links: [
+      { title: 'Notifications', slug: 'notifications' },
+      { title: 'FAQ', slug: 'faq' },
     ],
   },
 ];
