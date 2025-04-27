@@ -4,6 +4,7 @@ import { getServiceSupabaseClient } from '@/lib/supabase/client-service-role'; /
 import { log } from '@/lib/logger'; // Assuming logger
 import { attemptSendEmail } from '@/supabase/functions/send-email-alert/index'; // Placeholder path - ADJUST
 import { attemptSendSlack } from '@/supabase/functions/send-slack-alert/index'; // Placeholder path - ADJUST
+import { notificationsSentTotal } from '@/lib/metrics/registry'; // Import metrics
 
 const WORKER_NAME = 'notification-worker';
 const BATCH_SIZE = 10; // How many notifications to process per iteration
@@ -45,6 +46,8 @@ async function processNotificationJob(
   };
   log.info(baseLogData, 'Processing notification job');
 
+  let metricStatus = 'error'; // Default metric status
+
   try {
     // 1. Fetch Alert
     const { data: alert, error: alertError } = await supabase
@@ -63,6 +66,8 @@ async function processNotificationJob(
         .from('notification_queue')
         .update({ status: 'failed', error_msg: 'Alert not found' })
         .eq('id', job.id);
+      metricStatus = 'failed'; // Set status for metric reporting below
+      notificationsSentTotal.inc({ channel: job.channel, status: metricStatus });
       return;
     }
 
@@ -86,6 +91,8 @@ async function processNotificationJob(
         .from('notification_queue')
         .update({ status: 'failed', error_msg: 'User ID not found for account' })
         .eq('id', job.id);
+      metricStatus = 'failed'; // Set status for metric reporting below
+      notificationsSentTotal.inc({ channel: job.channel, status: metricStatus });
       return;
     }
     const userId = account.user_id;
@@ -102,7 +109,9 @@ async function processNotificationJob(
         .from('notification_queue')
         .update({ status: 'failed', error_msg: 'User preferences not found' })
         .eq('id', job.id);
-      await updateAlertStatus(supabase, alert.id, { [job.channel]: 'not_configured' });
+      metricStatus = 'not_configured'; // Specific status for this case
+      await updateAlertStatus(supabase, alert.id, { [job.channel]: metricStatus });
+      notificationsSentTotal.inc({ channel: job.channel, status: metricStatus });
       return;
     }
 
@@ -134,15 +143,18 @@ async function processNotificationJob(
         .from('notification_queue')
         .update({ status: 'failed', error_msg: 'Channel not configured or disabled' })
         .eq('id', job.id);
-      await updateAlertStatus(supabase, alert.id, { [job.channel]: 'not_configured' });
+      metricStatus = 'not_configured';
+      await updateAlertStatus(supabase, alert.id, { [job.channel]: metricStatus });
     } else if (sendResult.success) {
       log.info({ ...baseLogData }, 'Notification sent successfully');
       await supabase.from('notification_queue').update({ status: 'sent' }).eq('id', job.id);
-      await updateAlertStatus(supabase, alert.id, { [job.channel]: 'delivered' });
+      metricStatus = 'delivered';
+      await updateAlertStatus(supabase, alert.id, { [job.channel]: metricStatus });
     } else {
       const errorMessage =
         sendResult.error?.message || String(sendResult.error) || 'Unknown send error';
       log.warn({ ...baseLogData, error: errorMessage }, 'Notification send attempt failed');
+      metricStatus = 'failed'; // Set status for metric reporting below
 
       if (job.attempt < job.max_attempts) {
         const nextAttemptTime = calculateNextAttemptTime(job.attempt);
@@ -168,21 +180,30 @@ async function processNotificationJob(
           .from('notification_queue')
           .update({ status: 'failed', error_msg: errorMessage })
           .eq('id', job.id);
-        await updateAlertStatus(supabase, alert.id, { [job.channel]: 'failed' });
+        await updateAlertStatus(supabase, alert.id, { [job.channel]: metricStatus });
+        // Increment metric only on final failure
+        notificationsSentTotal.inc({ channel: job.channel, status: metricStatus });
       }
+    }
+
+    // If not retrying (i.e., final failure or success/not_configured), increment metric
+    if (metricStatus !== 'failed' || job.attempt >= job.max_attempts) {
+      notificationsSentTotal.inc({ channel: job.channel, status: metricStatus });
     }
   } catch (error: any) {
     log.error(
       { ...baseLogData, error: error?.message },
       'Critical error processing notification job',
     );
+    metricStatus = 'error'; // Worker error status
+    notificationsSentTotal.inc({ channel: job.channel, status: metricStatus });
     // Attempt to mark as failed to prevent infinite loops
     try {
       await supabase
         .from('notification_queue')
         .update({ status: 'failed', error_msg: `Worker error: ${error?.message}` })
         .eq('id', job.id);
-      await updateAlertStatus(supabase, job.alert_id, { [job.channel]: 'failed' }); // Also mark alert
+      await updateAlertStatus(supabase, job.alert_id, { [job.channel]: metricStatus }); // Also mark alert
     } catch (updateError: any) {
       log.fatal(
         { ...baseLogData, error: updateError?.message },

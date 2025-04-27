@@ -1,6 +1,8 @@
 // @ts-ignore: Deno-specific globals
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
+import { createClient, SupabaseClient, User } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
+import * as Sentry from 'https://esm.sh/@sentry/node@7.114.0'; // Import Sentry Node SDK
+import { ProfilingIntegration } from 'https://esm.sh/@sentry/profiling-node@7.114.0'; // Import Profiling Integration
 import { corsHeaders } from '../_shared/cors.ts';
 import { evaluateRulesEdge } from '../../lib/guardian/rules/edge.ts';
 import { validateStripeEvent } from '../../lib/guardian/validation/edge.ts';
@@ -9,6 +11,11 @@ import { getRuleConfig } from '../../lib/guardian/getRuleConfig.ts'; // Import c
 import { Database, Json, Tables, TablesInsert } from '../../types/supabase.ts'; // Import generated types
 import { AlertType, Severity } from '../../lib/guardian/constants.ts'; // Import shared enums
 import Stripe from 'https://esm.sh/stripe@12.17.0?target=deno&deno-std=0.132.0'; // Import Stripe types if needed
+import {
+  alertsTotal,
+  webhookEventDurationSeconds,
+  reactorEventsTotal,
+} from '../../lib/metrics/registry.ts'; // Import metrics
 
 // Environment variables
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -26,6 +33,30 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 console.log(`Guardian Reactor initialized`);
 console.log(`Optional env: RECENT_LOOKBACK_DAYS=${RECENT_LOOKBACK_DAYS}`);
 
+// --- Sentry Initialization ---
+const SENTRY_DSN = Deno.env.get('SENTRY_DSN');
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    integrations: [
+      // Add ProfilingIntegration for performance monitoring
+      new ProfilingIntegration(),
+    ],
+    // Performance Monitoring
+    tracesSampleRate: Deno.env.get('NODE_ENV') === 'production' ? 0.01 : 0.1,
+    // Set sampling rate for profiling - this is relative to tracesSampleRate
+    profilesSampleRate: Deno.env.get('NODE_ENV') === 'production' ? 0.01 : 0.1,
+    environment: Deno.env.get('NODE_ENV') || 'development',
+    // release: Deno.env.get('VERCEL_GIT_COMMIT_SHA'), // Example if running on Vercel
+  });
+  console.log('[Sentry] Guardian Reactor SDK initialized');
+  // Optional: Capture startup message
+  // Sentry.captureMessage('Guardian Reactor started', 'info');
+} else {
+  console.log('[Sentry] Guardian Reactor SDK not initialized (SENTRY_DSN not set)');
+}
+// --- End Sentry Initialization ---
+
 interface ProcessEventRequest {
   event_buffer_id: number; // Assuming event_buffer.id is bigint -> number
 }
@@ -42,25 +73,62 @@ const corsHeaders = {
 
 serve(async (req: Request) => {
   const reqId = generateRequestId();
-  const baseLogData: Record<string, any> = { req_id: reqId, service: 'guardian-reactor' }; // Use Record for flexibility
+  (req as any).req_id = reqId;
+  const baseLogData = { req_id: reqId, service: 'guardian-reactor' };
   log.info({ ...baseLogData, method: req.method, url: req.url }, 'Incoming reactor request');
 
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    log.debug({ ...baseLogData }, 'Handling CORS preflight request');
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const startTime = performance.now();
+  const startTime = performance.now(); // Start timer for duration metric
+  let metricOutcome = 'critical_error'; // Default outcome
+  let status = 500;
+  // Declare variables needed in the final block
   let eventBufferId: number | null = null;
-  let eventPayload: Json | null = null; // Use Json type from Supabase types
-  let stripeAccountId: string | null = null;
   let stripeEventId: string | null = null;
+  let stripeAccountId: string | null = null;
   let eventType: string | null = null;
-  let status = 500; // Default status
-  let metricOutcome = 'critical_error'; // Default outcome for metrics
-  let rulesEvalMs: number | null = null;
-  let ruleConfig: Record<string, any> | null = null; // Keep as Record for now
+  let finalLogData: Record<string, any> = baseLogData; // Initialize finalLogData
+
+  const transaction = Sentry.startTransaction({
+    op: 'guardian-reactor',
+    name: 'Process Webhook Event',
+  });
+  Sentry.getCurrentScope().setSpan(transaction);
+
+  // Use a function to ensure metrics are observed even if errors occur early
+  const observeMetricsAndRespond = async (responsePromise: Promise<Response>) => {
+    try {
+      const response = await responsePromise;
+      const durationSeconds = (performance.now() - startTime) / 1000;
+      webhookEventDurationSeconds.observe({ outcome: metricOutcome }, durationSeconds);
+      reactorEventsTotal.inc({ outcome: metricOutcome });
+      log.debug(
+        { ...finalLogData, duration_ms: durationSeconds * 1000, metric_outcome: metricOutcome },
+        'Observed metrics for reactor event',
+      );
+      transaction?.setStatus(
+        metricOutcome === 'success' ||
+          metricOutcome === 'skipped' ||
+          metricOutcome === 'skipped_duplicate'
+          ? 'ok'
+          : 'internal_error',
+      );
+      transaction?.finish();
+      return response;
+    } catch (e) {
+      // If response generation itself fails (unlikely but possible)
+      log.fatal(
+        { ...finalLogData, error: (e as Error)?.message },
+        'Failed to generate final response after metrics observation',
+      );
+      // Fallback response
+      return new Response(
+        JSON.stringify({ error: 'Critical internal error during response generation' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+  };
 
   try {
     // Parse request body
@@ -111,7 +179,7 @@ serve(async (req: Request) => {
     }
 
     // Store details for logging & fetch config
-    eventPayload = event.payload;
+    const eventPayload = event.payload;
     stripeEventId = event.stripe_event_id;
     stripeAccountId = event.stripe_account_id;
     eventType = event.type;
@@ -127,7 +195,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const finalLogData = {
+    finalLogData = {
       ...eventLogData,
       stripe_event_id: stripeEventId,
       stripe_account_id: stripeAccountId,
@@ -151,10 +219,14 @@ serve(async (req: Request) => {
         'Duplicate event buffer ID detected, skipping processing.',
       );
       status = 200; // Acknowledge receipt to caller (e.g., webhook handler) but do no work.
-      return new Response(JSON.stringify({ message: 'Event already processed' }), {
-        status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await observeMetricsAndRespond(
+        Promise.resolve(
+          new Response(JSON.stringify({ message: 'Event already processed' }), {
+            status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
     } else if (processedError) {
       // Any other error during the idempotency check is problematic
       metricOutcome = 'idempotency_error';
@@ -180,7 +252,7 @@ serve(async (req: Request) => {
     // --- Fetch Rule Config BEFORE Transaction ---
     try {
       // Ensure stripeAccountId is not null before passing
-      ruleConfig = await getRuleConfig(stripeAccountId);
+      const ruleConfig = await getRuleConfig(stripeAccountId);
       if (!ruleConfig) {
         log.error(
           { ...finalLogData },
@@ -226,7 +298,9 @@ serve(async (req: Request) => {
           },
           'Event processing skipped (already processed)',
         );
-        return new Response(null, { status, headers: { ...corsHeaders } });
+        return await observeMetricsAndRespond(
+          Promise.resolve(new Response(null, { status, headers: { ...corsHeaders } })),
+        );
       }
       if (dupError) {
         throw new Error(`Failed idempotency check: ${dupError.message}`);
@@ -274,19 +348,19 @@ serve(async (req: Request) => {
           userId: userId, // Use the fetched userId
         }));
 
-        rulesEvalMs = Math.round(performance.now() - ruleStart);
+        const ruleEvalMs = Math.round(performance.now() - ruleStart);
         log.info(
           {
             ...finalLogData,
-            rules_eval_ms: rulesEvalMs,
+            rules_eval_ms: ruleEvalMs,
             evaluated_alert_count: evaluatedAlertCount,
           },
           'Rules evaluated',
         );
       } catch (ruleError: any) {
-        if (rulesEvalMs !== null) {
+        if (ruleEvalMs !== null) {
           log.info(
-            { ...finalLogData, rules_eval_ms: rulesEvalMs, error: ruleError?.message },
+            { ...finalLogData, rules_eval_ms: ruleEvalMs, error: ruleError?.message },
             'Rule evaluation timing before error',
           );
         }
@@ -328,6 +402,7 @@ serve(async (req: Request) => {
                 'RPC insert_alert_and_enqueue succeeded',
               );
               if (result.value.data) {
+                alertsTotal.inc({ rule_id: ruleId }); // Increment alert counter on success
                 createdAlertIds.push(result.value.data);
               }
             }
@@ -361,15 +436,28 @@ serve(async (req: Request) => {
         metric_event: 'reactor_events_total',
         metric_outcome: metricOutcome,
       };
-      if (rulesEvalMs !== null) {
-        successMetrics.metric_hist_reactor_eval_ms = rulesEvalMs;
+      if (ruleEvalMs !== null) {
+        successMetrics.metric_hist_reactor_eval_ms = ruleEvalMs;
       }
       log.info({ ...finalLogData, ...successMetrics }, 'Event processed successfully');
-      return new Response(JSON.stringify(responsePayload), {
-        status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await observeMetricsAndRespond(
+        Promise.resolve(
+          new Response(JSON.stringify(responsePayload), {
+            status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
     } catch (error: any) {
+      // Capture exceptions before handling DLQ logic
+      Sentry.captureException(error, {
+        extra: {
+          eventBufferId,
+          stripeEventId,
+          stripeAccountId,
+          eventType,
+        },
+      });
       // --- Error Handling (largely unchanged) --- //
       status = status >= 400 ? status : 500; // Keep 4xx errors if already set
       const errorMsg = error?.message ?? String(error);
@@ -415,12 +503,13 @@ serve(async (req: Request) => {
               'Failed to insert into DLQ',
             );
             // Return original error status, not necessarily 500
-            return new Response(
-              JSON.stringify({ error: `Server error & DLQ failure: ${dlqError.message}` }),
-              {
-                status: 500, // Force 500 on DLQ failure
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              },
+            return await observeMetricsAndRespond(
+              Promise.resolve(
+                new Response(
+                  JSON.stringify({ error: `Server error & DLQ failure: ${dlqError.message}` }),
+                  { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+                ),
+              ),
             );
           } else {
             log.info(
@@ -432,12 +521,16 @@ serve(async (req: Request) => {
               'Event inserted into DLQ after error',
             );
             // Return the original error status that led to the DLQ
-            return new Response(
-              JSON.stringify({ error: `Event failed processing and sent to DLQ: ${errorMsg}` }),
-              {
-                status: status, // Return original status (e.g., 400 or 500)
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              },
+            return await observeMetricsAndRespond(
+              Promise.resolve(
+                new Response(
+                  JSON.stringify({ error: `Event failed processing and sent to DLQ: ${errorMsg}` }),
+                  {
+                    status: status,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                  },
+                ),
+              ),
             );
           }
         } catch (dlqCatchError: any) {
@@ -447,12 +540,13 @@ serve(async (req: Request) => {
             'CRITICAL: Unhandled exception during DLQ insertion',
           );
           // Return 500 on unexpected DLQ error
-          return new Response(
-            JSON.stringify({ error: 'Critical server error during DLQ processing' }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            },
+          return await observeMetricsAndRespond(
+            Promise.resolve(
+              new Response(
+                JSON.stringify({ error: 'Critical server error during DLQ processing' }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+              ),
+            ),
           );
         }
       } else {
@@ -462,15 +556,34 @@ serve(async (req: Request) => {
           { ...finalLogData, metric_event: 'reactor_events_total', metric_outcome: metricOutcome },
           'Cannot insert into DLQ due to missing event data',
         );
-        return new Response(JSON.stringify({ error: `Server error: ${errorMsg}` }), {
-          status: status, // Return original status
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return await observeMetricsAndRespond(
+          Promise.resolve(
+            new Response(JSON.stringify({ error: `Server error: ${errorMsg}` }), {
+              status: status,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }),
+          ),
+        );
       }
     }
-  } catch (error: any) {
+  } catch (outerError: any) {
+    // Capture exceptions before handling DLQ logic
+    Sentry.captureException(outerError, {
+      extra: {
+        eventBufferId,
+        stripeEventId,
+        stripeAccountId,
+        eventType,
+      },
+    });
+    // Ensure the transaction is finished even if observeMetricsAndRespond isn't reached
+    // (e.g., due to early errors before the wrapper is called)
+    if (!transaction?.endTimestamp) {
+      transaction?.setStatus('internal_error'); // Assume error if not finished cleanly
+      transaction?.finish();
+    }
     status = status >= 400 ? status : 500; // Keep 4xx errors if already set
-    const errorMsg = error?.message ?? String(error);
+    const errorMsg = outerError?.message ?? String(outerError);
     // Ensure critical IDs are available for logging/DLQ
     const finalLogData = {
       ...baseLogData,
@@ -513,12 +626,13 @@ serve(async (req: Request) => {
             'Failed to insert into DLQ',
           );
           // Return original error status, not necessarily 500
-          return new Response(
-            JSON.stringify({ error: `Server error & DLQ failure: ${dlqError.message}` }),
-            {
-              status: 500, // Force 500 on DLQ failure
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            },
+          return await observeMetricsAndRespond(
+            Promise.resolve(
+              new Response(
+                JSON.stringify({ error: `Server error & DLQ failure: ${dlqError.message}` }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+              ),
+            ),
           );
         } else {
           log.info(
@@ -530,12 +644,13 @@ serve(async (req: Request) => {
             'Event inserted into DLQ after error',
           );
           // Return the original error status that led to the DLQ
-          return new Response(
-            JSON.stringify({ error: `Event failed processing and sent to DLQ: ${errorMsg}` }),
-            {
-              status: status, // Return original status (e.g., 400 or 500)
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            },
+          return await observeMetricsAndRespond(
+            Promise.resolve(
+              new Response(
+                JSON.stringify({ error: `Event failed processing and sent to DLQ: ${errorMsg}` }),
+                { status: status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+              ),
+            ),
           );
         }
       } catch (dlqCatchError: any) {
@@ -545,12 +660,13 @@ serve(async (req: Request) => {
           'CRITICAL: Unhandled exception during DLQ insertion',
         );
         // Return 500 on unexpected DLQ error
-        return new Response(
-          JSON.stringify({ error: 'Critical server error during DLQ processing' }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          },
+        return await observeMetricsAndRespond(
+          Promise.resolve(
+            new Response(JSON.stringify({ error: 'Critical server error during DLQ processing' }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }),
+          ),
         );
       }
     } else {
@@ -560,10 +676,14 @@ serve(async (req: Request) => {
         { ...finalLogData, metric_event: 'reactor_events_total', metric_outcome: metricOutcome },
         'Cannot insert into DLQ due to missing event data',
       );
-      return new Response(JSON.stringify({ error: `Server error: ${errorMsg}` }), {
-        status: status, // Return original status
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return await observeMetricsAndRespond(
+        Promise.resolve(
+          new Response(JSON.stringify({ error: `Server error: ${errorMsg}` }), {
+            status: status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
     }
   }
 });
