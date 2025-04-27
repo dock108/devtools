@@ -1,17 +1,22 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: process.env.SITE_URL || 'https://dock108.com',
+  siteUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://www.dock108.com',
   generateRobotsTxt: true,
-  exclude: ['/admin/*', '/api/*', '/settings/*', '/callback', '/login', '/sign-up'],
   robotsTxtOptions: {
     policies: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/api/', '/settings/'],
       },
     ],
   },
+  exclude: [
+    '/api/*',
+    '/admin/*',
+    '/stripe-guardian/accounts/*/settings',
+    '/stripe-guardian/alerts/*',
+    '/guardian-demo',
+  ],
   // Optional: Exclude specific routes if necessary
   // exclude: ['/admin/*', '/api/*'],
   // Configure paths to be included

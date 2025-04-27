@@ -8,7 +8,11 @@ import { formatDate } from '@/lib/date';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
-// import { siteConfig } from '@/config/site'; // Assuming site config for base URL
+import siteConfig from '@/lib/siteConfig';
+import Image from 'next/image';
+import { format } from 'date-fns';
+import { compileMDX } from 'next-mdx-remote/rsc';
+import DemoCTA from '@/components/mdx/DemoCTA';
 
 interface BlogPostPageProps {
   params: { slug: string };
@@ -71,6 +75,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   const { prev, next } = getPrevNextPosts(params.slug);
 
+  const components = {
+    ...mdxComponents,
+    DemoCTA,
+  };
+
   return (
     <Container className="py-12 md:py-16 max-w-3xl mx-auto">
       <article>
@@ -98,7 +107,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         {/* Content */}
         <div className="prose prose-slate dark:prose-invert max-w-none">
           {/* @ts-expect-error Server Component */}
-          <MDXRemote source={post.content} components={mdxComponents} />
+          <MDXRemote source={post.content} components={components} />
         </div>
 
         {/* Footer Navigation */}
