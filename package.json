@@ -89,6 +89,7 @@
     "dompurify": "^3.0.6",
     "feed": "^4.2.2",
     "framer-motion": "^11.1.2",
+    "glob": "^11.0.2",
     "gray-matter": "^4.0.3",
     "lightningcss": "^1.0.0",
     "lucide-react": "^0.294.0",
@@ -165,6 +166,7 @@
     "supabase": "^1.150.0",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
+    "ts-prune": "^0.10.3",
     "tsconfig-paths": "^4.2.0",
     "vitest": "^3.1.2",
     "wait-on": "^8.0.3"
