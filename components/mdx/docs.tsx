@@ -1,4 +1,4 @@
-'use client';
+// 'use client'; // Remove this directive
 
 import React from 'react';
 import Link from 'next/link';

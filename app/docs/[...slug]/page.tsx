@@ -34,12 +34,12 @@ export default async function DocPage({ params }: DocPageProps) {
 
   return (
     <>
-      <h1 className="mb-4 text-4xl font-bold tracking-tight">
+      {/* <h1 className="mb-4 text-4xl font-bold tracking-tight">
         {doc.frontmatter?.title || 'Documentation'}
       </h1>
       {doc.frontmatter?.description && (
         <p className="text-xl text-muted-foreground mb-8">{doc.frontmatter.description}</p>
-      )}
+      )} */}
       <div>{doc.content}</div>
     </>
   );
