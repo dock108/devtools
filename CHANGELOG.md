@@ -189,6 +189,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated Supabase queries to use generated types (`types/supabase.ts`).
   - Added `pnpm tsc --noEmit` step to CI workflow (`ci.yml`).
   - Updated README with "Type Safety" section explaining type generation and strict enforcement.
+- **G-25: Admin UI for Guardian Management**
+  - Created a new section `/admin` accessible only to users with the `admin` role (checked via `AdminLayout` using Supabase `app_metadata`).
+  - **Rule Sets Management (`/admin/rule-sets`)**:
+    - UI for viewing, creating, editing, and deleting rule sets.
+    - Dialog for editing rule set name and JSON configuration with basic validation.
+    - API route (`/api/admin/rule-sets`) handling GET, POST, PUT, DELETE for rule sets.
+    - Prevents modification/deletion of the 'default' rule set.
+  - **Notification Settings Management (`/admin/settings`)**:
+    - UI for managing global Slack and email notification settings (webhook URL, recipient list, enable/disable toggles).
+    - API route (`/api/admin/settings`) handling GET and PUT (upsert) for the single `global_settings` row.
+  - **Account Management (`/admin/accounts`)**:
+    - UI for viewing all connected Stripe accounts.
+    - Displays account details (Stripe ID, name, status, connection time).
+    - Allows assigning specific rule sets (or default/null) to each account via a dropdown.
+    - API route (`/api/admin/accounts`) handling GET (list with rule set names) and PATCH (update `rule_set_id`).
+  - **Database & Security**:
+    - Added `rule_sets` and `settings` tables via migrations (`20250427_create_rule_sets.sql`, `20250427_create_settings.sql`).
+    - Updated/created `accounts` table migration (`20250427_create_accounts.sql`) to include `rule_set_id` foreign key to `rule_sets`.
+    - Added RLS policies (`20250426_admin_rls.sql`) to restrict access to `rule_sets`, `settings`, and `accounts` tables in the admin context.
+    - Created a migration to drop the potentially incorrect `settings` table (`20250426_drop_settings_table.sql`) before recreating it correctly.
+  - **Dependencies**: Utilizes `@supabase/auth-helpers-nextjs`, `zod` for validation, `shadcn/ui` components (Table, Dialog, Select, Card, etc.), `react-hot-toast`, `lucide-react`.
 
 ### Changed
 
