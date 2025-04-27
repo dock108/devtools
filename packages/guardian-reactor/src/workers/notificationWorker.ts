@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database, Tables, TablesInsert } from '@/types/supabase'; // Adjust path as needed
-import { getServiceSupabaseClient } from '@/lib/supabase/client-service-role'; // Assuming service client helper
+import { createAdminClient as getServiceSupabaseClient } from '@/lib/supabase/admin'; // Use admin client
 import { log } from '@/lib/logger'; // Assuming logger
 import { attemptSendEmail } from '@/supabase/functions/send-email-alert/index'; // Placeholder path - ADJUST
 import { attemptSendSlack } from '@/supabase/functions/send-slack-alert/index'; // Placeholder path - ADJUST

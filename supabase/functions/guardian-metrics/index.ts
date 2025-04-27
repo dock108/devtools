@@ -1,4 +1,4 @@
-// @ts-ignore: Deno-specific globals
+// @ts-expect-error: Deno-specific globals
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { log } from '../../lib/logger.ts';
@@ -51,7 +51,10 @@ serve(async (req: Request) => {
   // For now, return a placeholder or simulate metrics based on recent logs if feasible.
 
   // Placeholder Response:
-  log.info({ ...baseLogData, status: 200 }, 'Metrics endpoint accessed successfully (placeholder response).');
+  log.info(
+    { ...baseLogData, status: 200 },
+    'Metrics endpoint accessed successfully (placeholder response).',
+  );
   const placeholderMetrics = `# HELP placeholder_metric Example metric
 # TYPE placeholder_metric gauge
 placeholder_metric 1
@@ -64,4 +67,4 @@ placeholder_metric 1
       'Content-Type': 'text/plain; version=0.0.4; charset=utf-8',
     },
   });
-}); 
+});

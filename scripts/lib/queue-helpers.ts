@@ -1,7 +1,14 @@
 // scripts/lib/queue-helpers.ts
-import { queue } from '@/lib/queue'; // Assuming this path resolves correctly
+// import { queue } from '@/lib/queue'; // Original: Unresolved - Assuming this path resolves correctly
 
 export async function waitForQueueDrained(timeoutMs = 15000): Promise<void> {
+  // Cannot proceed without queue instance. Logging error and returning early.
+  console.error(
+    'waitForQueueDrained requires the BullMQ queue instance, but it could not be imported.',
+  );
+  throw new Error('Queue instance not available.');
+
+  /* Original logic commented out:
   console.log(`Waiting for BullMQ queue '${queue.name}' to drain...`);
   const start = Date.now();
   while (true) {
@@ -36,6 +43,7 @@ export async function waitForQueueDrained(timeoutMs = 15000): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait longer after an error
     }
   }
+  */
 }
 
 // Optional: Add a function to connect/disconnect the queue if needed for the script

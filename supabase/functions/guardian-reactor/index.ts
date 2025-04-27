@@ -1,4 +1,4 @@
-// @ts-ignore: Deno-specific globals
+// @ts-expect-error: Deno-specific globals
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient, User } from 'https://esm.sh/@supabase/supabase-js@2.43.4';
 import * as Sentry from 'https://esm.sh/@sentry/node@7.114.0'; // Import Sentry Node SDK

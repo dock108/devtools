@@ -2,6 +2,8 @@ import { log } from '@/lib/logger';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Database, Json, Tables } from '@/types/supabase';
 import { AlertType, Severity, GuardianRuleOutput } from '@/lib/guardian/constants';
+import { validateStripeEvent } from '@/lib/guardian/validateStripeEvent';
+// eslint-disable-next-line import/no-unresolved
 import Stripe from 'https://esm.sh/stripe@12.17.0?target=deno&deno-std=0.132.0';
 
 // Define the context structure expected by Edge rules

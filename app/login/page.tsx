@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,10 +119,10 @@ function LoginForm() {
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-center text-sm text-slate-400">
-            Don't have an account?
-            <a href="/sign-up" className="ml-1 font-medium text-blue-400 hover:underline">
+            Don&apos;t have an account?
+            <Link href="/sign-up" className="ml-1 font-medium text-blue-400 hover:underline">
               Sign up for Beta
-            </a>
+            </Link>
           </div>
         </CardFooter>
       </Card>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { DemoEvent } from './useFakeStripeEvents';
 
 export type ScenarioEvent = {
@@ -32,21 +32,21 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
   >([]);
 
   // Clear all timers on unmount or reset
-  const clearAllTimers = () => {
+  const clearAllTimers = useCallback(() => {
     if (timersRef.current.length > 0) {
       timersRef.current.forEach(clearTimeout);
       timersRef.current = [];
     }
     pendingEventsRef.current = [];
     setIsRunning(false);
-  };
+  }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     clearAllTimers();
     setEvents([]);
     setCurrentIndex(0);
     startRef.current = Date.now();
-  };
+  }, [clearAllTimers]);
 
   const restart = (newScenarioName?: string) => {
     reset();
@@ -58,51 +58,54 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
   };
 
   // Load scenario data
-  const loadScenario = async (name: string) => {
-    if (!name) return;
+  const loadScenario = useCallback(
+    async (name: string) => {
+      if (!name) return;
 
-    // Cancel any pending fetch
-    if (fetchControllerRef.current) {
-      fetchControllerRef.current.abort();
-    }
-
-    // Create new controller for this fetch
-    fetchControllerRef.current = new AbortController();
-    const signal = fetchControllerRef.current.signal;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/guardian-demo/scenarios/${name}.json`, { signal });
-      if (!response.ok) {
-        throw new Error(`Failed to load scenario: ${response.statusText}`);
+      // Cancel any pending fetch
+      if (fetchControllerRef.current) {
+        fetchControllerRef.current.abort();
       }
 
-      const data: ScenarioEvent[] = await response.json();
-      setScenarioEvents(data);
+      // Create new controller for this fetch
+      fetchControllerRef.current = new AbortController();
+      const signal = fetchControllerRef.current.signal;
 
-      // Calculate total delay time from all events
-      const total = data.reduce((sum, event) => sum + event.delayMs, 0);
-      setTotalDelayMs(total);
+      setIsLoading(true);
+      setError(null);
 
-      setIsLoading(false);
-      setCurrentIndex(0);
+      try {
+        const response = await fetch(`/guardian-demo/scenarios/${name}.json`, { signal });
+        if (!response.ok) {
+          throw new Error(`Failed to load scenario: ${response.statusText}`);
+        }
 
-      // Clear any existing events and timers before scheduling new ones
-      reset();
-    } catch (err) {
-      // Don't set error if aborted
-      if (err instanceof Error && err.name === 'AbortError') {
-        return;
+        const data: ScenarioEvent[] = await response.json();
+        setScenarioEvents(data);
+
+        // Calculate total delay time from all events
+        const total = data.reduce((sum, event) => sum + event.delayMs, 0);
+        setTotalDelayMs(total);
+
+        setIsLoading(false);
+        setCurrentIndex(0);
+
+        // Clear any existing events and timers before scheduling new ones
+        reset();
+      } catch (err) {
+        // Don't set error if aborted
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+        setError(err instanceof Error ? err.message : 'Failed to load scenario');
+        setIsLoading(false);
       }
-      setError(err instanceof Error ? err.message : 'Failed to load scenario');
-      setIsLoading(false);
-    }
-  };
+    },
+    [reset],
+  );
 
   // Schedule the events based on the scenario
-  const scheduleEvents = () => {
+  const scheduleEvents = useCallback(() => {
     clearAllTimers();
     const now = Date.now();
     startRef.current = now;
@@ -158,10 +161,10 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
 
       timersRef.current.push(timer);
     });
-  };
+  }, [clearAllTimers, scenarioEvents, speed, onExpire, reset]);
 
   // Reschedule events when speed changes
-  const rescheduleEvents = () => {
+  const rescheduleEvents = useCallback(() => {
     if (pendingEventsRef.current.length === 0) return;
 
     clearAllTimers();
@@ -217,7 +220,7 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
 
       timersRef.current.push(timer);
     });
-  };
+  }, [clearAllTimers, scenarioEvents, speed, onExpire, reset]);
 
   // Load scenario effect
   useEffect(() => {
@@ -233,21 +236,21 @@ export function useDemoScenario(scenarioName: string | null, options: ScenarioOp
       }
       clearAllTimers();
     };
-  }, [scenarioName]);
+  }, [scenarioName, clearAllTimers, loadScenario]);
 
   // Schedule events when scenario data is loaded
   useEffect(() => {
     if (scenarioEvents.length > 0) {
       scheduleEvents();
     }
-  }, [scenarioEvents]);
+  }, [scenarioEvents, scheduleEvents]);
 
   // Reschedule when speed changes
   useEffect(() => {
     if (scenarioEvents.length > 0 && pendingEventsRef.current.length > 0) {
       rescheduleEvents();
     }
-  }, [speed]);
+  }, [speed, scenarioEvents.length, rescheduleEvents]);
 
   return {
     events,

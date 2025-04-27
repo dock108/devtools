@@ -198,7 +198,7 @@ export default function AnalyticsPage() {
     // When filtering is implemented, this logic will change:
     // return isProUser ? selectedAccountId : null;
     return null; // Always fetch global for now
-  }, [isProUser, selectedAccountId]);
+  }, []); // Removed unnecessary dependencies
 
   // --- React Query Hooks --- //
   // Pass fetchAccountId to queryKey and queryFn

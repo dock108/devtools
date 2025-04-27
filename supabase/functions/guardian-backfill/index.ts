@@ -157,13 +157,13 @@ serve(async (req: Request) => {
 
         for (const event of relevantEvents) {
           // Only process if the event has data.object (some events might not)
-          // @ts-ignore TODO: Refine Stripe types if possible
+          // @ts-expect-error TODO: Refine Stripe types if possible
           if (event.data && event.data.object) {
             eventsInBatch.push({
               stripe_event_id: event.id,
               stripe_account_id: stripeAccountId,
               type: event.type,
-              // @ts-ignore TODO: Refine Stripe types if possible
+              // @ts-expect-error TODO: Refine Stripe types if possible
               payload: event.data.object, // Store original data part
               received_at: new Date(event.created * 1000).toISOString(), // Use event creation time
             });
@@ -191,6 +191,7 @@ serve(async (req: Request) => {
               console.log(`Upserted ${inserted.length} events into buffer. Triggering reactor...`);
               // Trigger reactor for the successfully inserted events (fire and forget)
               for (const buf of inserted) {
+                // @ts-expect-error TODO: Refine Stripe types if possible
                 fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/guardian-reactor`, {
                   method: 'POST',
                   headers: {
@@ -233,6 +234,7 @@ serve(async (req: Request) => {
       } else if (inserted) {
         console.log(`Upserted ${inserted.length} final events into buffer. Triggering reactor...`);
         for (const buf of inserted) {
+          // @ts-expect-error TODO: Refine Stripe types if possible
           fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/guardian-reactor`, {
             method: 'POST',
             headers: {

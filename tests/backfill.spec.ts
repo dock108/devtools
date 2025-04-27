@@ -24,7 +24,7 @@ const createMockStripeEvent = (id: string, type: string, created: number, accoun
   pending_webhooks: 0,
   request: { id: null, idempotency_key: null },
   type,
-  // @ts-ignore - Simplify data object for testing - This might cause issues with strict checks if not handled
+  // @ts-expect-error - Simplify data object for testing - This might cause issues with strict checks if not handled
   data: { object: { id: `obj_${id}`, object: type.split('.')[0] ?? 'charge', amount: 1000 } },
   account: account,
 });
@@ -89,6 +89,18 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
         return !type.startsWith('customer.');
       },
     }));
+
+    // Mock the fetch call to the reactor
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({}),
+    });
+    // @ts-expect-error - Mocking global fetch for testing reactor trigger
+    global.fetch = mockFetch;
+
+    // Set a specific date for consistent testing
+    // ... existing code ...
 
     // Runtime setup - ensure context types are correct
     runtime = new EdgeRuntime({

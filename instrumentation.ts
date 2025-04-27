@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
-import { NextRequest } from 'next/server';
-import { RequestError } from 'next/dist/server/request-error';
+import { ProfilingIntegration } from '@sentry/profiling-node';
+// import { RequestError } from 'next/dist/server/request-error'; // Original: Unresolved
 
 export function register() {
   Sentry.init({

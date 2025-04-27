@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getAllPosts, getPostBySlug, getPrevNextPosts, Post } from '@/lib/blog';
-import { MDXRemote } from 'next-mdx-remote/rsc';
+import { MDXRemote , compileMDX } from 'next-mdx-remote/rsc';
 import mdxComponents from '@/components/mdx'; // Import custom components
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,6 @@ import type { Metadata } from 'next';
 import siteConfig from '@/lib/siteConfig';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { compileMDX } from 'next-mdx-remote/rsc';
 import DemoCTA from '@/components/mdx/DemoCTA';
 
 interface BlogPostPageProps {

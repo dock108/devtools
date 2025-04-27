@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { User } from '@supabase/auth-helpers-nextjs';
+import { createClientComponentClient , User } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 
 // Define a type for profile data

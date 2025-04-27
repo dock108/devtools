@@ -1,20 +1,17 @@
 'use client';
 
 import React, { useEffect, useState, Suspense, useMemo, useTransition } from 'react';
-import { format, startOfMonth, addDays, formatRelative } from 'date-fns';
-import { Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { format, startOfMonth, formatRelative } from 'date-fns';
+import { Loader2, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
 import {
   resumePayoutsServerAction,
   pausePayoutsServerAction,
 } from 'app/(auth)/settings/connected-accounts/actions';
-import { Alert as ShadcnAlert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import Link from 'next/link';
 import { alertCapFor } from '@/lib/guardian/plan';
 import { UpgradeBanner } from '@/app/components/UpgradeBanner';
 
@@ -29,17 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { HiSearch, HiCheckCircle, HiOutlineExclamationCircle } from 'react-icons/hi';
-import Image from 'next/image';
-import { Card, Input, Spinner, Alert } from 'flowbite-react';
 import StripeAccountSelect from '@/app/components/StripeAccountSelect';
-import RuleResultAlert from '@/app/components/RuleResultAlert';
 import MetricCard from '@/app/components/MetricCard';
-import StatusFilters from '@/app/components/StatusFilters';
 import { Database } from '@/types/supabase';
-import { AlertStatus, Settings, StripeEvent } from '@/types/guardian';
-import { transformAlertData, fetchStripeEvent } from '@/lib/guardian/display';
-import { displayableStripeEvent } from '@/lib/guardian/utils';
 
 // Type for connected account data needed
 type ConnectedAccount = {
@@ -72,12 +61,23 @@ type AlertChannels = {
   auto_pause: boolean;
 };
 
-// Settings type definition
+// Settings type definition - Define locally if import commented out
 type Settings = {
   id: string;
+  user_id: string;
   tier: string | null;
-  // Other settings fields as needed
+  free_tier_alert_limit?: number;
+  pro_tier_alert_limit?: number;
+  enterprise_tier_alert_limit?: number;
+  slack_notifications_enabled?: boolean;
+  email_notifications_enabled?: boolean;
+  // Add other relevant settings fields as needed
 };
+
+// StripeEvent might be needed? Define a basic structure or remove usage
+type StripeEvent = Record<string, any>; // Placeholder
+// Define AlertStatus locally if needed
+type AlertStatus = 'open' | 'resolved' | 'muted'; // Example
 
 // Wrap the core logic in a component to use Suspense
 function AlertsPageContent() {
@@ -106,7 +106,6 @@ function AlertsPageContent() {
 
   const supabase = createClient();
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   // Memoize the currently selected account's full data
   const selectedAccountData = useMemo(() => {
@@ -397,7 +396,7 @@ function AlertsPageContent() {
       console.log(`Unmounting data fetch effect for ${selectedAccountId}`);
       isMounted = false;
     }; // Cleanup
-  }, [selectedAccountId, supabase]);
+  }, [supabase, selectedAccountId]); // Added selectedAccountId
 
   // Set up real-time subscription based on selectedAccountId
   useEffect(() => {

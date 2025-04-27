@@ -15,8 +15,9 @@ export function EventTable({ events, className = '' }: Props) {
 
   // Clear the rendered events cache when component unmounts
   useEffect(() => {
+    const currentRenderedEvents = renderedEvents.current;
     return () => {
-      renderedEvents.current.clear();
+      currentRenderedEvents.clear();
     };
   }, []);
 

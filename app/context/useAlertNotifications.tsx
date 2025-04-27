@@ -191,7 +191,7 @@ export const AlertNotificationsProvider: React.FC<AlertNotificationsProviderProp
         },
       );
     },
-    [router, userStripeAccounts, unreadAlerts], // Removed markSingleRead from deps for now
+    [router, userStripeAccounts, unreadAlerts, markSingleRead],
   );
 
   // Subscribe to Realtime changes on mount

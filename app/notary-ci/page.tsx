@@ -1,25 +1,16 @@
 import type { Metadata } from 'next';
+import { ExternalLink, Github, CheckCircle2 } from 'lucide-react';
 import { Container } from '@/components/Container';
-import { UploadCloud, Github, FileCheck2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { productLD } from '@/lib/jsonld';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // Placeholder components - replace or refine
-const Badge = ({ children, colorVar }: { children: React.ReactNode, colorVar: string }) => (
-  <span 
-    className="inline-flex items-center rounded-full px-3 py-0.5 text-sm font-medium"
-    style={{ backgroundColor: `color-mix(in srgb, ${colorVar} 10%, transparent)`, color: colorVar }}
-  >
-    {children}
-  </span>
-);
-// Using a generic icon placeholder for now
-import { Laptop } from 'lucide-react'; 
-const LaptopCodeIcon = ({ className }: { className?: string }) => (
-  <Laptop className={`w-64 h-64 text-gray-300 ${className || ''}`} /> 
+const Laptop = ({ className }: { className?: string }) => (
+  <svg className={`w-64 h-64 text-gray-300 ${className || ''}`} />
 );
 
 // Metadata
@@ -50,7 +41,7 @@ export const generateMetadata = (): Metadata => {
           url,
           image,
           price: '25.00',
-        })
+        }),
       ),
     },
   };
@@ -58,35 +49,38 @@ export const generateMetadata = (): Metadata => {
 
 const painPoints = [
   {
-    pain: "The `altool` is deprecated, notarization fails randomly, and App Store Connect is a maze.",
-    fix: "Uses the modern `notarytool` Swift CLI via a stable API, handling auth and retries automatically.",
+    pain: 'The `altool` is deprecated, notarization fails randomly, and App Store Connect is a maze.',
+    fix: 'Uses the modern `notarytool` Swift CLI via a stable API, handling auth and retries automatically.',
   },
   {
-    pain: "CI breaks whenever the Apple certificate expires, usually discovered at 2 AM.",
-    fix: "Securely stores your keys/certs in a cloud HSM with auto-renewal alerts and seamless rotation.",
+    pain: 'CI breaks whenever the Apple certificate expires, usually discovered at 2 AM.',
+    fix: 'Securely stores your keys/certs in a cloud HSM with auto-renewal alerts and seamless rotation.',
   },
   {
-    pain: "Requires a dedicated macOS runner in CI just for the signing and notarization steps.",
-    fix: "Offload the entire process to our hosted macOS VMs. Trigger via API or GitHub Action.",
+    pain: 'Requires a dedicated macOS runner in CI just for the signing and notarization steps.',
+    fix: 'Offload the entire process to our hosted macOS VMs. Trigger via API or GitHub Action.',
   },
 ];
 
 const features = [
   {
     name: 'Drag-and-Drop Web UI',
-    description: 'No CLI needed. Upload your unsigned .app or .pkg, and download the notarized, stapled output minutes later.',
-    icon: UploadCloud,
+    description:
+      'No CLI needed. Upload your unsigned .app or .pkg, and download the notarized, stapled output minutes later.',
+    icon: ExternalLink,
   },
   {
     name: 'GitHub Action Integration',
-    description: 'Drop our action into your existing workflow. Handles inputs, outputs, and secrets securely.',
+    description:
+      'Drop our action into your existing workflow. Handles inputs, outputs, and secrets securely.',
     icon: Github,
-    code: `uses: dock108/notary-ci-action@v1\\nwith:\\n  api_key: \\\${{ secrets.NOTARY_CI_KEY }}\\n  app_path: ./build/MyApp.dmg`
+    code: `uses: dock108/notary-ci-action@v1\\nwith:\\n  api_key: \\\${{ secrets.NOTARY_CI_KEY }}\\n  app_path: ./build/MyApp.dmg`,
   },
   {
     name: 'Audit Log & Stapled Ticket',
-    description: 'Get a full history of submissions and download the stapled notarization ticket for offline validation.',
-    icon: FileCheck2,
+    description:
+      'Get a full history of submissions and download the stapled notarization ticket for offline validation.',
+    icon: CheckCircle2,
   },
 ];
 
@@ -145,20 +139,21 @@ export default function NotaryCiPage() {
               Codesign & notarize mac builds in 60 seconds—straight from CI.
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-               Skip the Xcode maze. Upload once or drop our GitHub Action and ship notarized DMGs automatically.
+              Skip the Xcode maze. Upload once or drop our GitHub Action and ship notarized DMGs
+              automatically.
             </p>
-             {/* Waitlist Form */}
-             <div className="mt-8">
-               <WaitlistForm 
-                 productIdentifier={productIdentifier} 
-                 accentColorVar={accentColor} 
-                 tableName={tableName} 
-               />
-             </div>
+            {/* Waitlist Form */}
+            <div className="mt-8">
+              <WaitlistForm
+                productIdentifier={productIdentifier}
+                accentColorVar={accentColor}
+                tableName={tableName}
+              />
+            </div>
           </div>
           {/* Placeholder Illustration */}
           <div className="mt-16 sm:mt-24 lg:mt-0 lg:flex-shrink-0 lg:flex-grow">
-             <LaptopCodeIcon className="mx-auto w-[24rem] h-[24rem] max-w-full drop-shadow-xl" />
+            <Laptop className="mx-auto w-[24rem] h-[24rem] max-w-full drop-shadow-xl" />
           </div>
         </Container>
       </div>
@@ -167,7 +162,9 @@ export default function NotaryCiPage() {
       <div className="py-24 sm:py-32">
         <Container>
           <div className="mx-auto max-w-2xl lg:mx-0">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Stop wrestling with macOS signing & notarization</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Stop wrestling with macOS signing & notarization
+            </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
               Notary CI turns a complex, error-prone chore into a simple API call or CI step.
             </p>
@@ -175,8 +172,8 @@ export default function NotaryCiPage() {
           <div className="mt-16 flow-root">
             <div className="-my-8 divide-y divide-gray-100">
               {painPoints.map((point, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`py-8 ${index % 2 !== 0 ? 'bg-gray-50 -mx-6 px-6 lg:-mx-8 lg:px-8' : ''}`}
                 >
                   <dl className="relative flex flex-wrap gap-x-3 gap-y-3 lg:gap-x-8">
@@ -200,7 +197,9 @@ export default function NotaryCiPage() {
       <div className="bg-white py-24 sm:py-32">
         <Container>
           <div className="mx-auto max-w-2xl lg:mx-0">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Everything needed for automated notarization</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Everything needed for automated notarization
+            </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
               Whether you prefer a web UI or full CI/CD integration, Notary CI has you covered.
             </p>
@@ -208,23 +207,32 @@ export default function NotaryCiPage() {
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
             <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
               {features.map((feature) => (
-                <div key={feature.name} 
-                     className={cn(
-                       "flex flex-col rounded-2xl border border-t-2 bg-white p-8",
-                       "shadow-[0_0px_0px_0px_var(--tw-shadow-color)] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_6px_25px_-4px_var(--tw-shadow-color)]"
-                     )} 
-                     style={{ 
-                       '--tw-shadow-color': accentColor,
-                       borderColor: accentColor
-                     } as React.CSSProperties}>
+                <div
+                  key={feature.name}
+                  className={cn(
+                    'flex flex-col rounded-2xl border border-t-2 bg-white p-8',
+                    'shadow-[0_0px_0px_0px_var(--tw-shadow-color)] transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_6px_25px_-4px_var(--tw-shadow-color)]',
+                  )}
+                  style={
+                    {
+                      '--tw-shadow-color': accentColor,
+                      borderColor: accentColor,
+                    } as React.CSSProperties
+                  }
+                >
                   <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
-                    <feature.icon className="h-5 w-5 flex-none text-[var(--accent-notary)]" aria-hidden="true" />
+                    <feature.icon
+                      className="h-5 w-5 flex-none text-[var(--accent-notary)]"
+                      aria-hidden="true"
+                    />
                     {feature.name}
                   </dt>
                   <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
                     <p className="flex-auto">{feature.description}</p>
                     {feature.code && (
-                      <pre className="mt-4 overflow-x-auto rounded bg-gray-800 p-4 text-xs text-gray-300"><code>{feature.code}</code></pre>
+                      <pre className="mt-4 overflow-x-auto rounded bg-gray-800 p-4 text-xs text-gray-300">
+                        <code>{feature.code}</code>
+                      </pre>
                     )}
                   </dd>
                 </div>
@@ -238,31 +246,44 @@ export default function NotaryCiPage() {
       <div className="bg-gray-50 py-24 sm:py-32">
         <Container>
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Flat pricing, no surprises</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Flat pricing, no surprises
+            </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
               Pay per seat or build minute? No thanks. Simple, predictable pricing for everyone.
             </p>
           </div>
           <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2">
             {tiers.map((tier) => (
-              <Card 
-                key={tier.id} 
-                className="flex flex-col rounded-2xl border border-t-2" 
+              <Card
+                key={tier.id}
+                className="flex flex-col rounded-2xl border border-t-2"
                 style={{ borderColor: accentColor }}
               >
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold leading-8 text-gray-900">{tier.name}</CardTitle>
-                  <CardDescription className="text-sm leading-6 text-gray-600">{tier.description}</CardDescription>
+                  <CardTitle className="text-lg font-semibold leading-8 text-gray-900">
+                    {tier.name}
+                  </CardTitle>
+                  <CardDescription className="text-sm leading-6 text-gray-600">
+                    {tier.description}
+                  </CardDescription>
                   <div className="mt-4 flex items-baseline gap-x-2">
-                    <span className="text-4xl font-bold tracking-tight text-gray-900">{tier.priceMonthly}</span>
-                    <span className="text-sm font-semibold leading-6 tracking-wide text-gray-600">/month</span>
+                    <span className="text-4xl font-bold tracking-tight text-gray-900">
+                      {tier.priceMonthly}
+                    </span>
+                    <span className="text-sm font-semibold leading-6 tracking-wide text-gray-600">
+                      /month
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1">
                   <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-gray-600">
                     {tier.features.map((feature) => (
                       <li key={feature} className="flex gap-x-3">
-                        <Check className="h-6 w-5 flex-none text-[var(--accent-notary)]" aria-hidden="true" />
+                        <CheckCircle2
+                          className="h-6 w-5 flex-none text-[var(--accent-notary)]"
+                          aria-hidden="true"
+                        />
                         {feature}
                       </li>
                     ))}
@@ -271,11 +292,11 @@ export default function NotaryCiPage() {
               </Card>
             ))}
           </div>
-           <p className="mt-8 text-center text-sm text-gray-500">
+          <p className="mt-8 text-center text-sm text-gray-500">
             Early-access pricing—subject to change after launch.
           </p>
         </Container>
       </div>
     </>
   );
-} 
+}

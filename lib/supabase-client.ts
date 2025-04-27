@@ -1,18 +1,19 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase.schema';
+import { createBrowserClient } from '@supabase/ssr';
+import { Database } from '@/types/supabase';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Reuse across hot reloads in dev
 const globalForSupabase = global as unknown as {
-  supabaseClient?: ReturnType<typeof createClient>;
+  supabaseClient?: ReturnType<typeof createBrowserClient>;
 };
 
 // Create Supabase client for browser-side use
 // This client will respect RLS policies
-export const supabaseClient = globalForSupabase.supabaseClient || 
-  createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabaseClient =
+  globalForSupabase.supabaseClient ||
+  createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -24,4 +25,4 @@ export const supabaseClient = globalForSupabase.supabaseClient ||
 
 if (process.env.NODE_ENV !== 'production') {
   globalForSupabase.supabaseClient = supabaseClient;
-} 
+}

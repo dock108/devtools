@@ -44,7 +44,7 @@ describe('Guardian Fraud Scenarios', () => {
   const mockDate = new Date('2025-04-26T12:00:00Z');
 
   beforeAll(() => {
-    // @ts-ignore
+    // @ts-expect-error -- Mocking global Date for consistent testing
     global.Date = class extends Date {
       constructor(date) {
         if (date) {

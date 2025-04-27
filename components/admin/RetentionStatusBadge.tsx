@@ -74,7 +74,7 @@ const RetentionStatusBadge: React.FC = () => {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p>The retention job hasn't recorded a successful run yet.</p>
+            <p>The retention job hasn&apos;t recorded a successful run yet.</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
