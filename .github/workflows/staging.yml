@@ -23,14 +23,10 @@ jobs:
       STAGING_BRANCH: staging-${{ github.sha }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
         with:
           node-version: '20.x'
-          cache: 'npm'
 
       - name: Disable corepack & ensure npm is default
         run: corepack disable
@@ -145,14 +141,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
         with:
           node-version: '20.x'
-          cache: 'npm'
 
       - name: Disable corepack & ensure npm is default
         run: corepack disable

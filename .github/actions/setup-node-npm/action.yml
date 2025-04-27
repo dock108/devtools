@@ -1,0 +1,28 @@
+name: 'Setup Node + NPM Deps'
+description: 'Checks out code, sets up Node.js, disables corepack, and installs dependencies using npm ci'
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      shell: bash # Explicit shell for consistency
+
+    - name: Disable corepack (npm is default)
+      run: corepack disable
+      shell: bash
+
+    - name: Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+      shell: bash
+
+    - name: Install dependencies
+      run: npm ci
+      shell: bash

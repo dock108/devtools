@@ -9,8 +9,8 @@ on:
 
 jobs:
   build-test:
-    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Node 20 on Ubuntu
+    runs-on: ubuntu-latest
     env:
       STRIPE_CLIENT_ID: ${{ secrets.STRIPE_CLIENT_ID || 'ca_XXXXXXXXXX' }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'test_key' }}
@@ -20,45 +20,33 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_key
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'dummy_service_role' }}
       NEXT_PUBLIC_SITE_URL: https://example.com
-    strategy:
-      matrix:
-        node-version: [20.x]
-        os: [ubuntu-latest]
+      # E2E specific vars:
+      NEXT_PUBLIC_SUPABASE_URL_E2E: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY_E2E: ${{ secrets.SUPABASE_ANON_KEY }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # Use the composite action for setup
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '20.x' # Specify Node version
 
-      - name: Disable corepack & ensure npm is default
-        run: corepack disable
-
+      # The actual checks start here
       - name: Check required secrets
         run: |
           if [[ -z "${{ secrets.STRIPE_CLIENT_ID }}" ]]; then
             echo "::warning::STRIPE_CLIENT_ID is not set in repository secrets"
           fi
-
           if [[ -z "${{ secrets.STRIPE_SECRET_KEY }}" ]]; then
             echo "::warning::STRIPE_SECRET_KEY is not set in repository secrets"
           fi
-
           if [[ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]]; then
             echo "::warning::SUPABASE_SERVICE_ROLE_KEY is not set in repository secrets"
           fi
 
-      - name: Install dependencies
-        run: npm ci
-
-      # Prettier + ESLint
       - name: Lint
         run: npm run lint
 
-      # Lint GitHub Actions workflows using actionlint
       - name: Lint GitHub Actions workflows
         uses: reviewdog/action-actionlint@v1
         with:
@@ -66,49 +54,39 @@ jobs:
           fail_on_error: true
           level: error
 
-      # Type check (Strict)
       - name: Type check (Strict)
-        # This now runs tsc with strict settings enabled in tsconfig.json
-        # If this fails, the build breaks.
         run: npm run tsc -- --noEmit
 
-      # Jest unit tests with coverage
-      # TODO (#<issue_number_for_step_3>): Re-enable this step after fixing Jest test suite failures.
       - name: Unit tests
+        id: unit-tests # Add id for checking outcome
         if: false # Temporarily disable failing test suite
         run: |
           npm test -- --coverage --runInBand || echo "::warning::Unit tests failed, review report"
 
       - name: Upload coverage
-        # Only upload if the test step actually ran (it won't currently)
         if: steps.unit-tests.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.node-version }}
+          name: coverage-20.x
           path: coverage/
 
-      # Build Next.js app once for Playwright
       - name: Build app
+        id: build-app # Add id for checking outcome
         run: |
           npm run build || echo "::error::Next.js build failed, cannot run Playwright tests"
 
-      # Removed docs build step
-      # - name: Build docs & check links
-      #   run: npm run build:docs
-
-      # Playwright smoke tests
       - name: Run Playwright tests
-        # continue-on-error: true # Removed
+        if: steps.build-app.outcome == 'success' # Only run if build succeeded
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.NEXT_PUBLIC_SUPABASE_URL_E2E }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY_E2E }}
         run: npm run test:e2e
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.node-version }}
+          name: playwright-report-20.x
           path: playwright-report/
 
       - name: Bundle size guard
