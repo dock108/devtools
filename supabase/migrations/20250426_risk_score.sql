@@ -74,4 +74,5 @@ for each row execute function public.compute_risk_score_before(); -- No argument
 --     END LOOP;
 -- END $$;
 
--- Remember to schedule 'REFRESH MATERIALIZED VIEW public.rule_fp_stats;' nightly. 
+-- Remember to schedule 'REFRESH MATERIALIZED VIEW public.rule_fp_stats;' nightly.
+REFRESH MATERIALIZED VIEW public.rule_fp_stats; 
