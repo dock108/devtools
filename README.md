@@ -179,6 +179,32 @@ While the full flow relies on GitHub Actions secrets and setup, you can simulate
 
 This project is intended for deployment on Vercel. Ensure environment variables for Supabase and Resend are set in the Vercel project settings.
 
+### Deployment Workflow
+
+Guardian uses an automated CI/CD pipeline to ensure reliable deployments:
+
+```mermaid
+flowchart TB
+    A[Push to main] --> B[Create Supabase Branch]
+    B --> C[Deploy to Vercel Preview]
+    C --> D[Run E2E Tests]
+    D -- Success --> E[Await Manual Approval]
+    D -- Failure --> F[Delete Supabase Branch]
+    E -- Approved --> G[Promote to Production]
+    G --> H[Deploy Supabase Branch to Prod]
+    H --> I[Delete Staging Branch]
+    I --> J[Notify Slack if Configured]
+```
+
+The deployment process is fully automated through GitHub Actions:
+
+1. **Staging**: Every push to `main` creates a clean staging environment with dedicated Supabase branch and Vercel preview deployment.
+2. **Testing**: E2E tests run against the staging environment to verify functionality.
+3. **Approval**: A manual approval step allows verification before promoting to production.
+4. **Production**: Upon approval, the staging environment is promoted to production.
+
+For detailed information about the CI/CD pipeline, see [docs/guardian/ci-cd.md](./docs/guardian/ci-cd.md).
+
 ## 🚀 Deploying to Vercel
 
 1. Duplicate `.env.example` → `.env` and fill in the required secrets.
@@ -444,15 +470,30 @@ Guardian development enforces strict TypeScript settings to catch errors early a
 
 ## Admin UI
 
-A dedicated Admin UI is available at `/admin` for managing core Guardian configurations. Access is restricted to users authenticated via Supabase Auth who have the role `admin` set in their `app_metadata`.
+The Admin UI allows users with the `admin` role to manage rule sets and notification settings for the application. Access is restricted via Row Level Security (RLS) policies in Supabase.
 
-Key sections include:
+### Features
 
-- **Rule Sets (`/admin/rule-sets`)**: Create, view, edit, and delete named rule sets. Each rule set contains a specific JSON configuration defining the behavior and thresholds for various Guardian rules. The `default` rule set cannot be deleted or renamed.
-- **Notifications (`/admin/settings`)**: Configure global notification channels. Enable/disable and provide details for Slack (via Incoming Webhook URL) and email (comma-separated list of recipients).
-- **Accounts (`/admin/accounts`)**: View a list of all connected Stripe accounts. Assign a specific Rule Set to each account to customize the rules applied to its events. If no rule set is assigned (or set to `Default (null)`), the system implies default rule behavior (which typically needs to be defined in the rule evaluation logic).
+- **Dashboard**: View metrics and quick links to various admin sections
+- **Notification Channels**: Create and manage notification channels for alerts
+- **Rule Sets**: Manage rule sets that define which alerts are triggered for accounts
+- **Connected Accounts**: View and manage connected Stripe accounts and assign rule sets
 
-**Security**: Row Level Security (RLS) policies are applied to the `rule_sets`, `settings`, and `accounts` tables to ensure that only users with the `admin` role can access or modify this data via the API routes (`/api/admin/*`). These policies are defined in `supabase/migrations/20250426_admin_rls.sql` and must be applied to your Supabase instance.
+### Access Control
+
+The admin area is protected by role-based access control. Only users with the `admin` role in their JWT claims can access the admin pages. This is enforced in the `app/admin/layout.tsx` component.
+
+To grant admin access to a user, set the `app_metadata` in Supabase:
+
+```sql
+UPDATE auth.users
+SET raw_app_meta_data = jsonb_set(raw_app_meta_data, '{role}', '"admin"')
+WHERE email = 'admin@example.com';
+```
+
+### Row Level Security
+
+The admin UI enforces permissions through Row Level Security policies in Supabase. The SQL for these policies is located in `supabase/migrations/20250426_admin_rls.sql`. Make sure to execute this SQL after deploying the application.
 
 ## Local Development
 

@@ -1,0 +1,53 @@
+# Actionlint configuration for Guardian CI/CD workflows
+# See: https://github.com/rhysd/actionlint
+
+# Severity levels (error, warning, info, none)
+self-hosted-runner: warning # Warnings for jobs using self-hosted runners
+workflow-dispatch-inputs: error # Error for missing workflow_dispatch inputs
+deprecated-commands: error # Error for using deprecated commands
+help-comment: warning # Warn on potentially misleading comments
+
+# Configuration for jobid pattern
+jobid: '[a-z][a-z0-9-_]*'
+
+# Shell syntax configuration
+shellcheck:
+  ignore-triggers: false
+  norc: true # Ignore ~/.bashrc
+  include-path: [] # Paths to include for ShellCheck analysis
+
+# Ignore certain rules
+# shellcheck:
+#   ignore:
+#     - SC2016  # Expressions don't expand in single quotes
+#     - SC2086  # Double quote to prevent globbing and word splitting
+
+# Configure allowed contexts
+context:
+  # Define specific rules for expressions like ${{ context.vars.* }}
+  - name: workflow_dispatch.inputs
+    type: object
+    required: false
+    properties:
+      preview_id:
+        type: string
+        required: true
+      preview_url:
+        type: string
+        required: true
+      supabase_branch:
+        type: string
+        required: true
+  - name: vars
+    type: object
+    required: false
+    properties:
+      SUPABASE_PROJECT_ID:
+        type: string
+        required: true
+      VERCEL_SCOPE:
+        type: string
+        required: false
+      PRODUCTION_URL:
+        type: string
+        required: false

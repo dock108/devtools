@@ -55,6 +55,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Lint GitHub Actions workflows using actionlint
+      - name: Lint GitHub Actions workflows
+        uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: github-pr-review
+          fail_on_error: true
+          level: error
+
       # Type check (Strict)
       - name: Type check (Strict)
         # This now runs tsc with strict settings enabled in tsconfig.json

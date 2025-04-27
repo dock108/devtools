@@ -1,0 +1,128 @@
+name: Production Promotion
+
+on:
+  repository_dispatch:
+    types: [promote-to-production]
+  workflow_dispatch:
+    inputs:
+      preview_id:
+        description: 'Vercel Preview Deployment ID'
+        required: true
+      preview_url:
+        description: 'Vercel Preview URL'
+        required: true
+      supabase_branch:
+        description: 'Supabase Branch Name'
+        required: true
+
+# Define environment variable defaults
+env:
+  SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+
+jobs:
+  approve-production:
+    name: Manual Approval
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Show Staging Info
+        run: |
+          echo "Staging Info:"
+          echo "- Preview URL: ${{ github.event.client_payload.preview_url || github.event.inputs.preview_url }}"
+          echo "- Preview ID: ${{ github.event.client_payload.preview_id || github.event.inputs.preview_id }}"
+          echo "- Supabase Branch: ${{ github.event.client_payload.supabase_branch || github.event.inputs.supabase_branch }}"
+
+  promote-to-production:
+    name: Promote to Production
+    needs: approve-production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify secrets
+        run: |
+          if [[ -z "${{ secrets.VERCEL_TOKEN }}" ]]; then
+            echo "::error::Missing VERCEL_TOKEN – add in repo secrets."
+            exit 1
+          fi
+          if [[ -z "${{ secrets.SUPABASE_CI_TOKEN }}" ]]; then
+            echo "::error::Missing SUPABASE_CI_TOKEN – add in repo secrets."
+            exit 1
+          fi
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Login to Supabase
+        run: supabase login --access-token ${{ secrets.SUPABASE_CI_TOKEN }}
+
+      - name: Promote Vercel deployment to production
+        run: |
+          PREVIEW_ID="${{ github.event.client_payload.preview_id || github.event.inputs.preview_id }}"
+
+          echo "Promoting Vercel deployment $PREVIEW_ID to production..."
+
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          vercel promote $PREVIEW_ID --token=${{ secrets.VERCEL_TOKEN }} --scope=${{ vars.VERCEL_SCOPE || github.repository_owner }}
+
+          echo "Vercel deployment promoted to production successfully!"
+
+      - name: Deploy Supabase branch to production
+        run: |
+          BRANCH_NAME="${{ github.event.client_payload.supabase_branch || github.event.inputs.supabase_branch }}"
+
+          echo "Deploying Supabase branch $BRANCH_NAME to production..."
+
+          # Deploy branch changes to production
+          supabase db branch deploy $BRANCH_NAME --project-ref ${{ env.SUPABASE_PROJECT_ID }}
+
+          echo "Supabase branch deployed to production successfully!"
+
+      - name: Clean up Supabase branch
+        run: |
+          BRANCH_NAME="${{ github.event.client_payload.supabase_branch || github.event.inputs.supabase_branch }}"
+
+          echo "Cleaning up Supabase branch $BRANCH_NAME..."
+
+          # Delete the staging branch
+          supabase db branch delete $BRANCH_NAME --project-ref ${{ env.SUPABASE_PROJECT_ID }} --yes
+
+          echo "Supabase branch $BRANCH_NAME deleted."
+
+      - name: Production deployment summary
+        run: |
+          PROD_URL="${{ vars.PRODUCTION_URL || 'https://dock108.ai' }}"
+          echo "## Production Deployment Successful! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment has been promoted to production." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Production URL:** [$PROD_URL]($PROD_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- **From Preview:** ${{ github.event.client_payload.preview_url || github.event.inputs.preview_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment ID:** ${{ github.event.client_payload.preview_id || github.event.inputs.preview_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Supabase changes from branch ${{ github.event.client_payload.supabase_branch || github.event.inputs.supabase_branch }} have been deployed to production and the branch has been deleted." >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Slack (if webhook available)
+        if: success() && env.SLACK_RELEASE_WEBHOOK != ''
+        run: |
+          PROD_URL="${{ vars.PRODUCTION_URL || 'https://dock108.ai' }}"
+
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"text\": \":rocket: *Production Deployment Successful!*\n• *URL:* $PROD_URL\n• *Commit:* ${{ github.sha }}\n• *Deployed by:* ${{ github.actor }}\"
+          }" ${{ secrets.SLACK_RELEASE_WEBHOOK }}
+        env:
+          SLACK_RELEASE_WEBHOOK: ${{ secrets.SLACK_RELEASE_WEBHOOK }}

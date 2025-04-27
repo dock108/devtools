@@ -1,8 +1,19 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Container } from '@/components/Container';
+import React from 'react';
+import { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import Link from 'next/link';
+import { Database } from '@/types/supabase';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AlertCircle, Plus } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -11,286 +22,189 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'react-hot-toast';
-import { Loader2, PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { Database, Json } from '@/types/supabase'; // Assuming Json type exists
-import { z } from 'zod';
 
-// Define Zod schema for rule set config validation
-// TODO: Make this more specific based on actual rule config structure
-const ruleSetConfigSchema = z.record(z.any()).refine(
-  (val) => {
-    try {
-      // Basic check: is it a non-null object?
-      return typeof val === 'object' && val !== null && !Array.isArray(val);
-    } catch {
-      return false;
-    }
-  },
-  { message: 'Rule config must be a valid JSON object.' },
-);
+export const metadata: Metadata = {
+  title: 'Rule Sets | Guardian Admin',
+  description: 'Create and manage rule sets for Stripe Guardian accounts',
+};
 
-type RuleSet = Database['public']['Tables']['rule_sets']['Row'];
+interface RuleSet {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  account_count: number;
+}
 
-export default function RuleSetsAdminPage() {
-  const [ruleSets, setRuleSets] = useState<RuleSet[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentRuleSet, setCurrentRuleSet] = useState<Partial<RuleSet>>({}); // For create/edit
-  const [configJsonString, setConfigJsonString] = useState('');
-  const [jsonError, setJsonError] = useState<string | null>(null);
+export default async function AdminRuleSetsPage() {
+  const cookieStore = cookies();
+  const supabase = createServerComponentClient<Database>({ cookies: () => cookieStore });
 
-  const fetchRuleSets = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/admin/rule-sets');
-      if (!res.ok) throw new Error('Failed to fetch rule sets');
-      const data = await res.json();
-      setRuleSets(data || []);
-    } catch (error: any) {
-      toast.error(`Error fetching rule sets: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Fetch rule sets with account count
+  const { data: ruleSets, error } = await supabase.rpc('get_rule_sets_with_account_count');
 
-  useEffect(() => {
-    fetchRuleSets();
-  }, []);
-
-  const handleOpenDialog = (ruleSet?: RuleSet) => {
-    if (ruleSet) {
-      setCurrentRuleSet(ruleSet);
-      setConfigJsonString(JSON.stringify(ruleSet.config ?? {}, null, 2));
-    } else {
-      // Default for new rule set
-      const defaultConfig = {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 3600 },
-        bankSwap: { minPayoutUsd: 1000, lookbackMinutes: 30 },
-        // Add other default rule configs here
-      };
-      setCurrentRuleSet({ name: 'New Rule Set' }); // Initialize with partial data
-      setConfigJsonString(JSON.stringify(defaultConfig, null, 2));
-    }
-    setJsonError(null);
-    setIsDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setJsonError(null);
-    let parsedConfig: Json;
-
-    // 1. Validate Name
-    if (!currentRuleSet.name || currentRuleSet.name.trim() === '') {
-      toast.error('Rule set name cannot be empty.');
-      setIsSaving(false);
-      return;
-    }
-
-    // 2. Validate JSON structure and schema
-    try {
-      parsedConfig = JSON.parse(configJsonString);
-      const validation = ruleSetConfigSchema.safeParse(parsedConfig);
-      if (!validation.success) {
-        setJsonError(validation.error.errors.map((e) => e.message).join(', '));
-        throw new Error('Invalid JSON config structure.');
-      }
-      // Parsed and validated config is in validation.data (or parsedConfig)
-    } catch (error: any) {
-      toast.error(`Invalid JSON config: ${error.message}`);
-      if (!jsonError && error instanceof SyntaxError) {
-        setJsonError(`Invalid JSON: ${error.message}`);
-      }
-      setIsSaving(false);
-      return;
-    }
-
-    // 3. Determine API method (POST for new, PUT for existing)
-    const method = currentRuleSet.id ? 'PUT' : 'POST';
-    const url = '/api/admin/rule-sets';
-    const payload = {
-      id: currentRuleSet.id, // Include ID for PUT
-      name: currentRuleSet.name,
-      config: parsedConfig,
-    };
-
-    // 4. Call API
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(
-          errorData.error || `Failed to ${method === 'POST' ? 'create' : 'update'} rule set`,
-        );
-      }
-
-      toast.success(`Rule set ${method === 'POST' ? 'created' : 'updated'} successfully!`);
-      setIsDialogOpen(false);
-      setCurrentRuleSet({}); // Reset form state
-      setConfigJsonString('');
-      fetchRuleSets(); // Refresh list
-    } catch (error: any) {
-      toast.error(`Save failed: ${error.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // TODO: Implement Delete functionality
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this rule set? This cannot be undone.')) {
-      return;
-    }
-    // Call DELETE /api/admin/rule-sets?id={id}
-    toast.info('Delete functionality not yet implemented.');
-  };
+  // If the RPC doesn't exist, provide SQL to create it
+  const rpcNotFoundError = error?.message?.includes(
+    'function get_rule_sets_with_account_count() does not exist',
+  );
+  const createRpcSQL = `
+-- Create the RPC function to get rule sets with account counts
+CREATE OR REPLACE FUNCTION get_rule_sets_with_account_count()
+RETURNS TABLE (
+  id uuid,
+  name text,
+  description text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  created_by uuid,
+  account_count bigint
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    rs.id, 
+    rs.name, 
+    rs.description, 
+    rs.created_at,
+    rs.updated_at,
+    rs.created_by,
+    COUNT(ca.id) as account_count
+  FROM 
+    public.rule_sets rs
+  LEFT JOIN 
+    public.connected_accounts ca ON rs.id = ca.rule_set_id
+  GROUP BY 
+    rs.id
+  ORDER BY 
+    rs.name ASC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+  `;
 
   return (
-    <Container className="py-10">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Manage Rule Sets</h1>
-        <Button onClick={() => handleOpenDialog()}>
-          {' '}
-          <PlusCircle className="mr-2 h-4 w-4" /> New Rule Set
-        </Button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Rule Sets</h1>
+          <p className="text-muted-foreground">
+            Create and manage rule sets for connected accounts
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/admin/rule-sets/new">
+              <Plus className="mr-2 h-4 w-4" /> Create Rule Set
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin">Back to Dashboard</Link>
+          </Button>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
-        </div>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Config Preview</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ruleSets.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-slate-500 py-4">
-                    No rule sets found.
-                  </TableCell>
-                </TableRow>
-              )}
-              {ruleSets.map((rs) => (
-                <TableRow key={rs.id}>
-                  <TableCell className="font-medium">{rs.name}</TableCell>
-                  <TableCell>
-                    <pre className="text-xs text-slate-500 overflow-hidden whitespace-pre-wrap truncate max-h-20">
-                      {JSON.stringify(rs.config, null, 2)}
-                    </pre>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenDialog(rs)}
-                      className="mr-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    {/* Prevent deleting default? Add logic later */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700"
-                      onClick={() => handleDelete(rs.id)}
-                      disabled={rs.name === 'default'}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      {rpcNotFoundError && (
+        <Card className="bg-amber-50 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertCircle className="mr-2 h-5 w-5" />
+              RPC Function Not Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>
+              The function <code>get_rule_sets_with_account_count</code> does not exist in your
+              Supabase instance.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Please create it using the SQL below:
+            </p>
+            <pre className="mt-4 p-4 bg-slate-900 text-slate-100 rounded-md overflow-auto text-xs">
+              {createRpcSQL}
+            </pre>
+          </CardContent>
         </Card>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{currentRuleSet.id ? 'Edit' : 'Create'} Rule Set</DialogTitle>
-            <DialogDescription>
-              Define the name and JSON configuration for this rule set.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={currentRuleSet.name || ''}
-                onChange={(e) => setCurrentRuleSet({ ...currentRuleSet, name: e.target.value })}
-                className="col-span-3"
-                disabled={isSaving || currentRuleSet.name === 'default'} // Cannot rename default
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="config" className="text-right pt-2">
-                Config (JSON)
-              </Label>
-              <Textarea
-                id="config"
-                value={configJsonString}
-                onChange={(e) => {
-                  setConfigJsonString(e.target.value);
-                  setJsonError(null); // Clear error on change
-                }}
-                className="col-span-3 font-mono h-64"
-                placeholder='{\n  "velocityBreach": { ... },\n  "bankSwap": { ... }\n}'
-                disabled={isSaving}
-              />
-            </div>
-            {jsonError && (
-              <div className="col-span-4">
-                <p className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
-                  {jsonError}
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isSaving}>
-                Cancel
+      {error && !rpcNotFoundError && (
+        <Card className="bg-destructive/10">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertCircle className="mr-2 h-5 w-5" />
+              Error Loading Rule Sets
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>{error.message || 'Unknown error occurred'}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {ruleSets && ruleSets.length === 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Rule Sets</CardTitle>
+            <CardDescription>There are no rule sets defined yet</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Rule sets define which alerts are triggered for connected accounts.</p>
+            <div className="mt-4">
+              <Button asChild>
+                <Link href="/admin/rule-sets/new">
+                  <Plus className="mr-2 h-4 w-4" /> Create Your First Rule Set
+                </Link>
               </Button>
-            </DialogClose>
-            <Button type="button" onClick={handleSave} disabled={isSaving || !!jsonError}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Rule Set
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Container>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {ruleSets && ruleSets.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Rule Sets ({ruleSets.length})</CardTitle>
+            <CardDescription>Manage rule sets and view account assignments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Accounts</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ruleSets.map((ruleSet) => (
+                  <TableRow key={ruleSet.id}>
+                    <TableCell className="font-medium">{ruleSet.name}</TableCell>
+                    <TableCell>
+                      <div className="max-w-md truncate">
+                        {ruleSet.description || 'No description'}
+                      </div>
+                    </TableCell>
+                    <TableCell>{ruleSet.account_count}</TableCell>
+                    <TableCell>{new Date(ruleSet.updated_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/admin/rule-sets/${ruleSet.id}/edit`}>Edit</Link>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/admin/rule-sets/${ruleSet.id}/view`}>View Details</Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
