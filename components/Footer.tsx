@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 import RetentionStatusBadge from './admin/RetentionStatusBadge';
+import { RssIcon } from 'lucide-react';
 
 export async function Footer() {
   const cookieStore = cookies();
@@ -45,6 +46,14 @@ export async function Footer() {
             className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
           >
             RSS
+          </Link>
+          <Link
+            href="/feed.xml"
+            aria-label="RSS Feed"
+            title="RSS Feed"
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <RssIcon className="h-5 w-5" />
           </Link>
         </div>
       </Container>
