@@ -1,14 +1,14 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import { fileURLToPath } from 'url';
 import path from 'path';
-// Remove unused MDX/prism imports
-// import rehypePrism from 'rehype-prism-plus';
+import createMDX from '@next/mdx';
+import rehypeShiki from '@shikijs/rehype';
 
 // In ESM, __dirname is not defined by default – define it manually
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+let nextConfig = {
   reactStrictMode: true,
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -33,7 +33,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // Remove mdx/md from page extensions
-  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'mdx'],
   // Explicitly configure webpack aliases
   webpack: (config) => {
     // Alias '@/' to project root
@@ -42,8 +42,29 @@ const nextConfig = {
   },
 };
 
-// Wrap the config with Sentry
-// Make sure to move this part below your original config definition
+// Configure MDX options
+const withMDX = createMDX({
+  extension: /\.mdx?$/,
+  options: {
+    remarkPlugins: [],
+    rehypePlugins: [
+      [
+        rehypeShiki,
+        {
+          themes: {
+            light: 'github-light',
+            dark: 'github-dark',
+          },
+        },
+      ],
+    ],
+  },
+});
+
+// Apply the MDX config
+nextConfig = withMDX(nextConfig);
+
+// Wrap the final config with Sentry
 export default withSentryConfig(
   nextConfig,
   {

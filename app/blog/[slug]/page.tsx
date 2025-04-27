@@ -1,117 +1,142 @@
 import { notFound } from 'next/navigation';
+import { getAllPosts, getPostBySlug, getPrevNextPosts, Post } from '@/lib/blog';
+import { MDXRemote } from 'next-mdx-remote/rsc';
+import mdxComponents from '@/components/mdx'; // Import custom components
 import { Container } from '@/components/Container';
-import type { Metadata } from 'next';
+import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/date';
 import Link from 'next/link';
-// Remove MDX-specific imports
-// import { getAllPostSlugs, getPostData } from '@/lib/blog'; // Original MDX helper
-// import { MDXRemote } from 'next-mdx-remote/rsc';
-// import { useMDXComponents } from '@/mdx-components';
-// import * as CustomComponents from '@/mdx-components';
-import { blogLD } from '@/lib/jsonld';
+import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
+import type { Metadata } from 'next';
+import { siteConfig } from '@/config/site'; // Assuming site config for base URL
 
-// Import necessary libraries for Markdown processing
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { getAllPostSlugs, getPostData } from '@/lib/markdown'; // Switch to new Markdown helper
-import { markdownComponents } from '@/components/MarkdownComponents'; // Import custom components
+interface BlogPostPageProps {
+  params: { slug: string };
+}
 
-// Disable static rendering – fallback to SSR to avoid build‑time MDX errors
-// export const dynamic = 'force-dynamic'; // REMOVED - Attempting static generation
-
-// Helper to safely import MDX content, replacing with fallback if missing/broken
-// const getMdxComponent = (slug: string) =>
-//   dynamicImport(async () => {
-//     try {
-//       const mod = await import(`@/content/blog/${slug}.mdx`);
-//       return mod.default;
-//     } catch (err) {
-//       console.error('Failed to load MDX for', slug, err);
-//       return () => <p className="text-red-600">Post content unavailable.</p>;
-//     }
-//   });
-
-// Generate segments for all blog posts at build time
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  return getAllPostSlugs().map(({ params }) => ({ slug: params.slug }));
+// Generate static paths for all blog posts
+export async function generateStaticParams() {
+  const posts = getAllPosts(); // Gets only metadata including slugs
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
 }
 
 // Generate metadata for the page
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata | undefined> {
-  const { slug } = await params;
-  const post = await getPostData(slug); // Use new helper
+export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
+  const post = getPostBySlug(params.slug);
 
   if (!post) {
-    return;
+    return { title: 'Post not found' };
   }
 
-  const { title, description, date, url } = post;
-  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.dock108.ai';
-  const fullUrl = `${site}${url}`;
-  const ogImage = `${fullUrl}/opengraph-image`;
+  const ogImageUrl = post.image
+    ? `${siteConfig.url}${post.image}` // Use absolute URL for OG
+    : `${siteConfig.url}/api/og?title=${encodeURIComponent(post.title)}`; // Fallback to dynamic OG
 
   return {
-    title: `${title} | DOCK108 Blog`,
-    description: description,
+    title: post.title,
+    description: post.excerpt,
     openGraph: {
-      title: title,
-      description: description,
+      title: post.title,
+      description: post.excerpt,
       type: 'article',
-      publishedTime: date,
-      url: fullUrl,
-      images: [ogImage],
+      publishedTime: post.date,
+      url: `${siteConfig.url}/blog/${post.slug}`,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200, // Adjust if dynamic OG size is different
+          height: 630,
+          alt: post.title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: title,
-      description: description,
-      images: [ogImage],
-    },
-    other: {
-      'script:type=application/ld+json': JSON.stringify(
-        blogLD({
-          title,
-          description,
-          url: fullUrl,
-          image: ogImage,
-          date,
-        })
-      ),
+      title: post.title,
+      description: post.excerpt,
+      images: [ogImageUrl],
     },
   };
 }
 
 // Render the blog post page
-export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const post = await getPostData(slug); // Fetch post metadata and content string
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const post = getPostBySlug(params.slug);
 
-  if (!post || !post.content) { // Check if content exists
-    return notFound();
+  if (!post) {
+    notFound(); // Trigger 404 if post not found
   }
 
-  return (
-    <Container className="mt-10">
-      <article className="mx-auto max-w-3xl">
-         <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-         <p className="text-sm text-slate-500">Published on {new Date(post.date).toLocaleDateString()}</p>
-         {/* Render markdown with custom components */}
-         <ReactMarkdown 
-           remarkPlugins={[remarkGfm]}
-           components={markdownComponents} // Pass the custom components
-         >
-           {post.content}
-         </ReactMarkdown>
-      </article>
+  const { prev, next } = getPrevNextPosts(params.slug);
 
-      {/* Back link */}
-      <div className="mt-12 text-center">
-        <Link href="/blog" className="text-sm font-medium text-primary hover:underline">
-          ← Back to Blog
-        </Link>
-      </div>
+  return (
+    <Container className="py-12 md:py-16 max-w-3xl mx-auto">
+      <article>
+        {/* Header */}
+        <header className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{post.title}</h1>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <time dateTime={post.date}>{formatDate(post.date)}</time>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {post.readingTime}
+            </span>
+          </div>
+          {post.tags && post.tags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {post.tags.map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </header>
+
+        {/* Content */}
+        <div className="prose prose-slate dark:prose-invert max-w-none">
+          {/* @ts-expect-error Server Component */}
+          <MDXRemote source={post.content} components={mdxComponents} />
+        </div>
+
+        {/* Footer Navigation */}
+        <footer className="mt-12 pt-8 border-t">
+          <div className="flex justify-between gap-8">
+            {
+              prev ? (
+                <Link
+                  href={`/blog/${prev.slug}`}
+                  className="text-left p-4 rounded-lg border hover:bg-accent hover:text-accent-foreground transition-colors w-1/2"
+                >
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center">
+                    <ArrowLeft className="h-3 w-3 mr-1" /> Previous
+                  </div>
+                  <div className="font-medium line-clamp-2">{prev.title}</div>
+                </Link>
+              ) : (
+                <div className="w-1/2"></div>
+              ) /* Placeholder for alignment */
+            }
+            {
+              next ? (
+                <Link
+                  href={`/blog/${next.slug}`}
+                  className="text-right p-4 rounded-lg border hover:bg-accent hover:text-accent-foreground transition-colors w-1/2"
+                >
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center justify-end">
+                    Next <ArrowRight className="h-3 w-3 ml-1" />
+                  </div>
+                  <div className="font-medium line-clamp-2">{next.title}</div>
+                </Link>
+              ) : (
+                <div className="w-1/2"></div>
+              ) /* Placeholder for alignment */
+            }
+          </div>
+        </footer>
+      </article>
     </Container>
   );
-} 
+}

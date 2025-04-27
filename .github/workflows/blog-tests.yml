@@ -1,0 +1,72 @@
+name: Blog Tests
+on:
+  pull_request:
+    paths:
+      - 'content/blog/**'
+      # Also run if related components/libs change
+      - 'app/blog/**'
+      - 'components/blog/**'
+      - 'components/mdx/**'
+      - 'lib/blog.ts'
+      - 'lib/date.ts'
+      - 'tests/blog.spec.ts'
+      - 'e2e/blog.spec.ts'
+      - '.github/workflows/blog-tests.yml'
+      - '.github/workflows/_setup.yml'
+      - 'package.json'
+      - 'lighthouserc.js'
+
+jobs:
+  # Assuming _setup.yml handles checkout, node setup, npm ci
+  blog:
+    name: Blog Tests (Unit, E2E, Lighthouse)
+    runs-on: ubuntu-latest # Define runner directly
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Optional: Cache dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Step 1: Run Vitest unit tests for blog utils
+      - name: Run Vitest Blog Util Tests
+        run: npm run test:blog # Needs script: "vitest run --filter tests/blog.spec.ts"
+        # Add required env vars if needed
+        # env:
+        # SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+
+      # Step 2: Run Playwright E2E tests for blog flow
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright Blog E2E Tests
+        run: npm run test:e2e:blog # Needs script: "playwright test e2e/blog.spec.ts"
+        # Add required env vars if needed
+        # env:
+        # TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+
+      # Step 3: Run Lighthouse CI on built blog index
+      - name: Build Next.js app for Lighthouse
+        run: npm run build
+        # Add build env vars if needed
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.13.x
+
+      - name: Run Lighthouse CI
+        run: npm run lh-ci /blog # Needs script: "lhci autorun --config=./lighthouserc.js --collect.url"
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }} # Optional
