@@ -25,6 +25,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY_E2E: ${{ secrets.SUPABASE_ANON_KEY }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       # Use the composite action for setup
       - name: Setup Node + NPM Deps
         uses: ./.github/actions/setup-node-npm
