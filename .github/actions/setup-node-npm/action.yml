@@ -8,8 +8,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    # Checkout removed - Handled by main workflow
+    # - name: Checkout repository
+    #   uses: actions/checkout@v4
 
     - name: Disable corepack (npm is default)
       run: corepack disable

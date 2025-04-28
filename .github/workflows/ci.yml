@@ -25,9 +25,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY_E2E: ${{ secrets.SUPABASE_ANON_KEY }}
 
     steps:
-      # Checkout removed - Handled by setup-node-npm action
-      # - name: Checkout repository
-      #   uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # Use the composite action for setup
       - name: Setup Node + NPM Deps
