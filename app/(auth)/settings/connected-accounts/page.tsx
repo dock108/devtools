@@ -5,7 +5,7 @@ import { Database } from '@/types/supabase';
 import { ConnectedAccountsManager } from './ConnectedAccountsManager'; // Client component
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import AccountsClient from './accounts-client';
+import { createClient } from '@/lib/supabase/server';
 
 // Revalidate data for this page every 0 seconds (dynamic rendering)
 export const revalidate = 0;
