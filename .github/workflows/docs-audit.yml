@@ -5,13 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
+
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
+
       - name: Run docs audit
         run: npm run docs:audit --silent | tee audit-output.txt
       - name: Check for completion

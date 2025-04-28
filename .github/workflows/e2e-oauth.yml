@@ -14,8 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium

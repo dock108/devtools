@@ -34,14 +34,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
 
       - name: Lint docs for sensitive content
         run: npm run docs:lint
