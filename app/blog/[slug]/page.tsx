@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
 import siteConfig from '@/lib/siteConfig';
 import DemoCTA from '@/components/mdx/DemoCTA'; // Keep for mapping
-import Alert from '@/components/ui/Alert'; // Import Alert component (adjust path)
+import Alert from '@/components/ui/alert'; // Corrected path
 
 interface BlogPostPageProps {
   params: { slug: string };
