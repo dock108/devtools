@@ -74,7 +74,7 @@ export function ConnectedAccountsManager({
   const [isDisconnecting, startDisconnectTransition] = useTransition();
   const [isTogglingPayouts, startPayoutsToggleTransition] = useTransition();
   const [togglingPayoutsAccountId, setTogglingPayoutsAccountId] = useState<string | null>(null);
-  const [accountToDisconnect, setAccountToDisconnect] = useState<string | null>(null);
+  const [accountToDisconnect, setAccountToDisconnect] = useState<ConnectedAccount | null>(null);
   const [muteDuration, setMuteDuration] = useState<string>('360');
   const [isTogglingMute, startMuteToggleTransition] = useTransition();
   const [togglingMuteAccountId, setTogglingMuteAccountId] = useState<string | null>(null);
@@ -174,11 +174,14 @@ export function ConnectedAccountsManager({
         }
       }
 
+      // Ensure durationMinutes is a number before calculating date
       const optimisticMutedUntil =
         action === 'mute'
           ? durationMinutes === Infinity
             ? 'infinity'
-            : new Date(Date.now() + durationMinutes * 60000).toISOString()
+            : typeof durationMinutes === 'number' // Check if it's a valid number
+              ? new Date(Date.now() + durationMinutes * 60000).toISOString()
+              : null // Handle potential NaN case (though fallback should prevent this)
           : null;
 
       // Optimistic UI update
@@ -192,11 +195,20 @@ export function ConnectedAccountsManager({
       );
 
       try {
-        const result = await toggleAlertsServerAction({
+        // Construct payload conditionally for exactOptionalPropertyTypes
+        const payload: {
+          stripeAccountId: string;
+          action: 'mute' | 'unmute';
+          durationMinutes?: number;
+        } = {
           stripeAccountId: account.stripe_account_id,
           action,
-          durationMinutes: action === 'mute' ? durationMinutes : undefined,
-        });
+        };
+        if (action === 'mute' && typeof durationMinutes === 'number') {
+          payload.durationMinutes = durationMinutes;
+        }
+
+        const result = await toggleAlertsServerAction(payload);
 
         if (result.success) {
           toast.success(`Alerts ${action === 'mute' ? 'muted' : 'unmuted'} successfully.`);
@@ -407,7 +419,9 @@ export function ConnectedAccountsManager({
                         <TableCell>{format(new Date(account.created_at), 'MMM d, yyyy')}</TableCell>
                         <TableCell className="text-right">
                           <AlertDialog
-                            open={accountToDisconnect === account.stripe_account_id}
+                            open={
+                              accountToDisconnect?.stripe_account_id === account.stripe_account_id
+                            }
                             onOpenChange={(open) => !open && setAccountToDisconnect(null)}
                           >
                             <AlertDialogTrigger asChild>
@@ -415,14 +429,16 @@ export function ConnectedAccountsManager({
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive hover:text-destructive h-8 w-8"
-                                onClick={() => setAccountToDisconnect(account.stripe_account_id)}
+                                onClick={() => setAccountToDisconnect(account)}
                                 disabled={
                                   isDisconnecting &&
-                                  accountToDisconnect === account.stripe_account_id
+                                  accountToDisconnect?.stripe_account_id ===
+                                    account.stripe_account_id
                                 }
                               >
                                 {isDisconnecting &&
-                                accountToDisconnect === account.stripe_account_id ? (
+                                accountToDisconnect?.stripe_account_id ===
+                                  account.stripe_account_id ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                   <Trash2 className="h-4 w-4" />
@@ -432,7 +448,7 @@ export function ConnectedAccountsManager({
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>
-                                  Disconnect {accountToDisconnect?.business_name}?
+                                  Disconnect {accountToDisconnect?.business_name || 'this account'}?
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Are you sure you want to disconnect this Stripe account? You
@@ -478,7 +494,7 @@ export function ConnectedAccountsManager({
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                       <CardTitle className="text-lg">{account.business_name || 'N/A'}</CardTitle>
                       <AlertDialog
-                        open={accountToDisconnect === account.stripe_account_id}
+                        open={accountToDisconnect?.stripe_account_id === account.stripe_account_id}
                         onOpenChange={(open) => !open && setAccountToDisconnect(null)}
                       >
                         <AlertDialogTrigger asChild>
@@ -486,13 +502,14 @@ export function ConnectedAccountsManager({
                             variant="ghost"
                             size="icon"
                             className="text-destructive hover:text-destructive h-8 w-8"
-                            onClick={() => setAccountToDisconnect(account.stripe_account_id)}
+                            onClick={() => setAccountToDisconnect(account)}
                             disabled={
-                              isDisconnecting && accountToDisconnect === account.stripe_account_id
+                              isDisconnecting &&
+                              accountToDisconnect?.stripe_account_id === account.stripe_account_id
                             }
                           >
                             {isDisconnecting &&
-                            accountToDisconnect === account.stripe_account_id ? (
+                            accountToDisconnect?.stripe_account_id === account.stripe_account_id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <Trash2 className="h-4 w-4" />
@@ -502,7 +519,7 @@ export function ConnectedAccountsManager({
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>
-                              Disconnect {accountToDisconnect?.business_name}?
+                              Disconnect {accountToDisconnect?.business_name || 'this account'}?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
                               Are you sure you want to disconnect this Stripe account? You
