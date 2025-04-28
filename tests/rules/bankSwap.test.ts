@@ -1,12 +1,29 @@
 import { bankSwap } from '@/lib/guardian/rules/bankSwap';
 import { logger } from '@/lib/logger';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 // Mock dependencies
-jest.mock('@/lib/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-  },
+const mockLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+};
+jest.mock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
+
+// Mock the rule-specific dependencies
+const mockFindMostRecentExternalAccountChange = jest.fn();
+jest.mock('@/lib/supabase/admin', () => ({
+  __esModule: true,
+  createAdminClient: jest.fn(() => ({
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      lt: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockImplementation(mockFindMostRecentExternalAccountChange),
+    })),
+  })),
 }));
 
 describe('Bank Swap Rule', () => {
@@ -65,16 +82,13 @@ describe('Bank Swap Rule', () => {
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123' },
-      'Bank-swap rule evaluated'
-    );
+    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
 
   it('should not trigger alert when payout amount is below threshold', async () => {
     // Payout of $200 (below $1000 threshold)
     const event = createStripePayoutEvent(20000);
-    
+
     // External account created 3 minutes ago
     const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
     const recentPayouts = [
@@ -93,21 +107,16 @@ describe('Bank Swap Rule', () => {
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123' },
-      'Bank-swap rule evaluated'
-    );
+    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
 
   it('should not trigger alert when bank change is outside lookback window', async () => {
     // Payout of $1500 (above $1000 threshold)
     const event = createStripePayoutEvent(150000);
-    
+
     // External account created 10 minutes ago (outside 5 min window)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentPayouts = [
-      createPayoutEvent('external_account.created', 'ea_123', tenMinutesAgo),
-    ];
+    const recentPayouts = [createPayoutEvent('external_account.created', 'ea_123', tenMinutesAgo)];
 
     const ctx = {
       recentPayouts,
@@ -121,16 +130,13 @@ describe('Bank Swap Rule', () => {
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123' },
-      'Bank-swap rule evaluated'
-    );
+    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
 
   it('should trigger alert when large payout follows recent external account change', async () => {
     // Payout of $1500 (above $1000 threshold)
     const event = createStripePayoutEvent(150000);
-    
+
     // External account created 3 minutes ago (within 5 min window)
     const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
     const recentPayouts = [
@@ -157,16 +163,13 @@ describe('Bank Swap Rule', () => {
       accountId: 'acct_123',
       createdAt: expect.any(String),
     });
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123' },
-      'Bank-swap rule evaluated'
-    );
+    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
 
   it('should not trigger alert when no external account changes found', async () => {
     // Payout of $1500 (above $1000 threshold)
     const event = createStripePayoutEvent(150000);
-    
+
     // No external_account.created events
     const recentPayouts = [
       createPayoutEvent('payout.created', 'po_456', new Date(Date.now() - 2 * 60 * 1000)),
@@ -184,9 +187,6 @@ describe('Bank Swap Rule', () => {
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123' },
-      'Bank-swap rule evaluated'
-    );
+    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
-}); 
+});

@@ -1,12 +1,27 @@
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { velocityBreach } from '@/lib/guardian/rules/velocityBreach';
 import { logger } from '@/lib/logger';
 
 // Mock dependencies
-jest.mock('@/lib/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-  },
+const mockLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+};
+jest.mock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
+
+// Mock the rule-specific dependencies
+const mockGetPayoutsWithinWindow = jest.fn();
+jest.mock('@/lib/supabase/admin', () => ({
+  __esModule: true,
+  createAdminClient: jest.fn(() => ({
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      gte: jest.fn().mockReturnThis(),
+      returns: jest.fn().mockImplementation(mockGetPayoutsWithinWindow),
+    })),
+  })),
 }));
 
 describe('Velocity Breach Rule', () => {
@@ -78,7 +93,7 @@ describe('Velocity Breach Rule', () => {
     expect(result).toEqual([]);
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', count: 2 },
-      'Velocity rule executed'
+      'Velocity rule executed',
     );
   });
 
@@ -113,7 +128,7 @@ describe('Velocity Breach Rule', () => {
     });
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', count: 3 },
-      'Velocity rule executed'
+      'Velocity rule executed',
     );
   });
 
@@ -140,7 +155,7 @@ describe('Velocity Breach Rule', () => {
     expect(result).toEqual([]);
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', count: 2 },
-      'Velocity rule executed'
+      'Velocity rule executed',
     );
   });
-}); 
+});

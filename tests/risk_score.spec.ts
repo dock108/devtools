@@ -4,14 +4,12 @@ import { v4 as uuidv4 } from 'uuid'; // For generating UUIDs
 
 // Load environment variables for Supabase connection
 // Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your test environment
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSJ9.vI9obAHOGyVVKa3pD--kJlyxp-Z2zV9UUMAhKpNLAcU';
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Supabase URL and Service Role Key must be provided via environment variables.');
-}
-
-const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // Helper function to clean up test data
 const cleanup = async (alertIds: string[], accountId: string) => {

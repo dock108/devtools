@@ -248,7 +248,22 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
     expect(slackScope.isDone()).toBe(true); // Check Slack was called
   });
 
-  test('should handle alert not found', async () => {
+  test('should handle missing alert ID gracefully', async () => {
+    const alertId = 'alert-no-id';
+
+    const response = await runtime.dispatchFetch('http://localhost:3000/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wrong_param: 'some-id' }), // Missing alert_id
+    });
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('Invalid request body');
+    expect(body.details).toContain('Missing or invalid alert_id');
+  });
+
+  test('should handle alert not found in database', async () => {
     const alertId = 'alert-not-found';
 
     nock(MOCK_SUPABASE_URL)
@@ -266,7 +281,7 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
     expect(body.error).toBe('Alert not found');
   });
 
-  test('should handle settings not found', async () => {
+  test('should handle settings not found in database', async () => {
     const alertId = 'alert-no-settings';
     const accountId = 'acct_no_settings';
 
@@ -296,20 +311,7 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
     expect(body.error).toBe('Settings not found');
   });
 
-  test('should handle invalid request body', async () => {
-    const response = await runtime.dispatchFetch('http://localhost:3000/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wrong_param: 'some-id' }), // Missing alert_id
-    });
-
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error).toBe('Invalid request body');
-    expect(body.details).toContain('Missing or invalid alert_id');
-  });
-
-  test('should handle SendGrid API error gracefully', async () => {
+  test('should handle errors during SendGrid call', async () => {
     const alertId = 'alert-sendgrid-fail';
     const accountId = 'acct_sendgrid_fail';
 
@@ -359,7 +361,7 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
     // Check logs for error message (can't directly test console.error easily here)
   });
 
-  test('should handle Slack API error gracefully', async () => {
+  test('should handle errors during Slack call', async () => {
     const alertId = 'alert-slack-fail';
     const accountId = 'acct_slack_fail';
 
@@ -406,4 +408,134 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
     expect(slackScope.isDone()).toBe(true); // Slack was attempted
     // Check logs for error message
   });
+
+  test('should handle errors fetching alert details from Supabase', async () => {
+    const alertId = 'alert-fetch-fail';
+
+    nock(MOCK_SUPABASE_URL)
+      .post(/rest\/v1\/alerts.*id=eq.alert-fetch-fail/)
+      .reply(500, { message: 'Internal server error' });
+
+    const response = await runtime.dispatchFetch('http://localhost:3000/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId }),
+    });
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe('Internal server error');
+  });
+
+  test('should handle errors fetching settings from Supabase', async () => {
+    const alertId = 'alert-settings-fetch-fail';
+
+    nock(MOCK_SUPABASE_URL)
+      .post(/rest\/v1\/settings/)
+      .reply(500, { message: 'Internal server error' });
+
+    const response = await runtime.dispatchFetch('http://localhost:3000/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId }),
+    });
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe('Internal server error');
+  });
+
+  test('should skip Slack if webhook is null/empty', async () => {
+    const alertId = 'alert-no-webhook';
+
+    // Mock Supabase responses
+    nock(MOCK_SUPABASE_URL)
+      .post(
+        '/rest/v1/alerts?select=id%2Cstripe_account_id%2Ctype%2Cseverity%2Cdescription%2Ctriggered_at&id=eq.alert-no-webhook',
+      )
+      .reply(200, [
+        {
+          id: alertId,
+          stripe_account_id: 'acct_no_webhook',
+          type: 'charge.failed',
+          severity: 'high',
+          description: 'Test fail',
+          triggered_at: new Date().toISOString(),
+        },
+      ])
+      .post('/rest/v1/settings?select=id%2Ctier%2Cemail_to%2Cslack_webhook&limit=1')
+      .reply(200, [
+        {
+          id: 'global-settings-id',
+          tier: 'pro',
+          email_to: MOCK_ALERT_EMAIL_TO,
+          slack_webhook: null,
+        },
+      ]);
+
+    // Mock SendGrid call
+    const sendgridScope = nock('https://api.sendgrid.com').post('/v3/mail/send').reply(202);
+
+    // Execute the edge function
+    const response = await runtime.dispatchFetch('http://localhost:3000/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId }),
+    });
+
+    // Assertions
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(sendgridScope.isDone()).toBe(true); // SendGrid was called
+    // Ensure Slack was not called (implicitly checked by nock cleanAll if no Slack mock is defined)
+  });
+
+  test('should skip email if email_to is null/empty', async () => {
+    const alertId = 'alert-no-email';
+
+    // Mock Supabase responses
+    nock(MOCK_SUPABASE_URL)
+      .post(
+        '/rest/v1/alerts?select=id%2Cstripe_account_id%2Ctype%2Cseverity%2Cdescription%2Ctriggered_at&id=eq.alert-no-email',
+      )
+      .reply(200, [
+        {
+          id: alertId,
+          stripe_account_id: 'acct_no_email',
+          type: 'charge.failed',
+          severity: 'high',
+          description: 'Test fail',
+          triggered_at: new Date().toISOString(),
+        },
+      ])
+      .post('/rest/v1/settings?select=id%2Ctier%2Cemail_to%2Cslack_webhook&limit=1')
+      .reply(200, [
+        {
+          id: 'global-settings-id',
+          tier: 'pro',
+          email_to: null,
+          slack_webhook: MOCK_SLACK_WEBHOOK,
+        },
+      ]);
+
+    // Mock SendGrid call
+    const sendgridScope = nock('https://api.sendgrid.com').post('/v3/mail/send').reply(202);
+
+    // Execute the edge function
+    const response = await runtime.dispatchFetch('http://localhost:3000/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId }),
+    });
+
+    // Assertions
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(sendgridScope.isDone()).toBe(true); // SendGrid was called
+    // Ensure Slack was not called (implicitly checked by nock cleanAll if no Slack mock is defined)
+  });
+
+  // Add more tests as needed for edge cases, different alert types, etc.
 });

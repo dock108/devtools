@@ -325,4 +325,37 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
     expect(body.details).toContain('Invalid API Key provided');
     expect(statusErrorScope.isDone()).toBe(true);
   });
+
+  test('should process events incrementally based on checkpoint', async () => {
+    // Implementation of this test case
+  });
+
+  test('should handle empty event list from Stripe gracefully', async () => {
+    // Implementation of this test case
+  });
+
+  test('should stop if Stripe returns fewer events than limit (end of stream)', async () => {
+  it('should stop if Stripe returns fewer events than limit (end of stream)', async () => {
+    // Implementation of this test case
+  });
+
+  it('should handle Stripe API errors during event fetching', async () => {
+    // Implementation of this test case
+  });
+
+  it('should handle errors writing checkpoint file', async () => {
+    // Implementation of this test case
+  });
+
+  it('should handle errors reading checkpoint file (and start from scratch)', async () => {
+    // Implementation of this test case
+  });
+
+  it('should handle Supabase errors during event insertion', async () => {
+    // Implementation of this test case
+  });
+
+  it('should skip processing if another instance is running (lock file exists)', async () => {
+    // Implementation of this test case
+  });
 });

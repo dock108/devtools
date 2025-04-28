@@ -23,7 +23,7 @@ module.exports = {
     '<rootDir>/app/guardian-demo/__tests__/useDemoScenario.timers.test.ts',
   ],
   // Transformation ignore patterns
-  transformIgnorePatterns: ['/node_modules/', '^.+\.module\.(css|sass|scss)$'],
+  transformIgnorePatterns: ['/node_modules/(?!uuid)/', '^.+\.module\.(css|sass|scss)$'],
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1', // Handle path aliases like @/

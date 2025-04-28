@@ -232,3 +232,35 @@ describe('Database Functions', () => {
 
   // ... other potential DB tests ...
 });
+
+const mockGetRuleConfig = jest.fn();
+const mockEvaluateRules = jest.fn();
+const mockInsertAlert = jest.fn();
+const mockInsertAlertAndEnqueue = jest.fn();
+const mockIncrementMetric = jest.fn();
+
+// Mock dependencies
+jest.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: jest.fn(() => mockSupabaseAdmin),
+}));
+jest.mock('@/lib/guardian/rules/registry', () => ({
+  getRuleConfig: mockGetRuleConfig,
+}));
+jest.mock('@/lib/guardian/rules/engine', () => ({
+  evaluateRules: mockEvaluateRules,
+}));
+jest.mock('@/lib/guardian/alerts', () => ({
+  insertAlert: mockInsertAlert,
+}));
+jest.mock('@/lib/metrics/guard-metrics', () => ({
+  incrementMetric: mockIncrementMetric,
+}));
+
+// Mock the specific DB function call used
+mockSupabaseAdmin.rpc.mockImplementation(async (functionName, params) => {
+  if (functionName === 'insert_alert_and_enqueue') {
+    return mockInsertAlertAndEnqueue(params);
+  }
+  // Add other RPC mocks if needed
+  return { data: null, error: new Error(`Unexpected RPC call: ${functionName}`) };
+});

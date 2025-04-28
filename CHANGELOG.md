@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**April 28 2025** – Added typed Supabase mock & regenerated types/supabase.d.ts (Fix-block 2).
+**April 28 2025** – Replaced Vitest with Jest in all remaining suites (#Fix-block 1).
+
 ### Refactored
 
 - refactor(layout): unify site header/footer; removed duplicates (2025-04-25)

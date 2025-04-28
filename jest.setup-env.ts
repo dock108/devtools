@@ -1,6 +1,11 @@
 // jest.setup-env.ts
 // Provides dummy environment variables for Jest tests
 
+import { TextEncoder, TextDecoder } from 'util';
+global.TextEncoder = TextEncoder;
+// @ts-ignore - Polyfill for Jest/Node environment
+global.TextDecoder = TextDecoder;
+
 // Polyfills/Stubs for jsdom environment
 global.setImmediate = (callback: (...args: any[]) => void, ...args: any[]): NodeJS.Immediate => {
   return setTimeout(callback, 0, ...args) as unknown as NodeJS.Immediate;

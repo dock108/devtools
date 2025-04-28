@@ -1,12 +1,21 @@
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { geoMismatch } from '@/lib/guardian/rules/geoMismatch';
 import { logger } from '@/lib/logger';
 
 // Mock dependencies
-jest.mock('@/lib/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-  },
+const mockLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+};
+jest.mock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
+
+// Mock the rule-specific dependencies
+const mockGetPayouts = jest.fn();
+const mockGetCharges = jest.fn();
+jest.mock('@/lib/stripe/api', () => ({
+  getPayouts: mockGetPayouts,
+  getCharges: mockGetCharges,
 }));
 
 describe('Geo Mismatch Rule', () => {
@@ -22,9 +31,9 @@ describe('Geo Mismatch Rule', () => {
       ip_country: ipCountry,
       billing_details: {
         address: {
-          country: ipCountry
-        }
-      }
+          country: ipCountry,
+        },
+      },
     },
   });
 
@@ -38,7 +47,7 @@ describe('Geo Mismatch Rule', () => {
         id: 'po_123',
         object: 'payout',
         destination: {
-          account_country: bankCountry
+          account_country: bankCountry,
         },
         currency: 'usd',
       },
@@ -70,7 +79,7 @@ describe('Geo Mismatch Rule', () => {
 
   it('should not trigger alert when charge countries match bank country', async () => {
     const event = createStripePayoutEvent('US');
-    
+
     // All charges have same country as bank
     const recentCharges = [
       createChargeEvent('US'),
@@ -92,13 +101,13 @@ describe('Geo Mismatch Rule', () => {
     expect(result).toEqual([]);
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', mismatches: 0 },
-      'Geo-mismatch rule executed'
+      'Geo-mismatch rule executed',
     );
   });
 
   it('should not trigger alert when mismatches are below threshold', async () => {
     const event = createStripePayoutEvent('US');
-    
+
     // Only one charge has different country
     const recentCharges = [
       createChargeEvent('US'),
@@ -120,13 +129,13 @@ describe('Geo Mismatch Rule', () => {
     expect(result).toEqual([]);
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', mismatches: 1 },
-      'Geo-mismatch rule executed'
+      'Geo-mismatch rule executed',
     );
   });
 
   it('should trigger alert when mismatches meet or exceed threshold', async () => {
     const event = createStripePayoutEvent('US');
-    
+
     // Three charges from Nigeria (different from US bank)
     const recentCharges = [
       createChargeEvent('NG'),
@@ -156,13 +165,13 @@ describe('Geo Mismatch Rule', () => {
     });
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', mismatches: 3 },
-      'Geo-mismatch rule executed'
+      'Geo-mismatch rule executed',
     );
   });
 
   it('should handle charges with missing country info gracefully', async () => {
     const event = createStripePayoutEvent('US');
-    
+
     // Mix of charges with and without country info
     const recentCharges = [
       createChargeEvent('NG'),
@@ -185,7 +194,7 @@ describe('Geo Mismatch Rule', () => {
     expect(result).toHaveLength(1);
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', mismatches: 2 },
-      'Geo-mismatch rule executed'
+      'Geo-mismatch rule executed',
     );
   });
 
@@ -203,7 +212,7 @@ describe('Geo Mismatch Rule', () => {
         },
       },
     };
-    
+
     const recentCharges = [
       createChargeEvent('NG'),
       createChargeEvent('NG'),
@@ -224,7 +233,7 @@ describe('Geo Mismatch Rule', () => {
     expect(result).toEqual([]);
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', mismatches: 0 },
-      'Geo-mismatch rule executed'
+      'Geo-mismatch rule executed',
     );
   });
 
@@ -242,7 +251,7 @@ describe('Geo Mismatch Rule', () => {
         },
       },
     };
-    
+
     const recentCharges = [
       createChargeEvent('NG'),
       createChargeEvent('NG'),
@@ -264,7 +273,7 @@ describe('Geo Mismatch Rule', () => {
     expect(result[0].message).toContain('bank country us');
     expect(logger.info).toHaveBeenCalledWith(
       { accountId: 'acct_123', mismatches: 3 },
-      'Geo-mismatch rule executed'
+      'Geo-mismatch rule executed',
     );
   });
-}); 
+});
