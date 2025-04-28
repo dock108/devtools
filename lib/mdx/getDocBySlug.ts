@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { compileMDX } from 'next-mdx-remote/rsc';
+// import { compileMDX } from 'next-mdx-remote/rsc';
 import docsComponents from '@/components/mdx/docs';
 
 interface DocFrontmatter {
