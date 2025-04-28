@@ -1,0 +1,226 @@
+name: End-to-End Tests
+
+on:
+  push:
+    branches: [main]
+    # Trigger only on changes likely to affect E2E tests
+    paths:
+      - '.github/workflows/e2e.yml'
+      - '.github/actions/**' # Include composite actions
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'pages/**' # If applicable
+      - 'public/**'
+      - 'scripts/**' # Potentially relevant scripts
+      - 'src/**' # If applicable
+      - 'styles/**'
+      - 'tests/e2e/**'
+      - 'e2e/**' # Alternative E2E dir
+      - 'test/fixtures/**' # Test data
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.ts' # Playwright config
+      # Exclude documentation/blog content changes
+    paths-ignore:
+      - '**.md'
+      - 'content/**'
+      - 'LICENSE'
+      - '.gitignore'
+  pull_request:
+    branches: [main]
+    # Apply same path filtering for PRs
+    paths:
+      - '.github/workflows/e2e.yml'
+      - '.github/actions/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'pages/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'styles/**'
+      - 'tests/e2e/**'
+      - 'e2e/**'
+      - 'test/fixtures/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.ts'
+    paths-ignore:
+      - '**.md'
+      - 'content/**'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    name: E2E Tests (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Set a reasonable timeout
+    strategy:
+      fail-fast: false # Allow other suites to run if one fails
+      matrix:
+        # Define the E2E test suites to run
+        # Ensure corresponding npm scripts exist:
+        # test:e2e:oauth, test:e2e:supabase, test:e2e:blog
+        suite: [oauth, supabase, blog]
+
+    steps:
+      # 1. Setup Node, checkout code, install npm deps
+      - name: Setup Node + NPM Deps
+        uses: ./.github/actions/setup-node-npm
+        with:
+          node-version: '20.x'
+          # Fetch full history if needed by tests/tooling
+          # fetch-depth: 0
+
+      # 2. Install Playwright browsers
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium # Install chromium, add others if needed
+
+      # 3. Conditional Setup: Supabase CLI (needed for 'supabase' suite)
+      - name: Setup Supabase CLI
+        if: matrix.suite == 'supabase'
+        uses: ./.github/actions/setup-supabase-cli
+
+      # 4. Conditional Setup: Stripe CLI (needed for 'oauth', 'supabase' suites)
+      - name: Setup Stripe CLI
+        if: contains('oauth, supabase', matrix.suite)
+        uses: ./.github/actions/setup-stripe-cli
+      - name: Stripe Login
+        if: contains('oauth, supabase', matrix.suite)
+        run: stripe login --api-key ${{ secrets.STRIPE_TEST_KEY }}
+        env:
+          STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }} # Ensure this secret is set
+
+      # 5. Supabase Local Environment (only for 'supabase' suite)
+      - name: Start Supabase local env
+        if: matrix.suite == 'supabase'
+        run: supabase start
+        env:
+          SUPABASE_CLI_DISABLE_TYPEGEN: true # Make non-interactive
+
+      - name: Wait for Supabase services
+        if: matrix.suite == 'supabase'
+        run: sleep 15 # Increase wait time slightly
+
+      - name: Get Supabase local credentials
+        if: matrix.suite == 'supabase'
+        id: supabase_creds
+        run: |
+          echo "SUPABASE_URL=$(supabase status --output json | jq -r .apiURL)" >> $GITHUB_ENV
+          echo "SUPABASE_ANON_KEY=$(supabase status --output json | jq -r .anonKey)" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status --output json | jq -r .serviceKey)" >> $GITHUB_ENV
+          echo "DB_URL=$(supabase status --output json | jq -r .dbURL)" >> $GITHUB_ENV
+
+      - name: Apply Supabase migrations
+        if: matrix.suite == 'supabase'
+        run: supabase db reset --local
+
+      - name: Seed Supabase Test Data
+        if: matrix.suite == 'supabase'
+        # Adapt seeding logic from supabase-e2e.yml or use a dedicated script
+        run: |
+          echo "Running SQL seed..."
+          PGPASSWORD=$(echo $DB_URL | awk -F[:/@] '{print $4}') psql $DB_URL -U postgres -c "\\
+          insert into auth.users(id, email, encrypted_password, role) values \
+            ('00000000-0000-0000-0000-000000000001', 'ci-tester@dock108.ai', '', 'authenticated') \
+          on conflict do nothing; \
+          insert into public.connected_accounts(stripe_account_id, user_id) \
+          values ('acct_ci123', '00000000-0000-0000-0000-000000000001') \
+          on conflict do nothing;"
+        env:
+          DB_URL: ${{ env.DB_URL }}
+
+      # 6. Start Application (for suites needing localhost)
+      # Assuming oauth might run against preview, but supabase/blog need local dev server
+      - name: Start Next.js app in background
+        if: contains('supabase, blog', matrix.suite)
+        run: npm run dev &
+        env:
+          # Common env vars needed by `npm run dev`
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }} # Use local Supabase URL if 'supabase' suite
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }} # Use local key if 'supabase' suite
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }} # Use local key if 'supabase' suite
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'test_key' }}
+          STRIPE_WEBHOOK_SECRET: ${{ env.STRIPE_WEBHOOK_SECRET_TEST || 'whsec_test_fixture_secret' }}
+          # Add other necessary runtime env vars (use dummy values or secrets)
+          SENDGRID_API_KEY: dummy_sendgrid_key
+          # Override with test-specific keys for supabase suite if needed
+          # These might be set globally or within the test run command instead
+
+      - name: Wait for app to start (if applicable)
+        if: contains('supabase, blog', matrix.suite)
+        run: npx wait-on http://localhost:3000 -t 120000 # Wait up to 120s
+
+      # 7. Stripe Event Replay (only for 'supabase' suite)
+      - name: Replay Stripe events from fixture
+        if: matrix.suite == 'supabase'
+        run: |
+          echo "Starting Stripe event replay..."
+          stripe listen --api-key ${{ secrets.STRIPE_TEST_KEY }} \\
+            --forward-to http://localhost:3000/api/stripe/webhook \\
+            --events-from-file test/fixtures/full_day.jsonl \\
+            --print-json > stripe_output.log &
+          STRIPE_PID=$!
+          echo "Stripe listen started with PID $STRIPE_PID"
+          sleep 45 # Wait for events to process
+          echo "Attempting to stop Stripe listen (PID $STRIPE_PID)..."
+          kill $STRIPE_PID || echo "Stripe listen already stopped."
+          echo "Stripe event replay finished."
+        env:
+          STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }}
+          STRIPE_WEBHOOK_SECRET_TEST: whsec_test_fixture_secret # App needs to use this
+
+      - name: Wait for backend processing (if applicable)
+        if: matrix.suite == 'supabase'
+        run: |
+          echo "Waiting for backend processing after Stripe replay..."
+          sleep 30 # Simple wait, replace with metrics check if available
+          echo "Assuming processing complete."
+
+      # 8. Run E2E tests based on matrix suite
+      - name: Run Playwright Tests (${{ matrix.suite }})
+        run: npm run test:e2e:${{ matrix.suite }}
+        env:
+          # Pass necessary env vars to the test runner
+          # Common vars
+          CI: true
+          # Supabase specific vars (use generated local keys)
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }} # Use local URL if 'supabase' suite
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }} # Use local key if 'supabase' suite
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SUPABASE_SERVICE_ROLE_KEY }} # Use local key if 'supabase' suite
+          # Vars for test login helpers etc.
+          TEST_USER_ID: '00000000-0000-0000-0000-000000000001' # If needed by tests
+          TEST_STRIPE_ACCOUNT_ID: 'acct_ci123' # If needed by tests
+          # Stripe keys (might be needed directly by tests or test setup)
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'test_key' }}
+          STRIPE_TEST_KEY: ${{ secrets.STRIPE_TEST_KEY }}
+          # Ensure the correct webhook secret is used by the running app instance
+          STRIPE_WEBHOOK_SECRET: ${{ env.STRIPE_WEBHOOK_SECRET_TEST || 'whsec_test_fixture_secret' }}
+
+      # 9. Upload Playwright Report
+      - name: Upload Playwright report (${{ matrix.suite }})
+        if: always() # Always upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.suite }}
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore # Don't fail if dir is missing
+
+      # 10. Upload Stripe Output Log (for supabase suite)
+      - name: Upload Stripe output log
+        if: matrix.suite == 'supabase' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-output-log-${{ matrix.suite }}
+          path: stripe_output.log
+          retention-days: 7
+          if-no-files-found: ignore

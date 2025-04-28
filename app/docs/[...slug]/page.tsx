@@ -9,7 +9,6 @@ import rehypeHighlight from 'rehype-highlight'; // Or your preferred highlighter
 import { getAllDocs, DocFrontmatter } from '@/lib/mdx/getDocBySlug'; // Adjust import if needed
 import siteConfig from '@/lib/siteConfig';
 import Alert from '@/components/ui/alert'; // Corrected path
-import Link from 'next/link';
 // Import other components used via shortcodes
 
 interface DocPageProps {

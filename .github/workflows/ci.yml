@@ -3,14 +3,67 @@ name: CI
 on:
   push:
     branches: [main]
+    # Only run on changes to relevant files, ignore markdown etc.
+    paths:
+      - '.github/**'
+      - 'app/**'
+      - 'components/**'
+      - 'content/**' # Include content for module tests
+      - 'lib/**'
+      - 'pages/**' # If applicable
+      - 'public/**'
+      - 'scripts/**'
+      - 'src/**' # If applicable
+      - 'styles/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'next.config.js' # Or .mjs
+      - 'lighthouserc.js'
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      # Exclude specific content dirs if needed, handled by job conditions
+      # - 'content/docs/**' # Example: handled in docs job
   pull_request:
     branches: [main]
+    # Apply same path filtering for PRs
+    paths:
+      - '.github/**'
+      - 'app/**'
+      - 'components/**'
+      - 'content/**'
+      - 'lib/**'
+      - 'pages/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'styles/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'next.config.js'
+      - 'lighthouserc.js'
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-test:
-    name: Node 20 on Ubuntu
+    name: Build & Core Tests (Node 20)
     runs-on: ubuntu-latest
+    outputs:
+      build-status: ${{ steps.build-app.outcome }}
+      unit-test-outcome: ${{ steps.unit-tests.outcome }}
     env:
       STRIPE_CLIENT_ID: ${{ secrets.STRIPE_CLIENT_ID || 'ca_XXXXXXXXXX' }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'test_key' }}
@@ -20,22 +73,21 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_key
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'dummy_service_role' }}
       NEXT_PUBLIC_SITE_URL: https://example.com
-      # E2E specific vars:
+      # E2E specific vars (needed for build potentially):
       NEXT_PUBLIC_SUPABASE_URL_E2E: ${{ secrets.SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY_E2E: ${{ secrets.SUPABASE_ANON_KEY }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Use the composite action for setup
+      # Use the composite action for setup (includes checkout)
       - name: Setup Node + NPM Deps
         uses: ./.github/actions/setup-node-npm
         with:
-          node-version: '20.x' # Specify Node version
+          node-version: '20.x'
+          # fetch-depth: 0 # Optional: Fetch full history if needed for lint/test tools
 
       # The actual checks start here
-      - name: Check required secrets
+      - name: Check required secrets (Optional)
+        # This check is informational; consider if it's still necessary
         run: |
           if [[ -z "${{ secrets.STRIPE_CLIENT_ID }}" ]]; then
             echo "::warning::STRIPE_CLIENT_ID is not set in repository secrets"
@@ -61,45 +113,123 @@ jobs:
         run: npm run tsc -- --noEmit
 
       - name: Unit tests
-        id: unit-tests # Add id for checking outcome
-        if: false # Temporarily disable failing test suite
+        id: unit-tests
+        # Re-enable unit tests
         run: |
           npm test -- --coverage --runInBand || echo "::warning::Unit tests failed, review report"
 
       - name: Upload coverage
-        if: steps.unit-tests.outcome == 'success'
+        # Only upload if tests were attempted and succeeded or produced a warning (ran)
+        if: steps.unit-tests.outcome == 'success' || steps.unit-tests.outcome == 'failure' # Adjust if needed
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-20.x
+          name: coverage-report-node20
           path: coverage/
+          if-no-files-found: ignore # Don't fail if coverage dir is missing
 
       - name: Build app
-        id: build-app # Add id for checking outcome
+        id: build-app
         run: |
-          npm run build || echo "::error::Next.js build failed, cannot run Playwright tests"
+          npm run build || echo "::error::Next.js build failed"
 
-      - name: Run Playwright tests
-        if: steps.build-app.outcome == 'success' # Only run if build succeeded
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ env.NEXT_PUBLIC_SUPABASE_URL_E2E }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY_E2E }}
-        run: npm run test:e2e
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-20.x
-          path: playwright-report/
+      # E2E tests moved to e2e.yml
+      # Playwright report upload moved
 
       - name: Bundle size guard
+        # Run only if build succeeded
+        if: steps.build-app.outcome == 'success'
         run: npm run size:check
 
-      - name: Run Lighthouse CI
-        run: npm run lh-ci
+      - name: Run Lighthouse CI (on main build)
+        # Run only if build succeeded
+        if: steps.build-app.outcome == 'success'
+        run: npm run lh-ci # Assumes this runs on the default build output path
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }} # Optional
 
       - name: Upload Lighthouse report
+        # Run only if build succeeded (and lh-ci ran)
+        if: steps.build-app.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: lhci-report
+          name: lhci-report-main
           path: .lighthouseci
+          if-no-files-found: ignore # Don't fail if report dir is missing
+
+  module-tests:
+    name: Module Tests (${{ matrix.target }})
+    needs: build-test
+    runs-on: ubuntu-latest
+    if: needs.build-test.outputs.build-status == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [blog, docs, cleanup]
+        # Removed complex include with paths, rely on trigger paths
+
+    steps:
+      # Removed Check paths step
+
+      - name: Setup Node + NPM Deps
+        # Run setup unconditionally for the job now
+        uses: ./.github/actions/setup-node-npm
+        with:
+          node-version: '20.x'
+
+      # Conditional execution based only on matrix target
+      - name: Run Blog Tests (Unit)
+        if: matrix.target == 'blog'
+        run: npm run test:blog # Assumes script: "vitest run tests/blog.spec.ts"
+
+      - name: Run Docs Tests (Unit)
+        if: matrix.target == 'docs'
+        run: npm run test:unit -- --run ./tests/mdx/getAllDocs.test.mjs
+
+      - name: Check Docs Links
+        if: matrix.target == 'docs'
+        run: npm run check:links
+
+      - name: Run Docs Audit
+        if: matrix.target == 'docs'
+        run: |
+          npm run docs:audit --silent | tee audit-output.txt
+          grep -q "ALL FILES ACCOUNTED FOR" audit-output.txt
+
+      - name: Run Cleanup Tests (ts-prune)
+        if: matrix.target == 'cleanup'
+        run: |
+          npm install -D ts-prune # Ensure ts-prune is available
+          echo "Running ts-prune check for unused exports"
+          npx ts-prune | tee unused-exports.txt
+          if grep -v "used in module" unused-exports.txt; then
+            echo "::error::Found unused exports!"
+            exit 1
+          else
+            echo "✅ No unused exports found"
+          fi
+
+      - name: Upload unused exports list (Cleanup)
+        if: matrix.target == 'cleanup' && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unused-exports
+          path: unused-exports.txt
+          if-no-files-found: ignore
+
+      # Add other module-specific steps here, e.g., blog E2E/Lighthouse if desired
+      # Example: Blog Lighthouse (requires build step if not done globally)
+      # - name: Build for Blog Lighthouse
+      #   if: matrix.target == 'blog'
+      #   run: npm run build # Or reuse build artifact if possible
+      # - name: Run Blog Lighthouse CI
+      #   if: matrix.target == 'blog'
+      #   run: npm run lh-ci /blog
+      #   env:
+      #     LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      # - name: Upload Blog Lighthouse Report
+      #   if: matrix.target == 'blog'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: lhci-report-blog
+      #     path: .lighthouseci
+      #     if-no-files-found: ignore
