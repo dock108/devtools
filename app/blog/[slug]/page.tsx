@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
 // import { Post, compileMDX } from '@/lib/mdx';
-import { getPost } from '@/lib/mdx';
 import { notFound } from 'next/navigation';
 // import Image from 'next/image';
 // import { format } from 'date-fns';

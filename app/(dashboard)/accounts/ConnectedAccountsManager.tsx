@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+// import { useSearchParams, useRouter } from 'next/navigation'; // Removed
 import useSWR, { mutate } from 'swr'; // For data fetching and optimistic updates
 import { linkStripeAccountServerAction } from '@/app/(auth)/settings/connected-accounts/actions'; // Reuse existing action
-import { createClient } from '@supabase/supabase-js';
+// import { createClient } from '@supabase/supabase-js'; // Removed unused
 
 import { Button } from '@/components/ui/button';
 import {
@@ -81,7 +81,6 @@ export function ConnectedAccountsManager({
   userRole,
   availableRuleSets = [], // Default to empty if not admin/provided
 }: ConnectedAccountsManagerProps) {
-  const supabase = createClient(); // Use client-side Supabase client
   // const router = useRouter(); // Removed
 
   const { data: accounts = initialAccounts, error: accountsError } = useSWR<AccountWithStatus[]>(
@@ -93,8 +92,8 @@ export function ConnectedAccountsManager({
     },
   );
 
-  const [isLinking, startLinkTransition] = useTransition();
-  const [isOperating, startOperatingTransition] = useTransition(); // For disconnect/patch
+  const [isLinking, startLinkTransition] = React.useTransition();
+  const [isOperating, startOperatingTransition] = React.useTransition(); // For disconnect/patch
   const [operatingAccountId, setOperatingAccountId] = useState<string | null>(null);
   const [accountToDisconnect, setAccountToDisconnect] = useState<string | null>(null);
 

@@ -5,14 +5,14 @@ import { format, startOfMonth, formatRelative } from 'date-fns';
 import { Loader2, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/utils/supabase/client';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams /*, useRouter */ } from 'next/navigation'; // Removed useRouter
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   resumePayoutsServerAction,
   pausePayoutsServerAction,
 } from 'app/(auth)/settings/connected-accounts/actions';
-import { alertCapFor } from '@/lib/guardian/plan';
+// import { alertCapFor } from '@/lib/guardian/plan'; // Removed unused
 import { UpgradeBanner } from '@/app/components/UpgradeBanner';
 
 import { Container } from '@/components/Container';
@@ -26,9 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import StripeAccountSelect from '@/app/components/StripeAccountSelect';
+// import StripeAccountSelect from '@/app/components/StripeAccountSelect'; // Removed unused
 import MetricCard from '@/app/components/MetricCard';
-import { Database } from '@/types/supabase';
+// import { Database } from '@/types/supabase'; // Removed unused
 
 // Type for connected account data needed
 type ConnectedAccount = {
@@ -53,13 +53,13 @@ type Alert = {
 };
 
 // Alert channels type definition
-type AlertChannels = {
-  id: number;
-  stripe_account_id: string;
-  slack_webhook_url: string | null;
-  email_to: string | null;
-  auto_pause: boolean;
-};
+// type AlertChannels = { // Removed unused type
+//   id: number;
+//   stripe_account_id: string;
+//   slack_webhook_url: string | null;
+//   email_to: string | null;
+//   auto_pause: boolean;
+// };
 
 // Settings type definition - Define locally if import commented out
 type Settings = {
@@ -75,9 +75,9 @@ type Settings = {
 };
 
 // StripeEvent might be needed? Define a basic structure or remove usage
-type StripeEvent = Record<string, any>; // Placeholder
+// type StripeEvent = Record<string, any>; // Removed unused type
 // Define AlertStatus locally if needed
-type AlertStatus = 'open' | 'resolved' | 'muted'; // Example
+// type AlertStatus = 'open' | 'resolved' | 'muted'; // Removed unused type
 
 // Wrap the core logic in a component to use Suspense
 function AlertsPageContent() {
@@ -90,7 +90,7 @@ function AlertsPageContent() {
   const [updatingAutoPause, setUpdatingAutoPause] = useState(false);
   // Add new state for settings and monthly alert count
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [monthlyAlertCount, setMonthlyAlertCount] = useState(0);
+  const [_monthlyAlertCount, setMonthlyAlertCount] = useState(0); // Prefixed unused
   const [alertMetrics, setAlertMetrics] = useState<{
     monthlyCount: number;
     openCount: number;
@@ -129,8 +129,8 @@ function AlertsPageContent() {
   // Calculate whether to show upgrade banner
   const showUpgradeBanner = useMemo(() => {
     const alertCap = alertCapFor(settings);
-    return settings?.tier === 'free' && monthlyAlertCount >= alertCap;
-  }, [settings, monthlyAlertCount]);
+    return settings?.tier === 'free' && _monthlyAlertCount >= alertCap;
+  }, [settings, _monthlyAlertCount]);
 
   // Show toast on first connect (runs only once)
   useEffect(() => {
@@ -285,7 +285,7 @@ function AlertsPageContent() {
           console.error('Error fetching monthly alerts:', monthlyAlertsError);
         }
 
-        const monthlyAlertCount = monthlyAlerts?.length || 0;
+        const _monthlyAlertCountResult = monthlyAlerts?.length || 0; // Prefix unused var
 
         // Fetch alert channels for the selected account
         console.log(`Fetching channels for ${selectedAccountId}...`);
@@ -629,7 +629,7 @@ function AlertsPageContent() {
       <div className="mb-8 grid gap-6 md:grid-cols-3">
         <MetricCard
           title="Current Month Alerts"
-          value={monthlyAlertCount}
+          value={_monthlyAlertCount}
           description={
             settings?.tier === 'free'
               ? `Free tier limit: ${alertCapFor(settings)}`
@@ -654,7 +654,7 @@ function AlertsPageContent() {
 
       {/* Show upgrade banner for users exceeding free tier limits */}
       {showUpgradeBanner && (
-        <UpgradeBanner monthlyAlertCount={monthlyAlertCount} alertLimit={alertCapFor(settings)} />
+        <UpgradeBanner monthlyAlertCount={_monthlyAlertCount} alertLimit={alertCapFor(settings)} />
       )}
 
       {/* Auto-pause and Tabs section - only show if an account is selected */}

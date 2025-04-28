@@ -84,7 +84,7 @@ export default function CreateRuleSetPage() {
       if (values.rules_config) {
         try {
           rulesConfig = JSON.parse(values.rules_config);
-        } catch (err) {
+        } catch {
           form.setError('rules_config', {
             message: 'Invalid JSON format',
           });

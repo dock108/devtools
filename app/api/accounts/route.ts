@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import { /* NextRequest, */ NextResponse } from 'next/server';
 import { Database } from '@/types/supabase';
 
 // Select fields needed by the frontend
@@ -16,7 +16,8 @@ const ACCOUNTS_QUERY = `
   account_backfill_status ( status, progress, error_message, updated_at )
 `;
 
-export async function GET(request: NextRequest) {
+// GET: Fetch all accounts with their assigned rule set names
+export async function GET(/* _request: NextRequest */) {
   const cookieStore = cookies();
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/accounts - Link a new Stripe account
-export async function POST(/* request: Request */) {
+export async function POST(/* _request: Request */) {
   console.log('POST /api/accounts called');
   // const supabase = createServerClient<Database>( // Removed unused variable
   //   process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -6,12 +6,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectedAccountsManager } from './ConnectedAccountsManager';
 import { SWRConfig } from 'swr';
-import { useSearchParams } from 'next/navigation';
 
 // Mocks
 vi.mock('next/navigation', () => ({
   useRouter: () => ({}),
-  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@/app/(auth)/settings/connected-accounts/actions', () => ({
   linkStripeAccountServerAction: vi.fn(),

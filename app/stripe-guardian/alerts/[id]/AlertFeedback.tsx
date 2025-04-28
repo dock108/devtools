@@ -26,7 +26,7 @@ export function AlertFeedback({ alertId }: AlertFeedbackProps) {
     legit: 0,
   });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
-  const [userVote, setUserVote] = useState<'false_positive' | 'legit' | null>(null); // Track the logged-in user's specific vote
+  const [_userVote, setUserVote] = useState<'false_positive' | 'legit' | null>(null); // Track the logged-in user's specific vote
 
   // Fetch initial counts and user's vote (if any)
   const fetchFeedbackData = useCallback(async () => {

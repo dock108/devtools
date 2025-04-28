@@ -33,7 +33,7 @@ export function DemoViewer() {
   });
 
   // Use scenario events
-  const { events, isRunning, totalDelayMs } = scenarioData;
+  const { events, isRunning /*, totalDelayMs */ } = scenarioData;
 
   const [log, setLog] = useState<string[]>(['Monitoring started…']);
   const [alert, setAlert] = useState<{ text: string }>();

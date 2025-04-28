@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { createClient as createAdminClient } from '@/lib/supabase/admin';
+import 'next/server';
+// import { stripe } from '@/lib/stripe'; // Removed
+// import { createClient as createAdminClient } from '@/lib/supabase/admin'; // Removed
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { rotateAccountWebhook } from '@/lib/stripe-webhook';

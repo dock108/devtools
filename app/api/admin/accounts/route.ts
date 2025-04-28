@@ -21,7 +21,7 @@ const updateAccountSchema = z.object({
 });
 
 // GET: Fetch all accounts with their assigned rule set names
-export async function GET(/* request: Request */) {
+export async function GET(/* _request: Request */) {
   console.log('GET /api/admin/accounts called');
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
@@ -69,7 +69,10 @@ export async function GET(/* request: Request */) {
 }
 
 // PATCH: Update the rule_set_id for a specific account
-export async function PATCH(request: Request, { params }: { params: { accountId?: string } }) {
+export async function PATCH(
+  _request: Request,
+  {} /* params */ : { params: { accountId?: string } },
+) {
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 
@@ -85,7 +88,7 @@ export async function PATCH(request: Request, { params }: { params: { accountId?
   // Revisit this if using dynamic route segments.
 
   // Let's expect the account ID in the URL search params like /api/admin/accounts?id=xxx
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = new URL(_request.url);
   const accountId = searchParams.get('id');
 
   if (!accountId || !z.string().uuid().safeParse(accountId).success) {
@@ -96,7 +99,7 @@ export async function PATCH(request: Request, { params }: { params: { accountId?
   }
 
   try {
-    const body = await request.json();
+    const body = await _request.json();
     const validation = updateAccountSchema.safeParse(body);
 
     if (!validation.success) {
@@ -152,8 +155,8 @@ export async function PATCH(request: Request, { params }: { params: { accountId?
 }
 
 // PUT: Update account details (e.g., assign rule set, toggle active status)
-export async function PUT(request: Request, {} /* params */ : { params: { id: string } }) {
+export async function PUT(_request: Request, {} /* _params */ : { params: { id: string } }) {
   console.log('PUT /api/admin/accounts called'); // Removed ID log as params is unused
-  const supabaseAdmin = createAdminClient();
+  // const supabaseAdmin = createAdminClient(); // Removed
   // ... existing code ...
 }

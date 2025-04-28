@@ -24,7 +24,7 @@ import { format } from 'date-fns'; // For formatting dates on axes/tooltips
 import { useUser } from '@/lib/hooks/useUser'; // Assuming hook to get user/profile
 import { isPro } from '@/lib/guardian/plan'; // Assuming plan helper exists
 import StripeAccountSelect from '@/app/components/StripeAccountSelect'; // Import account selector
-import { Database } from '@/types/supabase'; // Import Database type
+import { Database } from '@/types/supabase'; // Reverted import path
 
 // Define SettingsRow type locally or import if available elsewhere
 type SettingsRow = Database['public']['Tables']['settings']['Row'];
@@ -42,7 +42,11 @@ type FpRateRuleData = {
 type AvgRiskScoreData = { day: string; avg_risk: number }[];
 
 // --- Data Fetching Functions --- //
-const fetchAnalyticsView = async (viewName: string, accountId?: string | null, isPro?: boolean) => {
+const fetchAnalyticsView = async (
+  viewName: string,
+  _accountId?: string | null,
+  _isPro?: boolean,
+) => {
   const supabase = createClient();
 
   // Note: Views currently DO NOT support account filtering.
@@ -124,7 +128,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 // --- Main Analytics Page Component --- //
 export default function AnalyticsPage() {
   const supabase = createClient();
-  const { user, profile, isLoading: isLoadingUser } = useUser(); // Get user/profile info
+  const { user, /* profile, */ isLoading: isLoadingUser } = useUser(); // Get user/profile info
   const [allAccounts, setAllAccounts] = useState<ConnectedAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);

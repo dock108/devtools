@@ -4,7 +4,6 @@ import { Container } from '@/components/Container';
 import BlogCard from '@/components/blog/BlogCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { Metadata } from 'next';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Blog',

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   try {
     feedbackData = await request.json();
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       });
       console.log(`[API/Feedback] Sent feedback notification for user: ${userId}`);
       return NextResponse.json({ message: 'Feedback submitted' }, { status: 201 });
-    } catch /* (_e) */ {
+    } catch {
       // console.error('Feedback error:', e);
       return NextResponse.json({ error: 'Server error submitting feedback' }, { status: 500 });
     }

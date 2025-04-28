@@ -8,7 +8,6 @@ import { productLD } from '@/lib/jsonld';
 import { Badge } from '@/components/ui/badge';
 // import { Features } from '@/components/products/Features'; // Commented out
 // import { Hero } from '@/components/products/Hero'; // Commented out
-import Image from 'next/image';
 
 // Placeholder components - replace or refine
 const Laptop = ({ className }: { className?: string }) => (

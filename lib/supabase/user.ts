@@ -1,6 +1,6 @@
 import 'server-only';
 import { Database } from '@/types/supabase';
-import { createServerClient } from './server';
+import { createSupabaseServerClient } from './server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
@@ -8,24 +8,7 @@ import crypto from 'crypto';
 // Helper to create a server-side Supabase client
 function createClient() {
   const cookieStore = cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options) {
-          // Can't set cookies in Server Actions/Components directly yet in this setup
-          // Client will need to handle session refresh if needed after updates
-        },
-        remove(name: string, options) {
-          // Can't set cookies in Server Actions/Components directly yet in this setup
-        },
-      },
-    },
-  );
+  return createSupabaseServerClient();
 }
 
 export interface Profile {

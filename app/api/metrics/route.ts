@@ -24,7 +24,7 @@ function checkAuth(request: Request): boolean {
     const base64Credentials = authHeader.substring(6);
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
     // Expecting format like '_:YOUR_PROM_METRICS_KEY' or 'user:YOUR_PROM_METRICS_KEY'
-    const [user, key] = credentials.split(':');
+    const [_user, key] = credentials.split(':');
     return key === expectedKey;
   } catch (e) {
     console.error('Error decoding Basic Auth credentials:', e);
