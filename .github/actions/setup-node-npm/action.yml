@@ -10,7 +10,6 @@ runs:
   steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      shell: bash # Explicit shell for consistency
 
     - name: Disable corepack (npm is default)
       run: corepack disable
@@ -21,7 +20,6 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
-      shell: bash
 
     - name: Install dependencies
       run: npm ci
