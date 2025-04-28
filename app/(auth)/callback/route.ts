@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe'; // Assuming stripe client is configured
@@ -18,16 +18,32 @@ export async function GET(request: NextRequest) {
   const errorDescription = requestUrl.searchParams.get('error_description');
 
   const cookieStore = cookies();
+
+  // Use the recommended cookie handling methods for Route Handlers with ssr client
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (name) => cookieStore.get(name)?.value } },
+    process.env['NEXT_PUBLIC_SUPABASE_URL']!,
+    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
+    },
   );
 
   // 1. Handle OAuth errors from Stripe
   if (error) {
     console.error(`Stripe OAuth Error: ${error} - ${errorDescription}`);
-    return NextResponse.redirect(getErrorRedirect(requestUrl.origin, error, errorDescription));
+    return NextResponse.redirect(
+      getErrorRedirect(requestUrl.origin, error, errorDescription || 'Unknown Stripe Error'),
+    );
   }
 
   // 2. Handle missing code
@@ -54,6 +70,12 @@ export async function GET(request: NextRequest) {
 
     if (!stripeAccountId) {
       throw new Error('Stripe account ID not found in OAuth response.');
+    }
+    if (!refreshToken) {
+      throw new Error('Stripe refresh token not found in OAuth response.');
+    }
+    if (!accessToken) {
+      throw new Error('Stripe access token not found in OAuth response.');
     }
 
     // 4. Get Supabase User
@@ -92,33 +114,28 @@ export async function GET(request: NextRequest) {
           requestUrl.origin,
           'Account Limit Reached',
           `You can connect a maximum of ${MAX_ACCOUNTS} Stripe accounts.`,
-          '/dashboard', // Redirect back to dashboard or settings
+          '/dashboard',
         ),
       );
     }
     console.log(`User ${user.id} has ${count ?? 0} accounts, proceeding.`);
 
     // 6. Insert/Update Stripe Account Info (encrypt tokens!)
-    const keyId = process.env.SODIUM_ENCRYPTION_KEY_ID;
+    const keyId = process.env['SODIUM_ENCRYPTION_KEY_ID'];
     if (!keyId) {
       console.error('SODIUM_ENCRYPTION_KEY_ID is not set in environment variables.');
       throw new Error('Server configuration error for encryption.');
     }
 
     console.log(`Upserting Stripe account ${stripeAccountId} for user ${user.id}...`);
-    // We need to use raw SQL for encryption as Supabase client doesn't directly support pgsodium bytea functions yet.
-    // Note: Ensure pgsodium is enabled and the key referenced by keyId exists.
     const { error: upsertError } = await supabaseAdmin.rpc('upsert_stripe_account', {
       p_user_id: user.id,
       p_stripe_account_id: stripeAccountId,
       p_scope: scope,
-      p_refresh_token: refreshToken, // Pass plaintext to function
-      p_access_token: accessToken, // Pass plaintext to function
+      p_refresh_token: refreshToken,
+      p_access_token: accessToken,
       p_key_id: keyId,
     });
-
-    // We need to define the upsert_stripe_account SQL function in a migration
-    // This function will handle the encryption using pgsodium.crypto_aead_det_encrypt
 
     if (upsertError) {
       console.error('Error upserting Stripe account:', upsertError);

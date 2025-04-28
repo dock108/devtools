@@ -1,34 +1,40 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { v4 as uuidv4 } from 'uuid';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
-// Mock the Supabase client
-jest.mock('@/lib/supabase-admin', () => ({
-  supabaseAdmin: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockResolvedValue({ data: [{ id: 'mock-id' }], error: null }),
-    upsert: jest.fn().mockResolvedValue({ data: [{ id: 'mock-id' }], error: null }),
-    delete: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
-    like: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn().mockReturnThis(),
-    rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
-  },
+// Define mocks for the builder methods. These will be configured per test.
+const mockQueryBuilder = {
+  insert: jest.fn(),
+  select: jest.fn(),
+  upsert: jest.fn(),
+  eq: jest.fn(),
+  in: jest.fn(),
+  like: jest.fn(),
+  delete: jest.fn(),
+  single: jest.fn(),
+};
+
+// Mock the Supabase client object
+const supabaseAdmin = {
+  from: jest.fn(() => mockQueryBuilder), // from simply returns the mock builder object
+  rpc: jest.fn(),
+};
+
+// Mock the factory function
+jest.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: jest.fn(() => supabaseAdmin),
 }));
 
-describe('Event Buffer', () => {
-  // Reset mocks before each test
+describe('Supabase Event Buffer Table & Logic', () => {
   beforeEach(() => {
+    // Reset all mocks before each test
     jest.clearAllMocks();
-    // Mock the delete response for test data cleanup
-    (supabaseAdmin.from as jest.Mock).mockReturnThis();
-    (supabaseAdmin.delete as jest.Mock).mockReturnThis();
-    (supabaseAdmin.like as jest.Mock).mockResolvedValue({ data: null, error: null });
+    // Reset specific mock implementations if needed (though usually covered by clearAllMocks for jest.fn)
+    // e.g., supabaseAdmin.from.mockImplementation(() => mockQueryBuilder);
+    // Ensure rpc mock has a default resolved value
+    supabaseAdmin.rpc.mockResolvedValue({ data: null, error: null });
   });
 
-  // Test data
   const testEvents = [
     {
       stripe_event_id: `evt_test_${uuidv4()}`,
@@ -44,38 +50,30 @@ describe('Event Buffer', () => {
       payload: { object: { id: 'po_123', amount: 5000 } },
       received_at: new Date(),
     },
-    // This event is older than the TTL and should be purged
     {
       stripe_event_id: `evt_test_${uuidv4()}`,
       stripe_account_id: 'acct_test123',
       type: 'payout.paid',
       payload: { object: { id: 'po_456', amount: 7500 } },
-      // Set date to 31 days ago
       received_at: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
     },
   ];
 
   it('should insert events into the buffer', async () => {
-    // Mock the insert response
-    (supabaseAdmin.from as jest.Mock).mockReturnThis();
-    (supabaseAdmin.insert as jest.Mock).mockResolvedValue({
-      data: [{ id: 'mock-id' }],
-      error: null,
-    });
-    (supabaseAdmin.select as jest.Mock).mockReturnThis();
-    (supabaseAdmin.in as jest.Mock).mockResolvedValue({
+    // Setup mocks for this specific test
+    mockQueryBuilder.insert.mockResolvedValueOnce({ data: [{ id: 'mock-id' }], error: null });
+    mockQueryBuilder.select.mockReturnThis(); // select returns the builder
+    mockQueryBuilder.in.mockResolvedValueOnce({
       data: [testEvents[0], testEvents[1]],
       error: null,
-    });
+    }); // in returns the final result
 
-    // Insert recent events
     const { error: insertError } = await supabaseAdmin
       .from('event_buffer')
       .insert([testEvents[0], testEvents[1]]);
 
     expect(insertError).toBeNull();
 
-    // Verify events were inserted - use mocked response
     const { data, error } = await supabaseAdmin
       .from('event_buffer')
       .select('*')
@@ -84,61 +82,47 @@ describe('Event Buffer', () => {
     expect(error).toBeNull();
     expect(data).toHaveLength(2);
     expect(supabaseAdmin.from).toHaveBeenCalledWith('event_buffer');
-    expect(supabaseAdmin.insert).toHaveBeenCalledWith([testEvents[0], testEvents[1]]);
+    expect(mockQueryBuilder.insert).toHaveBeenCalledWith([testEvents[0], testEvents[1]]);
+    expect(mockQueryBuilder.select).toHaveBeenCalledWith('*');
+    expect(mockQueryBuilder.in).toHaveBeenCalledWith('stripe_event_id', [
+      testEvents[0].stripe_event_id,
+      testEvents[1].stripe_event_id,
+    ]);
   });
 
   it('should enforce uniqueness on stripe_event_id', async () => {
-    // Mock the error for duplicate insert
-    (supabaseAdmin.from as jest.Mock).mockReturnThis();
-    (supabaseAdmin.insert as jest.Mock)
+    // Setup mocks: first insert succeeds, second fails
+    mockQueryBuilder.insert
       .mockResolvedValueOnce({ data: [{ id: 'mock-id' }], error: null })
       .mockResolvedValueOnce({
         data: null,
         error: { code: '23505', message: 'duplicate key value violates unique constraint' },
       });
 
-    // Insert an event
     await supabaseAdmin.from('event_buffer').insert([testEvents[0]]);
 
-    // Try to insert the same event again
     const { error: duplicateError } = await supabaseAdmin
       .from('event_buffer')
       .insert([testEvents[0]]);
 
-    // Should fail with a uniqueness constraint error
     expect(duplicateError).not.toBeNull();
-    expect(duplicateError?.code).toEqual('23505'); // PostgreSQL unique violation
+    expect(duplicateError?.code).toEqual('23505');
+    expect(mockQueryBuilder.insert).toHaveBeenCalledTimes(2);
   });
 
   it('should allow upsert on stripe_event_id', async () => {
-    // Mock responses
-    (supabaseAdmin.from as jest.Mock).mockReturnThis();
-    (supabaseAdmin.insert as jest.Mock).mockResolvedValue({
-      data: [{ id: 'mock-id' }],
-      error: null,
-    });
-    (supabaseAdmin.upsert as jest.Mock).mockResolvedValue({
-      data: [{ id: 'mock-id' }],
-      error: null,
-    });
-    (supabaseAdmin.select as jest.Mock).mockReturnThis();
-    (supabaseAdmin.eq as jest.Mock).mockReturnThis();
-    (supabaseAdmin.single as jest.Mock).mockResolvedValue({
-      data: {
-        ...testEvents[0],
-        payload: { object: { id: 'ch_123', amount: 2000 } },
-      },
-      error: null,
-    });
-
-    // Insert an event
-    await supabaseAdmin.from('event_buffer').insert([testEvents[0]]);
-
-    // Modify and upsert the same event
     const modifiedEvent = {
       ...testEvents[0],
-      payload: { object: { id: 'ch_123', amount: 2000 } }, // Changed amount
+      payload: { object: { id: 'ch_123', amount: 2000 } },
     };
+    // Setup mocks
+    mockQueryBuilder.insert.mockResolvedValueOnce({ data: [{ id: 'mock-id' }], error: null });
+    mockQueryBuilder.upsert.mockResolvedValueOnce({ data: [modifiedEvent], error: null });
+    mockQueryBuilder.select.mockReturnThis();
+    mockQueryBuilder.eq.mockReturnThis();
+    mockQueryBuilder.single.mockResolvedValueOnce({ data: modifiedEvent, error: null });
+
+    await supabaseAdmin.from('event_buffer').insert([testEvents[0]]);
 
     const { error: upsertError } = await supabaseAdmin
       .from('event_buffer')
@@ -146,7 +130,6 @@ describe('Event Buffer', () => {
 
     expect(upsertError).toBeNull();
 
-    // Verify the event was updated
     const { data, error } = await supabaseAdmin
       .from('event_buffer')
       .select('*')
@@ -154,36 +137,29 @@ describe('Event Buffer', () => {
       .single();
 
     expect(error).toBeNull();
-    expect(data.payload.object.amount).toEqual(2000);
-    expect(supabaseAdmin.upsert).toHaveBeenCalledWith([modifiedEvent], {
+    expect(data?.payload.object.amount).toEqual(2000);
+    expect(mockQueryBuilder.upsert).toHaveBeenCalledWith([modifiedEvent], {
       onConflict: 'stripe_event_id',
     });
+    expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+      'stripe_event_id',
+      testEvents[0].stripe_event_id,
+    );
+    expect(mockQueryBuilder.single).toHaveBeenCalledTimes(1);
   });
 
   it('should purge old events but keep recent ones', async () => {
-    // Mock responses
-    (supabaseAdmin.from as jest.Mock).mockReturnThis();
-    (supabaseAdmin.insert as jest.Mock).mockResolvedValue({ data: testEvents, error: null });
-    (supabaseAdmin.select as jest.Mock).mockReturnThis();
-    (supabaseAdmin.in as jest.Mock)
-      .mockResolvedValueOnce({
-        data: testEvents,
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [testEvents[0], testEvents[1]],
-        error: null,
-      });
-    (supabaseAdmin.eq as jest.Mock).mockResolvedValue({
-      data: [],
-      error: null,
-    });
-    (supabaseAdmin.rpc as jest.Mock).mockResolvedValue({ data: null, error: null });
+    // Setup mocks
+    mockQueryBuilder.insert.mockResolvedValueOnce({ data: testEvents, error: null });
+    mockQueryBuilder.select.mockReturnThis();
+    mockQueryBuilder.in
+      .mockResolvedValueOnce({ data: testEvents, error: null }) // Before purge
+      .mockResolvedValueOnce({ data: [testEvents[0], testEvents[1]], error: null }); // After purge
+    mockQueryBuilder.eq.mockResolvedValueOnce({ data: [], error: null }); // Checking for old event
+    supabaseAdmin.rpc.mockResolvedValueOnce({ data: null, error: null }); // Purge call
 
-    // Insert all events (including the old one)
     await supabaseAdmin.from('event_buffer').insert(testEvents);
 
-    // Verify all events were inserted
     const { data: beforePurge } = await supabaseAdmin
       .from('event_buffer')
       .select('*')
@@ -191,13 +167,10 @@ describe('Event Buffer', () => {
         'stripe_event_id',
         testEvents.map((e) => e.stripe_event_id),
       );
-
     expect(beforePurge).toHaveLength(3);
 
-    // Execute the purge function
     await supabaseAdmin.rpc('purge_old_events');
 
-    // Verify only recent events remain
     const { data: afterPurge } = await supabaseAdmin
       .from('event_buffer')
       .select('*')
@@ -205,16 +178,19 @@ describe('Event Buffer', () => {
         'stripe_event_id',
         testEvents.map((e) => e.stripe_event_id),
       );
-
     expect(afterPurge).toHaveLength(2);
 
-    // The old event should be gone
     const { data: oldEvent } = await supabaseAdmin
       .from('event_buffer')
       .select('*')
       .eq('stripe_event_id', testEvents[2].stripe_event_id);
-
     expect(oldEvent).toHaveLength(0);
+
     expect(supabaseAdmin.rpc).toHaveBeenCalledWith('purge_old_events');
+    expect(mockQueryBuilder.in).toHaveBeenCalledTimes(2);
+    expect(mockQueryBuilder.eq).toHaveBeenCalledWith(
+      'stripe_event_id',
+      testEvents[2].stripe_event_id,
+    );
   });
 });

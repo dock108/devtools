@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   linkStripeAccountServerAction,

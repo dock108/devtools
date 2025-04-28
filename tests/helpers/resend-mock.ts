@@ -1,19 +1,15 @@
-import { jest } from '@jest/globals';
 import nock from 'nock';
 
 // Create a mock for the Resend API
 export const mockResendApi = () => {
   // Ensure nock is configured to mock the Resend API endpoint
-  nock('https://api.resend.com')
-    .persist()
-    .post('/emails')
-    .reply(200, {
-      id: 'mock-email-id',
-      from: 'alerts@example.com',
-      to: 'recipient@example.com',
-      subject: 'Alert Notification',
-      status: 'success',
-    });
+  nock('https://api.resend.com').persist().post('/emails').reply(200, {
+    id: 'mock-email-id',
+    from: 'alerts@example.com',
+    to: 'recipient@example.com',
+    subject: 'Alert Notification',
+    status: 'success',
+  });
 };
 
 // Utility function to verify the Resend API was called
@@ -25,11 +21,11 @@ export const verifyResendApiCalled = () => {
 
 // Utility to setup a specific Resend API response expectation
 export const expectResendApiCall = (expectedEmailData: {
-  to: string[],
-  from: string,
-  subject: string,
-  html?: string,
-  text?: string
+  to: string[];
+  from: string;
+  subject: string;
+  html?: string;
+  text?: string;
 }) => {
   return nock('https://api.resend.com')
     .post('/emails', (body) => {
@@ -53,7 +49,7 @@ export const expectResendApiCall = (expectedEmailData: {
     })
     .reply(200, {
       id: 'test-email-id',
-      status: 'success'
+      status: 'success',
     });
 };
 
@@ -67,18 +63,18 @@ export const mockResendApiWithContentCheck = (expectedParams: any) => {
   return nock('https://api.resend.com')
     .post('/emails', (body) => {
       // Perform assertions on the body
-      const allExpectedParamsPresent = Object.keys(expectedParams).every(key => {
+      const allExpectedParamsPresent = Object.keys(expectedParams).every((key) => {
         if (typeof expectedParams[key] === 'string' || typeof expectedParams[key] === 'boolean') {
           return body[key] === expectedParams[key];
         } else if (typeof expectedParams[key] === 'object') {
           // For nested objects, check that they contain expected keys
-          return Object.keys(expectedParams[key]).every(subKey => 
-            JSON.stringify(body[key]).includes(expectedParams[key][subKey])
+          return Object.keys(expectedParams[key]).every((subKey) =>
+            JSON.stringify(body[key]).includes(expectedParams[key][subKey]),
           );
         }
         return true;
       });
-      
+
       return allExpectedParamsPresent;
     })
     .reply(200, {
@@ -91,11 +87,9 @@ export const mockResendApiWithContentCheck = (expectedParams: any) => {
 
 // Helper to mock a failed email send
 export const mockResendApiFailure = () => {
-  return nock('https://api.resend.com')
-    .post('/emails')
-    .reply(400, {
-      statusCode: 400,
-      message: 'Bad request',
-      name: 'Error',
-    });
-}; 
+  return nock('https://api.resend.com').post('/emails').reply(400, {
+    statusCode: 400,
+    message: 'Bad request',
+    name: 'Error',
+  });
+};

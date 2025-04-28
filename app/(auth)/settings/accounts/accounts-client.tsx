@@ -73,15 +73,15 @@ export default function AccountsClient({ initialAccounts }: { initialAccounts: A
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'alert_channels' },
         (payload) => {
-          if (payload.new && payload.new.stripe_account_id) {
+          if (payload.new && payload.new['stripe_account_id']) {
             setAccounts((currentAccounts) =>
               currentAccounts.map((account) =>
-                account.stripe_account_id === payload.new.stripe_account_id
+                account.stripe_account_id === payload.new['stripe_account_id']
                   ? {
                       ...account,
                       alert_channels: {
                         ...account.alert_channels,
-                        auto_pause: payload.new.auto_pause,
+                        auto_pause: payload.new['auto_pause'],
                       },
                     }
                   : account,

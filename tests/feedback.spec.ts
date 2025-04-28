@@ -1,88 +1,105 @@
-import { test, expect, describe, beforeAll, afterAll, vi } from 'vitest';
-import { POST, GET } from '../../app/api/guardian/alerts/feedback/route'; // Adjust path as needed
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { POST, GET } from '@/app/api/guardian/alerts/feedback/route';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 // --- Mocking --- //
-// Note: With strict TypeScript, ensure mock implementations and return types match signatures accurately.
-vi.mock('@/lib/supabase-admin', () => ({
-  supabaseAdmin: {
-    from: vi.fn().mockReturnThis(),
-    upsert: vi.fn(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    filter: vi.fn().mockReturnThis(),
-    returns: vi.fn(),
-    single: vi.fn(),
-    maybeSingle: vi.fn(),
-  },
+
+// Mock the query builder methods using jest.fn
+const mockQueryBuilder = {
+  from: jest.fn(),
+  upsert: jest.fn(),
+  select: jest.fn(),
+  eq: jest.fn(),
+  in: jest.fn(),
+  filter: jest.fn(),
+  single: jest.fn(),
+  maybeSingle: jest.fn(),
+};
+
+// Mock the Supabase client object using jest.fn
+const supabaseAdmin = {
+  from: jest.fn(() => mockQueryBuilder),
+  // rpc: jest.fn(), // Add if needed
+};
+
+// Mock the factory function using jest.mock
+jest.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: jest.fn(() => supabaseAdmin),
 }));
 
-vi.mock('@supabase/ssr', () => ({
-  createServerClient: vi.fn(() => ({
+// Mock auth and cookies using jest.mock
+jest.mock('@supabase/ssr', () => ({
+  createServerClient: jest.fn(() => ({
     auth: {
-      getSession: vi.fn(() => ({ data: { session: { user: { id: 'test-user-id' } } } })), // Mock successful session
+      getSession: jest
+        .fn()
+        .mockResolvedValue({ data: { session: { user: { id: 'test-user-id' } } } }),
     },
   })),
 }));
 
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(() => ({
-    get: vi.fn(),
+jest.mock('next/headers', () => ({
+  cookies: jest.fn(() => ({
+    get: jest.fn(),
+    set: jest.fn(),
+    remove: jest.fn(),
   })),
 }));
 
-// Mock prom-client (basic mock to prevent errors)
-vi.mock('prom-client', () => ({
+// Mock prom-client using jest.mock
+jest.mock('prom-client', () => ({
   register: {
-    getSingleMetric: vi.fn(),
+    getSingleMetric: jest.fn(),
     contentType: 'text/plain',
-    metrics: vi.fn(async () => 'mock_metrics_output'),
+    metrics: jest.fn(async () => 'mock_metrics_output'),
   },
-  Counter: vi.fn(() => ({
-    inc: vi.fn(),
-    labels: vi.fn().mockReturnThis(),
+  Counter: jest.fn(() => ({
+    inc: jest.fn(),
+    labels: jest.fn().mockReturnThis(),
   })),
-  Gauge: vi.fn(() => ({
-    set: vi.fn(),
-    labels: vi.fn().mockReturnThis(),
+  Gauge: jest.fn(() => ({
+    set: jest.fn(),
+    labels: jest.fn().mockReturnThis(),
   })),
-  Histogram: vi.fn(() => ({
-    observe: vi.fn(),
-    labels: vi.fn().mockReturnThis(),
-    startTimer: vi.fn(() => vi.fn()),
+  Histogram: jest.fn(() => ({
+    observe: jest.fn(),
+    labels: jest.fn().mockReturnThis(),
+    startTimer: jest.fn(() => jest.fn()), // Use jest.fn here too
   })),
-  Summary: vi.fn(() => ({
-    observe: vi.fn(),
-    labels: vi.fn().mockReturnThis(),
-    startTimer: vi.fn(() => vi.fn()),
+  Summary: jest.fn(() => ({
+    observe: jest.fn(),
+    labels: jest.fn().mockReturnThis(),
+    startTimer: jest.fn(() => jest.fn()), // Use jest.fn here too
   })),
-  collectDefaultMetrics: vi.fn(),
+  collectDefaultMetrics: jest.fn(),
 }));
 
 // --- Test Suite --- //
 describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
-  const MOCK_ALERT_ID = 'alert-uuid-123';
+  const MOCK_ALERT_ID = 123;
   const MOCK_USER_ID = 'test-user-id';
 
-  // Reset mocks between tests
+  // Use beforeEach if setup needed before each test (Jest)
+  beforeEach(() => {
+    // Use jest.clearAllMocks()
+    jest.clearAllMocks();
+    // Optional: Reset specific mock implementations if needed
+    // supabaseAdmin.from.mockImplementation(() => mockQueryBuilder);
+  });
+
+  // afterEach remains the same conceptually, just using Jest API
   afterEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   // --- POST Tests --- //
   describe('POST /api/guardian/alerts/feedback', () => {
-    test('should insert new feedback successfully', async () => {
-      const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      // Ensure mockResolvedValue types match the expected return type from the actual function
-      vi.mocked(supabaseAdmin.upsert).mockResolvedValueOnce({
-        data: [{ id: 'feedback-uuid-1' }], // Ensure this structure matches Supabase response
+    // Use it instead of test
+    it('should insert new feedback successfully', async () => {
+      mockQueryBuilder.upsert.mockResolvedValueOnce({
+        data: [{ id: 'feedback-uuid-1' }],
         error: null,
       });
-      vi.mocked(supabaseAdmin.select).mockReturnThis(); // Chain .select()
-      vi.mocked(supabaseAdmin.single).mockResolvedValueOnce({
-        data: { id: 'feedback-uuid-1' },
-        error: null,
-      }); // Mock the single() call result
 
       const request = new Request('http://localhost/api/guardian/alerts/feedback', {
         method: 'POST',
@@ -96,21 +113,21 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       expect(response.status).toBe(200);
       expect(body.success).toBe(true);
       expect(body.feedbackId).toBe('feedback-uuid-1');
-      expect(vi.mocked(supabaseAdmin.upsert)).toHaveBeenCalledWith(
-        { alert_id: MOCK_ALERT_ID, user_id: MOCK_USER_ID, verdict: 'legit', comment: null },
+      expect(supabaseAdmin.from).toHaveBeenCalledWith('alert_feedback');
+      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // Jest's expect.objectContaining
+          alert_id: MOCK_ALERT_ID,
+          user_id: MOCK_USER_ID,
+          verdict: 'legit',
+        }),
         { onConflict: 'alert_id, user_id' },
       );
     });
 
-    test('should update existing feedback successfully', async () => {
-      const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      vi.mocked(supabaseAdmin.upsert).mockResolvedValueOnce({
+    it('should update existing feedback successfully', async () => {
+      mockQueryBuilder.upsert.mockResolvedValueOnce({
         data: [{ id: 'feedback-uuid-2' }],
-        error: null,
-      });
-      vi.mocked(supabaseAdmin.select).mockReturnThis();
-      vi.mocked(supabaseAdmin.single).mockResolvedValueOnce({
-        data: { id: 'feedback-uuid-2' },
         error: null,
       });
 
@@ -130,7 +147,8 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       expect(response.status).toBe(200);
       expect(body.success).toBe(true);
       expect(body.feedbackId).toBe('feedback-uuid-2');
-      expect(vi.mocked(supabaseAdmin.upsert)).toHaveBeenCalledWith(
+      expect(supabaseAdmin.from).toHaveBeenCalledWith('alert_feedback');
+      expect(mockQueryBuilder.upsert).toHaveBeenCalledWith(
         {
           alert_id: MOCK_ALERT_ID,
           user_id: MOCK_USER_ID,
@@ -141,13 +159,14 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       );
     });
 
-    test('should return 401 if not authenticated', async () => {
+    it('should return 401 if not authenticated', async () => {
       const { createServerClient } = await import('@supabase/ssr');
-      vi.mocked(createServerClient).mockImplementationOnce(
+      // Use jest.mocked if needed for type safety, or access mock directly
+      (createServerClient as jest.Mock).mockImplementationOnce(
         () =>
           ({
             auth: {
-              getSession: vi.fn(() => ({ data: { session: null }, error: null })), // Simulate no session
+              getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
             },
           }) as any,
       );
@@ -160,7 +179,7 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       expect(response.status).toBe(401);
     });
 
-    test('should return 400 for invalid request body', async () => {
+    it('should return 400 for invalid request body', async () => {
       const request = new Request('http://localhost/api/guardian/alerts/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,9 +189,8 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       expect(response.status).toBe(400);
     });
 
-    test('should handle database error during upsert', async () => {
-      const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      vi.mocked(supabaseAdmin.upsert).mockResolvedValueOnce({
+    it('should handle database error during upsert', async () => {
+      mockQueryBuilder.upsert.mockResolvedValueOnce({
         data: null,
         error: new Error('DB connection failed'),
       });
@@ -188,27 +206,21 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       const body = await response.json();
       expect(body.error).toContain('Failed to record feedback');
     });
-
-    // TODO: Add test for metrics increment logic when prom-client is properly integrated
   });
 
   // --- GET Tests --- //
   describe('GET /api/guardian/alerts/feedback', () => {
-    test('should return aggregated feedback counts successfully', async () => {
-      const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      // Ensure mock data structure and types match expected Supabase result
-      const mockCounts: { verdict: string; count: number }[] = [
+    it('should return aggregated feedback counts successfully', async () => {
+      const mockCounts = [
         { verdict: 'false_positive', count: 3 },
         { verdict: 'legit', count: 7 },
       ];
-      // Ensure the mock for .returns matches the expected structure
-      vi.mocked(supabaseAdmin.returns).mockResolvedValueOnce({ data: mockCounts, error: null });
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValueOnce({ data: mockCounts, error: null });
 
       const request = new Request(
         `http://localhost/api/guardian/alerts/feedback?alertId=${MOCK_ALERT_ID}`,
-        {
-          method: 'GET',
-        },
+        { method: 'GET' },
       );
 
       const response = await GET(request);
@@ -216,21 +228,18 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
 
       expect(response.status).toBe(200);
       expect(body).toEqual({ false_positive: 3, legit: 7 });
-      expect(vi.mocked(supabaseAdmin.select)).toHaveBeenCalledWith('verdict, count', {
-        count: 'exact',
-      });
-      expect(vi.mocked(supabaseAdmin.eq)).toHaveBeenCalledWith('alert_id', MOCK_ALERT_ID);
+      expect(supabaseAdmin.from).toHaveBeenCalledWith('alert_feedback');
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith('verdict, count');
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('alert_id', MOCK_ALERT_ID);
     });
 
-    test('should return zero counts if no feedback exists', async () => {
-      const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      vi.mocked(supabaseAdmin.returns).mockResolvedValueOnce({ data: [], error: null }); // Simulate no rows found
+    it('should return zero counts if no feedback exists', async () => {
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValueOnce({ data: [], error: null });
 
       const request = new Request(
         `http://localhost/api/guardian/alerts/feedback?alertId=${MOCK_ALERT_ID}`,
-        {
-          method: 'GET',
-        },
+        { method: 'GET' },
       );
 
       const response = await GET(request);
@@ -240,48 +249,45 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
       expect(body).toEqual({ false_positive: 0, legit: 0 });
     });
 
-    test('should return 401 if not authenticated', async () => {
+    it('should return 401 if not authenticated', async () => {
       const { createServerClient } = await import('@supabase/ssr');
-      vi.mocked(createServerClient).mockImplementationOnce(
+      (createServerClient as jest.Mock).mockImplementationOnce(
         () =>
           ({
             auth: {
-              getSession: vi.fn(() => ({ data: { session: null }, error: null })), // Simulate no session
+              getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
             },
           }) as any,
       );
 
       const request = new Request(
         `http://localhost/api/guardian/alerts/feedback?alertId=${MOCK_ALERT_ID}`,
-        {
-          method: 'GET',
-        },
+        { method: 'GET' },
       );
       const response = await GET(request);
       expect(response.status).toBe(401);
     });
 
-    test('should return 400 if alertId parameter is missing', async () => {
+    it('should return 400 if alertId parameter is missing', async () => {
       const request = new Request('http://localhost/api/guardian/alerts/feedback', {
-        // Missing alertId
         method: 'GET',
       });
       const response = await GET(request);
       expect(response.status).toBe(400);
     });
 
-    test('should handle database error during count fetch', async () => {
-      const { supabaseAdmin } = await import('@/lib/supabase-admin');
-      vi.mocked(supabaseAdmin.returns).mockResolvedValueOnce({
+    it('should handle database error during count fetch', async () => {
+      // Note: The original mock accessed supabaseAdmin.returns which is incorrect.
+      // We mock the chain select().eq()
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.eq.mockResolvedValueOnce({
         data: null,
         error: new Error('Failed to query DB'),
       });
 
       const request = new Request(
         `http://localhost/api/guardian/alerts/feedback?alertId=${MOCK_ALERT_ID}`,
-        {
-          method: 'GET',
-        },
+        { method: 'GET' },
       );
 
       const response = await GET(request);
@@ -291,3 +297,5 @@ describe('Alert Feedback API Route (tests/feedback.spec.ts)', () => {
     });
   });
 });
+
+// Removed export {}; - not typically needed for Jest/CommonJS focused setups

@@ -1,6 +1,8 @@
 import { evaluateRules } from '@/lib/guardian/rules';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { loadDemoScenarios } from '../utils/demo-scenario-loader';
+import { getRuleConfig } from '@/lib/guardian/getRuleConfig';
+import Stripe from 'stripe';
 
 // Mock supabaseAdmin to avoid actual database calls
 jest.mock('@/lib/supabase-admin', () => ({
@@ -17,27 +19,44 @@ jest.mock('@/lib/supabase-admin', () => ({
   },
 }));
 
+jest.mock('@/lib/logger', () => ({
+  logger: {
+    /* ... existing mock ... */
+  },
+}));
+jest.mock('@/lib/guardian/getRuleConfig');
+
 // Load all demo scenarios
 const scenarios = loadDemoScenarios();
 
 const expected = {
-  'velocity-breach': [{ type: 'VELOCITY', severity: 'high' }],
-  'bank-swap': [{ type: 'BANK_SWAP', severity: 'high' }],
-  'geo-mismatch': [{ type: 'GEO_MISMATCH', severity: 'medium' }],
+  velocity_breach: [{ alert_type: 'velocity_breach', severity: 'high' }],
+  bank_swap: [{ alert_type: 'bank_swap', severity: 'high' }],
+  geo_mismatch: [{ alert_type: 'geo_mismatch', severity: 'medium' }],
 };
 
 // TODO: Re-enable after fixing test assertion failures in #<issue_number>
 describe.skip('Demo Scenarios', () => {
   // Mock supabase queries with actual scenario data
   beforeAll(() => {
+    // Mock getRuleConfig once for all tests in this suite
+    (getRuleConfig as jest.Mock).mockResolvedValue({
+      velocityBreach: { maxPayouts: 3, windowMinutes: 60 },
+      bankSwap: { lookbackMinutes: 30 },
+      geoMismatch: { mismatchChargeCount: 2 },
+      failedChargeBurst: { windowMinutes: 5 },
+    });
+
     // Create mocks for payout events and charges with appropriate data
     const mockVelocityPayouts = scenarios['velocity-breach'].map((e) => ({
       id: e.id,
       type: e.type,
       created_at: new Date(e.created * 1000).toISOString(),
       stripe_account_id: 'acct_demo',
-      amount: e.data.object.amount || 0,
-      currency: e.data.object.currency || 'usd',
+      amount: (e.data.object as Stripe.Payout).amount || 0,
+      currency: (e.data.object as Stripe.Payout).currency || 'usd',
+      payload: e.data.object,
+      received_at: new Date(e.created * 1000).toISOString(),
     }));
 
     const mockBankSwapPayouts = scenarios['bank-swap'].map((e) => ({
@@ -45,8 +64,10 @@ describe.skip('Demo Scenarios', () => {
       type: e.type,
       created_at: new Date(e.created * 1000).toISOString(),
       stripe_account_id: 'acct_demo',
-      amount: e.data.object.amount || 0,
-      currency: e.data.object.currency || 'usd',
+      amount: (e.data.object as Stripe.Payout).amount || 0,
+      currency: (e.data.object as Stripe.Payout).currency || 'usd',
+      payload: e.data.object,
+      received_at: new Date(e.created * 1000).toISOString(),
     }));
 
     const mockGeoMismatchCharges = scenarios['geo-mismatch']
@@ -56,30 +77,34 @@ describe.skip('Demo Scenarios', () => {
         type: e.type,
         created_at: new Date(e.created * 1000).toISOString(),
         stripe_account_id: 'acct_demo',
-        amount: e.data.object.amount || 0,
-        currency: e.data.object.currency || 'usd',
-        event_data: {
+        amount: (e.data.object as Stripe.Charge).amount || 0,
+        currency: (e.data.object as Stripe.Charge).currency || 'usd',
+        payload: {
           ...e.data.object,
-          // Add geo mismatch data
-          ip_country: 'NG', // Nigeria
-          billing_details: { address: { country: 'US' } },
+          metadata: {
+            ip_country: 'NG',
+            billing_details_country: 'US',
+          },
         },
+        received_at: new Date(e.created * 1000).toISOString(),
       }));
 
-    // Setup mocks for each scenario
+    // Setup mocks for each scenario - Mock for event_buffer primarily
     (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
       const mockFrom = {
         insert: jest.fn().mockReturnValue({ error: null }),
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         gte: jest.fn().mockReturnThis(),
         like: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnValue({ data: [], error: null }),
+        order: jest.fn().mockReturnThis(),
+        returns: jest.fn().mockResolvedValue({ data: [], error: null }),
+        rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
       };
 
-      if (table === 'payout_events') {
-        // For velocity-breach scenario
+      if (table === 'event_buffer') {
         mockFrom.select = jest.fn().mockReturnThis();
         mockFrom.eq = jest.fn().mockImplementation((column, value) => {
           if (column === 'stripe_account_id' && value === 'acct_demo') {
@@ -87,29 +112,34 @@ describe.skip('Demo Scenarios', () => {
           }
           return mockFrom;
         });
-        mockFrom.or = jest.fn().mockReturnThis();
-        mockFrom.gte = jest.fn().mockReturnThis();
-        mockFrom.like = jest.fn().mockImplementation((column, value) => {
-          if (column === 'type' && value === 'charge.%') {
-            // For geo-mismatch, return charges
-            return {
-              gte: () => ({
-                order: () => ({ data: mockGeoMismatchCharges, error: null }),
-              }),
-            };
+        mockFrom.in = jest.fn().mockImplementation((column, value) => {
+          if (column === 'type' && value.includes('payout.paid')) {
+            let dataToReturn: any[] = [];
+            if (currentTestCase === 'velocity-breach') {
+              dataToReturn = mockVelocityPayouts;
+            } else if (currentTestCase === 'bank-swap') {
+              dataToReturn = mockBankSwapPayouts;
+            }
+            mockFrom.returns = jest.fn().mockResolvedValue({ data: dataToReturn, error: null });
           }
           return mockFrom;
         });
-        mockFrom.order = jest.fn().mockImplementation(() => {
-          // Check the current test case
-          if (currentTestCase === 'velocity-breach') {
-            return { data: mockVelocityPayouts, error: null };
-          } else if (currentTestCase === 'bank-swap') {
-            return { data: mockBankSwapPayouts, error: null };
-          } else {
-            return { data: [], error: null };
+        mockFrom.like = jest.fn().mockImplementation((column, value) => {
+          if (column === 'type' && value === 'charge.%') {
+            let dataToReturn: any[] = [];
+            if (currentTestCase === 'geo-mismatch') {
+              dataToReturn = mockGeoMismatchCharges;
+            }
+            mockFrom.returns = jest.fn().mockResolvedValue({ data: dataToReturn, error: null });
           }
+          return mockFrom;
         });
+        mockFrom.gte = jest.fn().mockReturnThis();
+        mockFrom.order = jest.fn().mockReturnThis();
+      }
+
+      if (table === 'payout_events') {
+        mockFrom.insert = jest.fn().mockResolvedValue({ error: null });
       }
 
       return mockFrom;
@@ -135,34 +165,23 @@ describe.skip('Demo Scenarios', () => {
       const alerts = [];
 
       for (const event of events) {
-        // Mock inserting each event
-        await supabaseAdmin.from('payout_events').insert({
-          stripe_event_id: event.id,
-          stripe_payout_id: event.data.object.id || event.id,
-          stripe_account_id: 'acct_demo',
-          type: event.type,
-          amount: event.data.object.amount || 0,
-          currency: event.data.object.currency || 'usd',
-          event_data: event.data.object,
-          created_at: new Date(event.created * 1000).toISOString(),
-        });
-
-        // Call the actual rule engine
-        const ruleAlerts = await evaluateRules(event);
+        // Call the actual rule engine with accountId
+        const ruleAlerts = await evaluateRules(event, event.account);
         alerts.push(...ruleAlerts);
       }
 
       // Only compare the last alert (end result) with expected
       const finalAlerts = alerts.length > 0 ? [alerts[alerts.length - 1]] : [];
 
-      // Extract just the type and severity for comparison
+      // Extract alert_type and severity for comparison
       const simplifiedAlerts = finalAlerts.map((a) => ({
-        type: a.type,
+        alert_type: a.alert_type,
         severity: a.severity,
       }));
 
-      // Check if we got the expected alert
-      expect(simplifiedAlerts).toEqual(expected[name]);
+      // Check if we got the expected alert using type assertion for name
+      const scenarioKey = name as keyof typeof expected;
+      expect(simplifiedAlerts).toEqual(expected[scenarioKey]);
     });
   }
 });

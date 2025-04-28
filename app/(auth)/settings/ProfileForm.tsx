@@ -49,13 +49,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     },
   });
 
-  const onSubmit: SubmitHandler<ProfileFormValues> = (data) => {
+  const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     const formData = new FormData();
     formData.append('display_name', data.display_name || '');
     formData.append('avatar_url', data.avatar_url || '');
 
-    // Use the imported server action
-    const result = updateProfileServerAction(formData);
+    // Await the result of the server action
+    const result = await updateProfileServerAction(formData);
 
     if (result.success) {
       toast.success('Profile updated successfully!');

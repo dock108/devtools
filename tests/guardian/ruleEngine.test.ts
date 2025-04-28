@@ -1,14 +1,16 @@
 import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
 import { runRules, evaluateEvent } from '@/lib/guardian/rules';
 import { expectedAlerts } from '../fixtures/guardian/expectedAlerts';
-import { GuardianEventRow } from '@/types/supabase';
+// import { GuardianEventRow } from '@/types/supabase'; // Removed potentially incorrect import
+type GuardianEventRow = any; // Use any as a placeholder
 import { loadScenario, scenarioEventToGuardianEvent } from '../utils/scenario-helpers';
-import { supabase } from '../../lib/supabase/client'; // Try relative path from tests/guardian/
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin'; // Use admin client, alias as supabase
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper to log debug info only during test failures
 function debugLog(scenarioName: string, event: any, alert: any) {
-  if (process.env.DEBUG) {
+  if (process.env['DEBUG']) {
+    // Use bracket notation for env var
     console.log(
       `[${scenarioName}] ${event.type} (${event.id}) -> Alert:`,
       alert ? { type: alert.type, severity: alert.severity } : 'none',
@@ -225,7 +227,7 @@ describe('Database Functions', () => {
     expect(queueError).toBeNull();
     expect(count).toBe(2); // Default: email + slack
     expect(queueData).toHaveLength(2);
-    expect(queueData?.map((q) => q.channel).sort()).toEqual(['email', 'slack']); // Check channels
+    expect(queueData?.map((q: any) => q.channel).sort()).toEqual(['email', 'slack']); // Check channels
   });
 
   // ... other potential DB tests ...

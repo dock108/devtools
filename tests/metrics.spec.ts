@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { test, expect, describe, beforeAll, afterAll } from '@jest/globals';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { AddressInfo } from 'net';
 import fetch from 'node-fetch'; // Use node-fetch for testing API routes
@@ -25,13 +25,13 @@ describe('Metrics Endpoint Tests', () => {
       // Basic routing based on URL path
       if (req.url === '/api/metrics') {
         // Simulate a NextRequest-like object if handler expects it
-        const mockReq = {
-          method: req.method,
-          url: `${serverUrl}${req.url}`,
-          headers: req.headers,
-          nextUrl: { pathname: '/api/metrics' }, // Simplified mock
-          // Add other necessary properties if the handler uses them
-        };
+        // const mockReq = { // Removed unused variable
+        //   method: req.method,
+        //   url: `${serverUrl}${req.url}`,
+        //   headers: req.headers,
+        //   nextUrl: { pathname: '/api/metrics' }, // Simplified mock
+        //   // Add other necessary properties if the handler uses them
+        // };
 
         // --- Replace with actual handler call ---
         // This requires the GET handler from the webhook route to be adapted or imported correctly.
@@ -63,10 +63,10 @@ describe('Metrics Endpoint Tests', () => {
   });
 
   test('should return metrics in Prometheus format', async () => {
-    process.env.METRICS_AUTH_TOKEN = 'test-token'; // Set required token for Supabase func test if needed
+    process.env['METRICS_AUTH_TOKEN'] = 'test-token'; // Use bracket notation
 
     const response = await fetch(`${serverUrl}/api/metrics`, {
-      // headers: { 'Authorization': `Bearer ${process.env.METRICS_AUTH_TOKEN}` } // Add if testing Supabase endpoint
+      // headers: { 'Authorization': `Bearer ${process.env['METRICS_AUTH_TOKEN']}` } // Bracket notation here too
     });
 
     expect(response.status).toBe(200);

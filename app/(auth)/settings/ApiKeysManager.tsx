@@ -105,8 +105,8 @@ export function ApiKeysManager({ initialApiKeys }: ApiKeysManagerProps) {
     setNewKeyName('');
   };
 
-  const handleRevoke = (keyId: string, keyName: string) => {
-    setKeyToRevoke({ id: keyId, name: keyName });
+  const handleRevoke = (key: ApiKeyInfo) => {
+    setKeyToRevoke(key);
     setShowRevokeDialog(true);
   };
 
@@ -145,11 +145,10 @@ export function ApiKeysManager({ initialApiKeys }: ApiKeysManagerProps) {
                 <TableCell>{new Date(key.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center space-x-2">
-                    <Button onClick={() => handleRevoke(key.id, key.name)} variant="destructive">
+                    <Button onClick={() => handleRevoke(key)} variant="destructive">
                       <Trash2 className="mr-2 h-4 w-4" /> Revoke
                     </Button>
 
-                    {/* Confirmation Dialog */}
                     <AlertDialog open={showRevokeDialog && keyToRevoke?.id === key.id}>
                       <AlertDialogContent>
                         <AlertDialogHeader>
@@ -163,9 +162,7 @@ export function ApiKeysManager({ initialApiKeys }: ApiKeysManagerProps) {
                           <AlertDialogCancel onClick={() => setShowRevokeDialog(false)}>
                             Cancel
                           </AlertDialogCancel>
-                          <AlertDialogAction onClick={confirmRevoke} variant="destructive">
-                            Revoke Key
-                          </AlertDialogAction>
+                          <AlertDialogAction onClick={confirmRevoke}>Revoke Key</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

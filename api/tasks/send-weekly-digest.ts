@@ -115,14 +115,17 @@ export default async function handler(req: NextRequest) {
     if (
       !process.env.SUPABASE_URL ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      !process.env.RESEND_API_KEY
+      !process.env['RESEND_API_KEY']
     ) {
       logger.error('Missing environment variables');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const supabase = createClient(
+      process.env['SUPABASE_URL'],
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+    const resend = new Resend(process.env['RESEND_API_KEY']);
 
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
     const prevMonday = subWeeks(weekStart, 1);

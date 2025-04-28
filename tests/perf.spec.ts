@@ -4,13 +4,18 @@ import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 
 // Test environment
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
-const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSJ9.vI9obAHOGyVVKa3pD--kJlyxp-Z2zV9UUMAhKpNLAcU';
+const SUPABASE_URL = process.env['NEXT_PUBLIC_SUPABASE_URL'] || 'http://localhost:54321';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Skip tests if no Supabase connection is available
 const skipTests = !SUPABASE_URL || !SUPABASE_SERVICE_KEY;
+
+// Add a warning if the service key is missing
+if (!SUPABASE_SERVICE_KEY) {
+  console.warn(
+    '[tests/perf.spec.ts] WARNING: SUPABASE_SERVICE_ROLE_KEY env var not set. Performance tests requiring it will be skipped.',
+  );
+}
 
 describe('Guardian performance tests', () => {
   // Only run these tests in a CI environment or with explicit opt-in

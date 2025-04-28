@@ -16,7 +16,7 @@ const MOCK_SLACK_WEBHOOK =
 const MOCK_ALERT_EMAIL_TO = 'alerts@example.com';
 
 // Mock Supabase client
-let supabase: SupabaseClient;
+// let supabase: SupabaseClient;
 
 describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
   let runtime: EdgeRuntime;
@@ -24,11 +24,11 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
 
   beforeAll(async () => {
     // Set mock environment variables for the edge runtime
-    process.env.SUPABASE_URL = MOCK_SUPABASE_URL;
-    process.env.SUPABASE_SERVICE_ROLE_KEY = MOCK_SUPABASE_KEY;
-    process.env.SENDGRID_API_KEY = MOCK_SENDGRID_KEY;
-    process.env.FROM_EMAIL = MOCK_FROM_EMAIL;
-    process.env.SLACK_DEFAULT_USERNAME = 'GuardianTest';
+    process.env['SUPABASE_URL'] = MOCK_SUPABASE_URL;
+    process.env['SUPABASE_SERVICE_ROLE_KEY'] = MOCK_SUPABASE_KEY;
+    process.env['SENDGRID_API_KEY'] = MOCK_SENDGRID_KEY;
+    process.env['FROM_EMAIL'] = MOCK_FROM_EMAIL;
+    process.env['SLACK_DEFAULT_USERNAME'] = 'GuardianTest';
 
     // Read the edge function code
     const functionPath = path.resolve(__dirname, '../supabase/functions/guardian-notify/index.ts');
@@ -48,11 +48,11 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
 
     // Initialize mock Supabase client for test setup/assertions if needed
     // Note: The edge function itself uses its own client instance based on env vars
-    supabase = createClient(MOCK_SUPABASE_URL, MOCK_SUPABASE_KEY);
+    // supabase = createClient(MOCK_SUPABASE_URL, MOCK_SUPABASE_KEY);
 
     // Initialize EdgeRuntime with environment variables
     runtime = new EdgeRuntime({
-      extend: (context) => {
+      extend: (context: any) => {
         context.env = {
           SUPABASE_URL: MOCK_SUPABASE_URL,
           SUPABASE_SERVICE_ROLE_KEY: MOCK_SUPABASE_KEY,
@@ -88,11 +88,11 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
     nock.restore(); // Restore nock
     nock.enableNetConnect(); // Re-enable network connections
     runtime?.dispose(); // Dispose of the edge runtime
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-    delete process.env.SENDGRID_API_KEY;
-    delete process.env.FROM_EMAIL;
-    delete process.env.SLACK_DEFAULT_USERNAME;
+    process.env['SUPABASE_URL'] = undefined;
+    process.env['SUPABASE_SERVICE_ROLE_KEY'] = undefined;
+    process.env['SENDGRID_API_KEY'] = undefined;
+    process.env['FROM_EMAIL'] = undefined;
+    process.env['SLACK_DEFAULT_USERNAME'] = undefined;
   });
 
   // --- Test Cases --- //
@@ -126,7 +126,7 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
         },
       ])
       .head('/rest/v1/alerts?select=id&stripe_account_id=eq.acct_free_1') // Mock count check
-      .reply(200, null, { 'content-range': '0-9/10' }); // Simulate count = 10
+      .reply(200, undefined, { 'content-range': '0-9/10' }); // Simulate count = 10
 
     // Mock SendGrid call
     const sendgridScope = nock('https://api.sendgrid.com').post('/v3/mail/send').reply(202); // SendGrid returns 202 Accepted
@@ -176,7 +176,7 @@ describe('Guardian Notify Edge Function (tests/notify.spec.ts)', () => {
         },
       ])
       .head('/rest/v1/alerts?select=id&stripe_account_id=eq.acct_free_2')
-      .reply(200, null, { 'content-range': '0-50/51' }); // Simulate count = 51 (>= 50)
+      .reply(200, undefined, { 'content-range': '0-50/51' }); // Simulate count = 51 (>= 50)
 
     // Mock SendGrid (but expect it NOT to be called)
     const sendgridScope = nock('https://api.sendgrid.com').post('/v3/mail/send').reply(202);

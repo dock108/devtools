@@ -19,6 +19,25 @@ if (typeof Request === 'undefined') {
   } as any;
 }
 
+// Basic polyfill for Response if not present
+if (typeof Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body?: BodyInit | null, init?: ResponseInit) {
+      // Basic stub - may need expansion depending on test usage
+      console.warn('[jest.setup-env.ts] Using basic Response polyfill stub.');
+    }
+    // Add static methods like .json() if needed by tests
+    static json(data: any, init?: ResponseInit): Response {
+      console.warn('[jest.setup-env.ts] Using basic Response.json polyfill stub.');
+      // @ts-ignore - Basic stub doesn't fully implement Response
+      return new Response(JSON.stringify(data), {
+        ...init,
+        headers: { 'Content-Type': 'application/json', ...init?.headers },
+      });
+    }
+  } as any;
+}
+
 // Basic mock for pino logger used in tests
 const mockLogger = {
   warn: jest.fn(),

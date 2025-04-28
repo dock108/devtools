@@ -1,32 +1,8 @@
-import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { evaluateRules } from '@/lib/guardian/rules/index';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { StripeEvent, Alert } from '@/lib/guardian/types';
-
-// Mock the velocity breach rule
-jest.mock('@/lib/guardian/rules/velocityBreach', () => ({
-  velocityBreach: jest.fn(async (event, ctx) => {
-    const maxPayouts = ctx.config.velocityBreach.maxPayouts;
-    const recentPayouts = ctx.recentPayouts;
-
-    // If number of recent payouts > maxPayouts, return an alert
-    if (recentPayouts.length > maxPayouts) {
-      return [
-        {
-          alert_type: 'velocity_breach',
-          severity: 'high',
-          message: `Too many payouts (${recentPayouts.length}) in short timeframe (max: ${maxPayouts})`,
-          stripe_account_id: event.account,
-          stripe_payout_id: event.data?.object?.id,
-          resolved: false,
-        },
-      ];
-    }
-
-    // Otherwise return no alerts
-    return [];
-  }),
-}));
+import type { StripeEvent } from '@/lib/guardian/types';
+import { getRuleConfig } from '@/lib/guardian/getRuleConfig';
 
 // Mock the other rules to return no alerts
 jest.mock('@/lib/guardian/rules/bankSwap', () => ({
@@ -38,19 +14,7 @@ jest.mock('@/lib/guardian/rules/geoMismatch', () => ({
 }));
 
 // Mock the supabaseAdmin
-jest.mock('@/lib/supabase-admin', () => ({
-  supabaseAdmin: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    or: jest.fn().mockReturnThis(),
-    like: jest.fn().mockReturnThis(),
-    gte: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-    data: [],
-  },
-}));
+jest.mock('@/lib/supabase-admin');
 
 // Mock the logger
 jest.mock('@/lib/logger', () => ({
@@ -61,156 +25,173 @@ jest.mock('@/lib/logger', () => ({
   },
 }));
 
+// Mock getRuleConfig globally (can be overridden in tests)
+jest.mock('@/lib/guardian/getRuleConfig');
+
 describe('Custom Rule Set', () => {
   let mockPayouts: any[] = [];
   let mockEvent: StripeEvent;
+  const mockAccountId = 'acct_123';
 
   beforeEach(() => {
+    // Reset mocks including getRuleConfig
+    jest.clearAllMocks();
+
+    // Default mock for getRuleConfig (returns default config)
+    (getRuleConfig as jest.Mock).mockResolvedValue({
+      velocityBreach: { maxPayouts: 3, windowSeconds: 60 * 60 }, // Default config
+      // Add other default rule configs if needed by evaluateRules
+    });
+
+    // Adjust mockPayouts structure for event_buffer - SIMPLIFIED
     mockPayouts = [
-      { type: 'payout.paid', created_at: new Date().toISOString() },
-      { type: 'payout.paid', created_at: new Date().toISOString() },
-      { type: 'payout.paid', created_at: new Date().toISOString() },
+      {
+        id: 'evt_p1',
+        type: 'payout.paid',
+        received_at: new Date(Date.now() - 10000).toISOString(),
+        payload: {},
+        stripe_account_id: mockAccountId,
+      },
+      {
+        id: 'evt_p2',
+        type: 'payout.paid',
+        received_at: new Date(Date.now() - 20000).toISOString(),
+        payload: {},
+        stripe_account_id: mockAccountId,
+      },
+      {
+        id: 'evt_p3',
+        type: 'payout.paid',
+        received_at: new Date(Date.now() - 30000).toISOString(),
+        payload: {},
+        stripe_account_id: mockAccountId,
+      },
     ];
 
     mockEvent = {
-      id: 'evt_123',
-      account: 'acct_123',
+      id: 'evt_trigger',
+      account: mockAccountId,
       type: 'payout.paid',
-      data: { object: { id: 'po_123', amount: 1000 } },
+      created: Math.floor(Date.now() / 1000),
+      data: { object: { id: 'po_trigger', amount: 1000, object: 'payout' } },
     } as any;
 
-    // Reset mocks
-    jest.clearAllMocks();
-
-    // Mock the supabase responses
+    // Default mock implementation for supabaseAdmin.from
+    // Handles the general case where no specific config/context is needed
     (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'connected_accounts') {
+      if (table === 'event_buffer') {
+        // Default: Return empty payouts/charges for context
         return {
-          ...supabaseAdmin,
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({ data: null }),
-        };
-      }
-
-      // Mock payout_events
-      if (table === 'payout_events') {
-        return {
-          ...supabaseAdmin,
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          or: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          like: jest.fn().mockReturnThis(),
           gte: jest.fn().mockReturnThis(),
-          order: jest.fn().mockResolvedValue({ data: mockPayouts }),
+          order: jest.fn().mockReturnThis(),
+          returns: jest.fn().mockResolvedValue({ data: [], error: null }),
         };
       }
-
-      // For any other tables
+      // Fallback for other tables if needed
       return {
-        ...supabaseAdmin,
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
-        like: jest.fn().mockReturnThis(),
-        gte: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: [] }),
+        /* ... minimal fallback ... */
       };
     });
   });
 
   it('should use default rule set when no custom rule set exists', async () => {
-    // Default rule set has maxPayouts: 3, so these 3 events should not trigger an alert
-    // since number of payouts (3) is not > maxPayouts (3)
-    const alerts = await evaluateRules(mockEvent);
-    expect(alerts.length).toBe(0);
-  });
-
-  it('should respect custom rule set with stricter maxPayouts threshold', async () => {
-    // Mock a custom rule set with maxPayouts: 2 (more strict than default)
+    // Arrange: Default getRuleConfig mock is used.
+    // Mock event_buffer to return the 3 payouts for context fetching
     (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'connected_accounts') {
+      if (table === 'event_buffer') {
         return {
-          ...supabaseAdmin,
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
-            data: {
-              rule_set: {
-                velocityBreach: { maxPayouts: 2, windowSeconds: 60 },
-              },
-            },
-          }),
-        };
-      }
-
-      // Mock payout_events
-      if (table === 'payout_events') {
-        return {
-          ...supabaseAdmin,
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          or: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
           gte: jest.fn().mockReturnThis(),
-          order: jest.fn().mockResolvedValue({ data: mockPayouts }),
+          order: jest.fn().mockReturnThis(),
+          returns: jest.fn().mockResolvedValue({ data: mockPayouts, error: null }),
         };
       }
-
-      // For any other tables
       return {
-        ...supabaseAdmin,
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
-        like: jest.fn().mockReturnThis(),
-        gte: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: [] }),
+        /* fallback */
       };
     });
 
-    // With maxPayouts: 2 and 3 recent payouts, this should trigger an alert
-    const alerts = await evaluateRules(mockEvent);
+    // Act: Default rule set has maxPayouts: 3.
+    // With 3 recent payouts, 3 > 3 is false, so no alert.
+    const alerts = await evaluateRules(mockEvent, mockEvent.account);
+
+    // Assert
+    expect(alerts.length).toBe(0);
+    expect(getRuleConfig).toHaveBeenCalledWith(mockEvent.account);
+  });
+
+  it('should respect custom rule set with stricter maxPayouts threshold', async () => {
+    // Arrange:
+    // 1. Mock getRuleConfig for this specific test to return stricter config
+    (getRuleConfig as jest.Mock).mockResolvedValue({
+      velocityBreach: { maxPayouts: 2, windowSeconds: 60 * 60 }, // Stricter config
+      // Add other rules if needed
+    });
+
+    // 2. Mock event_buffer to return the 3 payouts for context fetching
+    (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
+      if (table === 'event_buffer') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          gte: jest.fn().mockReturnThis(),
+          order: jest.fn().mockReturnThis(),
+          returns: jest.fn().mockResolvedValue({ data: mockPayouts, error: null }),
+        };
+      }
+      // No need to mock connected_accounts here, as getRuleConfig is mocked directly
+      return {
+        /* fallback */
+      };
+    });
+
+    // Act: Custom rule set has maxPayouts: 2.
+    // With 3 recent payouts, 3 > 2 is true, should trigger alert.
+    const alerts = await evaluateRules(mockEvent, mockEvent.account);
+
+    // Assert
+    expect(getRuleConfig).toHaveBeenCalledWith(mockEvent.account);
     expect(alerts.length).toBe(1);
     expect(alerts[0].alert_type).toBe('velocity_breach');
   });
 
   it('should handle errors when retrieving custom rule set', async () => {
-    // Mock a failed database lookup
+    // Arrange:
+    // 1. Mock getRuleConfig to reject
+    const configError = new Error('Failed to fetch config');
+    (getRuleConfig as jest.Mock).mockRejectedValue(configError);
+
+    // 2. Mock event_buffer (context fetch might still happen or be skipped)
+    // Let's assume evaluateRules handles config error gracefully and returns []
     (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'connected_accounts') {
+      if (table === 'event_buffer') {
+        // This might not even be called if config fails first
         return {
-          ...supabaseAdmin,
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockRejectedValue(new Error('Database error')),
-        };
-      }
-
-      // Mock payout_events
-      if (table === 'payout_events') {
-        return {
-          ...supabaseAdmin,
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          or: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
           gte: jest.fn().mockReturnThis(),
-          order: jest.fn().mockResolvedValue({ data: mockPayouts }),
+          order: jest.fn().mockReturnThis(),
+          returns: jest.fn().mockResolvedValue({ data: mockPayouts, error: null }),
         };
       }
-
-      // For any other tables
       return {
-        ...supabaseAdmin,
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
-        like: jest.fn().mockReturnThis(),
-        gte: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({ data: [] }),
+        /* fallback */
       };
     });
 
-    // Should fall back to default rule set (maxPayouts: 3), so no alert expected
-    const alerts = await evaluateRules(mockEvent);
-    expect(alerts.length).toBe(0);
+    // Act: evaluateRules should catch the config error and return []
+    const alerts = await evaluateRules(mockEvent, mockEvent.account);
+
+    // Assert
+    expect(getRuleConfig).toHaveBeenCalledWith(mockEvent.account);
+    expect(alerts.length).toBe(0); // Expect no alerts due to config error
   });
 });

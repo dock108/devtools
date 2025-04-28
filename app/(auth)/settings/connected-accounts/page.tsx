@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
-import { Database } from '@/types/supabase.d';
+import { Database } from '@/types/supabase';
 import { ConnectedAccountsManager } from './ConnectedAccountsManager'; // Client component
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import AccountsClient from './accounts-client';
 
 // Revalidate data for this page every 0 seconds (dynamic rendering)
 export const revalidate = 0;

@@ -1,8 +1,8 @@
 'use server';
 
 import { cookies, headers } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-import { Database } from '@/types/supabase.d';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { Database } from '@/types/supabase'; // Correct path to .ts file
 import { stripe } from '@/lib/stripe'; // Corrected path
 import { revalidatePath } from 'next/cache';
 import { Resend } from 'resend'; // Import Resend SDK
@@ -11,7 +11,7 @@ import { Resend } from 'resend'; // Import Resend SDK
 // --- Notification Helpers ---
 // Basic Slack helper using fetch
 async function sendSlackNotificationAction(message: string) {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const webhookUrl = process.env['SLACK_WEBHOOK_URL'];
   if (!webhookUrl) {
     console.warn('SLACK_WEBHOOK_URL not set, skipping Slack notification.');
     return;
@@ -34,7 +34,7 @@ async function sendSlackNotificationAction(message: string) {
 
 // Basic Resend helper
 async function sendEmailNotificationAction(to: string, subject: string, body: string) {
-  const resendApiKey = process.env.RESEND_API_KEY;
+  const resendApiKey = process.env['RESEND_API_KEY'];
   if (!resendApiKey) {
     console.warn('RESEND_API_KEY not set, skipping Email notification.');
     return;
@@ -62,17 +62,17 @@ async function sendEmailNotificationAction(to: string, subject: string, body: st
 const createSupabaseServerClient = () => {
   const cookieStore = cookies();
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env['NEXT_PUBLIC_SUPABASE_URL']!,
+    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']!,
     {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: CookieOptions) {
           cookieStore.set({ name, value, ...options });
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: CookieOptions) {
           cookieStore.set({ name, value: '', ...options });
         },
       },
@@ -82,59 +82,57 @@ const createSupabaseServerClient = () => {
 
 // --- Server Actions ---
 
-export async function linkStripeAccountServerAction() {
+export async function linkStripeAccountServerAction(): Promise<{
+  url?: string;
+  success?: boolean;
+  error?: string;
+}> {
   const supabase = createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error('Unauthorized: User not logged in');
+    // Return error object instead of throwing for client handling
+    return { success: false, error: 'Unauthorized: User not logged in' };
   }
 
-  // Construct the URLs for Stripe callback
-  // Ensure these URLs match your environment (localhost vs production)
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  // const returnUrl = `${baseUrl}/settings/connected-accounts`; // Removed
-  // const refreshUrl = `${baseUrl}/settings/connected-accounts`; // Removed
-
+  const baseUrl = process.env['NEXT_PUBLIC_APP_URL'] || 'http://localhost:3000';
   const origin = headers().get('origin');
+
   if (!origin) {
     return { success: false, error: 'Could not determine request origin' };
   }
 
   try {
-    const accountLink = await stripe.accountLinks.create({
-      // Note: Stripe needs an actual account ID to create a link.
-      // This action seems designed to initiate linking a *new* account,
-      // but accountLinks is typically for existing accounts needing onboarding.
-      //
-      // For initiating a *new* connection via OAuth, you usually redirect directly
-      // to a pre-constructed Stripe Connect OAuth URL, often using stripe.oauth.authorizeUrl()
-      // Let's assume we are using stripe.oauth.authorizeUrl() instead.
+    // Use stripe.oauth.authorizeUrl to generate the connection link
+    const authorizeUrlParams = {
+      client_id: process.env['STRIPE_CLIENT_ID'],
+      redirect_uri: `${baseUrl}/api/stripe/oauth/callback`,
+      response_type: 'code' as const,
+      scope: 'read_write' as const,
+      state: user.id,
+    };
 
-      // type: 'account_onboarding',
-      // account: 'acct_xyz' // Needs an actual account ID, which we don't have yet for a new link
+    // Ensure client_id exists
+    if (!authorizeUrlParams.client_id) {
+      console.error('STRIPE_CLIENT_ID is not set.');
+      return { success: false, error: 'Server configuration error: Missing Stripe Client ID' };
+    }
 
-      // Redirecting to Stripe Connect OAuth URL construction:
-      // See: https://stripe.com/docs/connect/standard-accounts#integrating-oauth
-      // You need your Stripe Connect Client ID from Stripe Dashboard > Connect > Settings
-      client_id: process.env.STRIPE_CLIENT_ID!,
-      redirect_uri: `${baseUrl}/api/stripe/oauth/callback`, // Your configured callback handler
-      response_type: 'code',
-      scope: 'read_write', // Request necessary permissions
-      // Optional: state parameter for security
-      state: user.id, // Example: Pass user ID for verification in callback
-    });
-
-    // Construct the authorize URL
-    const authorizeUrl = `https://connect.stripe.com/oauth/authorize?${new URLSearchParams(accountLink as any).toString()}`;
+    // Generate the URL using the Stripe library method
+    const authorizeUrl = stripe.oauth.authorizeUrl(authorizeUrlParams);
 
     console.log('Generated Stripe Connect OAuth URL:', authorizeUrl);
-    return { url: authorizeUrl };
-  } catch (error) {
-    console.error('Error creating Stripe account link:', error);
-    throw new Error('Could not initiate Stripe connection.');
+    // Return the URL for the client to redirect to
+    return { success: true, url: authorizeUrl };
+  } catch (error: any) {
+    console.error('Error generating Stripe OAuth URL:', error);
+    // Return error object
+    return {
+      success: false,
+      error: `Could not initiate Stripe connection: ${error.message || 'Unknown Stripe error'}`,
+    };
   }
 }
 
@@ -158,7 +156,7 @@ export async function disconnectStripeAccountServerAction(stripeAccountId: strin
     // Uses the Stripe Platform's secret key.
     // See: https://stripe.com/docs/connect/standard-accounts#disconnecting
     await stripe.oauth.deauthorize({
-      client_id: process.env.STRIPE_CLIENT_ID!,
+      client_id: process.env['STRIPE_CLIENT_ID']!,
       stripe_user_id: stripeAccountId,
     });
     console.log(`Deauthorized Stripe account ${stripeAccountId} via Stripe API.`);
