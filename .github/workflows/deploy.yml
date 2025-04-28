@@ -3,35 +3,19 @@ name: Deploy Staging & Production
 on:
   push:
     branches: [main]
-    # Trigger only on changes likely to affect deployment
-    # (Similar paths as CI/E2E, excluding test-only files if possible)
-    paths:
-      - '.github/workflows/deploy.yml'
-      - '.github/actions/**'
-      - 'app/**'
-      - 'components/**'
-      - 'lib/**'
-      - 'pages/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'styles/**'
-      - 'supabase/**' # Include Supabase migrations
-      - 'package.json'
-      - 'package-lock.json'
-      - 'next.config.js'
-      - 'vercel.json' # Vercel config
+    # Removed 'paths' filter, using only 'paths-ignore'
     paths-ignore:
       - '**.md'
       - 'content/**'
-      - 'tests/**'
-      - 'e2e/**'
+      - 'tests/**' # Ignore test files for deployment trigger
+      - 'e2e/**' # Ignore e2e test files
       - 'test/fixtures/**'
       - 'LICENSE'
       - '.gitignore'
       - 'playwright.config.ts'
       - 'lighthouserc.js'
-      - 'cypress/**' # If Cypress exists
+      - 'cypress/**'
+      # Add others? Maybe specific docs/config files?
   workflow_dispatch: # Allow manual trigger for retries / specific deployments
 
 concurrency:

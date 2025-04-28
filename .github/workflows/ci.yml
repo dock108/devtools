@@ -3,54 +3,21 @@ name: CI
 on:
   push:
     branches: [main]
-    # Only run on changes to relevant files, ignore markdown etc.
-    paths:
-      - '.github/**'
-      - 'app/**'
-      - 'components/**'
-      - 'content/**' # Include content for module tests
-      - 'lib/**'
-      - 'pages/**' # If applicable
-      - 'public/**'
-      - 'scripts/**'
-      - 'src/**' # If applicable
-      - 'styles/**'
-      - 'tests/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig.json'
-      - 'next.config.js' # Or .mjs
-      - 'lighthouserc.js'
+    # Removed 'paths' filter, using only 'paths-ignore'
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
-      # Exclude specific content dirs if needed, handled by job conditions
-      # - 'content/docs/**' # Example: handled in docs job
+      # Add other patterns to ignore if necessary
+      # - 'docs/**' # Example: If docs changes shouldn't trigger core CI
   pull_request:
     branches: [main]
-    # Apply same path filtering for PRs
-    paths:
-      - '.github/**'
-      - 'app/**'
-      - 'components/**'
-      - 'content/**'
-      - 'lib/**'
-      - 'pages/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'styles/**'
-      - 'tests/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig.json'
-      - 'next.config.js'
-      - 'lighthouserc.js'
+    # Removed 'paths' filter, using only 'paths-ignore'
     paths-ignore:
       - '**.md'
       - 'LICENSE'
       - '.gitignore'
+      # Add other patterns to ignore if necessary
   workflow_dispatch:
 
 concurrency:

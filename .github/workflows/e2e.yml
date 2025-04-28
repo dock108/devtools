@@ -3,53 +3,19 @@ name: End-to-End Tests
 on:
   push:
     branches: [main]
-    # Trigger only on changes likely to affect E2E tests
-    paths:
-      - '.github/workflows/e2e.yml'
-      - '.github/actions/**' # Include composite actions
-      - 'app/**'
-      - 'components/**'
-      - 'lib/**'
-      - 'pages/**' # If applicable
-      - 'public/**'
-      - 'scripts/**' # Potentially relevant scripts
-      - 'src/**' # If applicable
-      - 'styles/**'
-      - 'tests/e2e/**'
-      - 'e2e/**' # Alternative E2E dir
-      - 'test/fixtures/**' # Test data
-      - 'package.json'
-      - 'package-lock.json'
-      - 'playwright.config.ts' # Playwright config
-      # Exclude documentation/blog content changes
+    # Removed 'paths' filter, using only 'paths-ignore'
     paths-ignore:
       - '**.md'
-      - 'content/**'
+      - 'content/**' # Ignore documentation/blog content changes
       - 'LICENSE'
       - '.gitignore'
+      # Add other patterns if needed, e.g., specific config files not relevant to E2E
   pull_request:
     branches: [main]
-    # Apply same path filtering for PRs
-    paths:
-      - '.github/workflows/e2e.yml'
-      - '.github/actions/**'
-      - 'app/**'
-      - 'components/**'
-      - 'lib/**'
-      - 'pages/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'src/**'
-      - 'styles/**'
-      - 'tests/e2e/**'
-      - 'e2e/**'
-      - 'test/fixtures/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'playwright.config.ts'
+    # Removed 'paths' filter, using only 'paths-ignore'
     paths-ignore:
       - '**.md'
-      - 'content/**'
+      - 'content/**' # Ignore documentation/blog content changes
       - 'LICENSE'
       - '.gitignore'
   workflow_dispatch:
