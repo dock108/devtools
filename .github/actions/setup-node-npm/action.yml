@@ -1,23 +1,14 @@
 name: 'Setup Node + NPM Deps'
-description: 'Checks out code, sets up Node.js, caches npm dependencies, and installs them.'
+description: 'Sets up Node.js, caches npm dependencies, and installs them. Assumes checkout happened prior.'
 inputs:
   node-version:
     description: 'Node.js version to use'
     required: false
     default: '20.x'
-  fetch-depth:
-    description: 'Number of commits to fetch. 0 indicates all history.'
-    required: false
-    default: '1' # Default to shallow clone for most CI jobs (as string)
 
 runs:
   using: 'composite'
   steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: ${{ inputs.fetch-depth }} # Use input for fetch depth
-
     - name: Disable corepack (npm is default)
       shell: bash
       run: corepack disable

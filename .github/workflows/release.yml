@@ -14,13 +14,23 @@ jobs:
     name: Create GitHub Release & Notify
     runs-on: ubuntu-latest
     steps:
-      # Use composite action for checkout with full history
-      - name: Setup Node + Checkout Full History
-        uses: ./.github/actions/setup-node-npm
+      - name: Checkout repository (Fetch All History)
+        uses: actions/checkout@v4
         with:
-          # No node setup needed here, but action includes checkout
-          node-version: 'lts/*' # Specify a version, even if not used directly
           fetch-depth: 0 # Required to analyze tags and changelog history
+
+      # Use composite action just for Node setup if needed later, or remove if unused
+      # - name: Setup Node
+      #   uses: ./.github/actions/setup-node-npm
+      #   with:
+      #     node-version: 'lts/*'
+      # Removed fetch-depth here
+
+      # If Node/npm is NOT needed for any release steps (like parsing):
+      - name: Setup Node.js (Optional - if needed by scripts)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*' # Or specific version if scripts require it
 
       - name: Extract version from tag
         id: extract_version

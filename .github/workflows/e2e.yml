@@ -38,6 +38,10 @@ jobs:
         suite: [oauth, supabase, blog]
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        # Default fetch-depth: 1 is likely fine for E2E tests
+
       # 1. Setup Node, checkout code, install npm deps
       - name: Setup Node + NPM Deps
         uses: ./.github/actions/setup-node-npm

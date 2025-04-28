@@ -43,11 +43,15 @@ jobs:
       supabase_branch: ${{ env.STAGING_BRANCH_NAME }}
 
     steps:
-      - name: Setup Node + NPM Deps (Fetch All History)
+      - name: Checkout repository (Fetch All History)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Vercel build needs full history
+
+      - name: Setup Node + NPM Deps
         uses: ./.github/actions/setup-node-npm
         with:
           node-version: '20.x'
-          fetch-depth: 0 # Vercel build needs full history
 
       - name: Setup Supabase CLI
         uses: ./.github/actions/setup-supabase-cli
@@ -225,6 +229,11 @@ jobs:
     environment: production # Ensure it runs in prod env context for secrets/vars
 
     steps:
+      - name: Checkout repository (Fetch All History)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Vercel link/pull might need history
+
       - name: Download deployment info artifact
         uses: actions/download-artifact@v4
         with:
@@ -242,7 +251,6 @@ jobs:
         uses: ./.github/actions/setup-node-npm
         with:
           node-version: '20.x'
-          fetch-depth: 0 # Needed for Vercel link/pull
 
       - name: Setup Supabase CLI
         uses: ./.github/actions/setup-supabase-cli
