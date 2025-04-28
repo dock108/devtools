@@ -1,9 +1,9 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { NextRequest, NextResponse, Response } from 'next/server';
-import { Readable } from 'stream';
+import { NextRequest /*, NextResponse, Response */ } from 'next/server'; // Removed unused NextResponse, Response
+// import { Readable } from 'stream'; // Removed unused Readable
 import { POST, GET } from '../route';
 // import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'; // Removed
-// import Stripe from 'stripe'; // Removed unused import
+// import Stripe from 'stripe'; // Removed unused Stripe
 
 // Mock the stripe instance and supabase
 jest.mock('@/lib/stripe', () => {
@@ -23,7 +23,7 @@ jest.mock('@/lib/supabase-admin', () => ({
 }));
 
 // Import mocks after mocking
-import { stripe, Stripe } from '@/lib/stripe';
+import { stripe /*, Stripe */ } from '@/lib/stripe'; // Removed unused Stripe
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // TODO: Re-enable after fixing test stabilization issues (Response undefined) in #<issue_number>
