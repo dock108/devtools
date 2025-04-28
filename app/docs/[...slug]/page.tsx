@@ -7,9 +7,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight'; // Or your preferred highlighter
 import { getAllDocs, DocFrontmatter } from '@/lib/mdx/getDocBySlug'; // Adjust import if needed
-import docsComponents from '@/components/mdx/docs'; // Keep for mapping non-shortcodes
 import siteConfig from '@/lib/siteConfig';
 import Alert from '@/components/ui/alert'; // Corrected path
+import Link from 'next/link';
 // Import other components used via shortcodes
 
 interface DocPageProps {
@@ -24,7 +24,7 @@ const shortcodeComponents = {
 };
 
 // Custom component to handle ::: shortcodes (could be shared with blog)
-const ShortCodeRenderer = ({ node, ...props }: any) => {
+const ShortCodeRenderer = ({ node, ..._ }: any) => {
   const match = /^:::(\w+)\s+(\w+)(?:\s+(.*))?/.exec(node?.children?.[0]?.value ?? '');
   if (!match) {
     return null;
@@ -42,7 +42,7 @@ const ShortCodeRenderer = ({ node, ...props }: any) => {
       } catch (e) {
         console.error(`Invalid props JSON for shortcode ${name}: ${propsJson}`, e);
       }
-      // @ts-ignore Spread works
+      // @ts-expect-error Spread works
       return <Component {...parsedProps} />;
     }
   }
@@ -52,9 +52,6 @@ const ShortCodeRenderer = ({ node, ...props }: any) => {
 
 // Map Markdown elements to React components
 const markdownComponentsMap = {
-  // Include standard components from docsComponents if they override default tags (h1, p, etc.)
-  // Example: ...docsComponents,
-
   // Handle shortcodes via the <pre> tag
   pre: ShortCodeRenderer,
   // Potentially handle `code` for syntax highlighting interaction

@@ -6,12 +6,12 @@ import matter from 'gray-matter';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight'; // Or your preferred highlighter
-import { getAllPosts, getPostBySlug, getPrevNextPosts, PostFrontMatter } from '@/lib/blog'; // Assuming PostFrontMatter is exported
+import { getAllPosts, getPrevNextPosts } from '@/lib/blog';
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/date';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import siteConfig from '@/lib/siteConfig';
 import DemoCTA from '@/components/mdx/DemoCTA'; // Keep for mapping
 import Alert from '@/components/ui/alert'; // Corrected path
@@ -28,39 +28,13 @@ const shortcodeComponents = {
 };
 
 // Custom component to handle ::: shortcodes
-const ShortCodeRenderer = ({ node, ...props }: any) => {
-  // Attempt to parse the shortcode syntax: :::type Name optionalPropsJson
-  const match = /^:::(\w+)\s+(\w+)(?:\s+(.*))?/.exec(node?.children?.[0]?.value ?? '');
-  if (!match) {
-    // If it doesn't match our syntax, render the original <pre> content or nothing
-    // return <pre {...props} />; // Option 1: show the original code block
-    return null; // Option 2: hide unrecognized blocks
-  }
-
-  const [, type, name, propsJson] = match;
-
-  // Currently only handling type 'demo' and 'alert'
-  if (type === 'demo' || type === 'alert') {
-    const Component = shortcodeComponents[name as keyof typeof shortcodeComponents];
-    if (Component) {
-      let parsedProps = {};
-      try {
-        // Basic JSON parsing for props (use with caution or implement safer parsing)
-        if (propsJson) {
-          parsedProps = JSON.parse(propsJson);
-        }
-      } catch (e) {
-        console.error(`Invalid props JSON for shortcode ${name}: ${propsJson}`, e);
-      }
-      // @ts-ignore Spread works
-      return <Component {...parsedProps} />;
-    }
-  }
-
-  // Fallback for unrecognized shortcode types/names
-  console.warn(`Unrecognized shortcode: :::${type} ${name}`);
-  return null;
-};
+function ShortCodeRenderer({ node }: { node: any }) {
+  const name = node.name;
+  // @ts-expect-error Custom components
+  const Component = shortcodeComponents[name];
+  if (!Component) return null;
+  return <Component {...node.attributes} />;
+}
 
 // Map Markdown elements to React components (including shortcode handler)
 const markdownComponentsMap = {
