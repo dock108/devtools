@@ -1,6 +1,18 @@
 import { Metadata } from 'next';
 import { Container } from '@/components/Container';
-import { ShieldCheck, CreditCard, ArrowRight, Zap, Check } from 'lucide-react';
+import {
+  ShieldCheck,
+  CreditCard,
+  ArrowRight,
+  Zap,
+  Check,
+  Shield,
+  Settings,
+  Gauge,
+  Users,
+  Sparkles,
+  Eye,
+} from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { GuardianIcon } from '@/components/GuardianIcon';
 import { cn } from '@/lib/utils';
@@ -87,7 +99,6 @@ const features = [
     description:
       'Utilizes multiple heuristics like velocity checks, bank swap detection, and geo-location analysis.',
     icon: ShieldCheck,
-    icon: Shield,
   },
   {
     name: 'Real-Time Alerts & Notifications',

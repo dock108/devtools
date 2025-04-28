@@ -196,7 +196,8 @@ export default function AnalyticsPage() {
     // const { accountId, isPro } = args; // Removed unused destructured args
     // Current logic always fetches global data, will change when filtering is implemented
     // if (isPro && accountId) {
-    if (error) throw error;
+
+    // This appears to be dead code - removed the reference to undefined error variable
 
     // const profile = data; // Removed unused variable
 

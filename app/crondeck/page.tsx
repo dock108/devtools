@@ -1,12 +1,10 @@
 'use client';
 
-import { Metadata } from 'next';
 import { Container } from '@/components/Container';
 // import Image from 'next/image'; // Removed
 import { Badge } from '@/components/ui/badge';
 // import CrondeckHero from '@/components/products/CrondeckHero'; // Commented out
 // import { Features } from '@/components/products/Features'; // Commented out
-import { productLD } from '@/lib/jsonld';
 import { Clock, Check, ListChecks, BellRing, LineChart } from 'lucide-react';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,41 +16,6 @@ import { cn } from '@/lib/utils';
 const ClockIcon = ({ className }: { className?: string }) => (
   <Clock className={cn('w-64 h-64 text-gray-300', className)} />
 );
-
-// Metadata
-export const generateMetadata = (): Metadata => {
-  const url = 'https://www.dock108.ai/crondeck';
-  const image = `${url}/opengraph-image`;
-
-  return {
-    title: 'CronDeck – Cron & schedule monitor | DOCK108',
-    description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-    openGraph: {
-      title: 'CronDeck – Cron & schedule monitor | DOCK108',
-      description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-      url,
-      images: [image],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: 'CronDeck – Cron & schedule monitor | DOCK108',
-      description: 'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-      images: [image],
-    },
-    other: {
-      'script:type=application/ld+json': JSON.stringify(
-        productLD({
-          name: 'CronDeck',
-          description:
-            'Unified monitoring for Kubernetes CronJobs, GitHub Actions, and cloud tasks.',
-          url,
-          image,
-          price: '0.00',
-        }),
-      ),
-    },
-  };
-};
 
 const painPoints = [
   {

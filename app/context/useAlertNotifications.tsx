@@ -119,6 +119,94 @@ export const AlertNotificationsProvider: React.FC<AlertNotificationsProviderProp
     getUserAndFetch();
   }, [supabase, fetchInitialUnread, userStripeAccounts]);
 
+  // --- Actions --- //
+  const markAllRead = useCallback(async () => {
+    if (unreadAlerts.length === 0 || !userId) return;
+
+    const alertIdsToMark = unreadAlerts.map((alert) => alert.id);
+    console.log(`Calling API to mark ${alertIdsToMark.length} alerts as read for user ${userId}`);
+
+    // Optimistic update first
+    const previousAlerts = [...unreadAlerts];
+    setUnreadAlerts([]);
+    setUnreadCount(0);
+
+    try {
+      const { error } = await supabase.rpc('mark_alerts_read', {
+        p_alert_ids: alertIdsToMark,
+        p_user_id: userId,
+      });
+
+      if (error) {
+        log.error(
+          { error: error.message, userId, count: alertIdsToMark.length },
+          'Failed to mark all alerts as read via RPC',
+        );
+        // Revert optimistic update on failure
+        setUnreadAlerts(previousAlerts);
+        setUnreadCount(previousAlerts.length);
+        toast.error('Failed to mark alerts as read.');
+      }
+    } catch (error) {
+      log.error(
+        { error: error.message, userId, count: alertIdsToMark.length },
+        'Exception marking all alerts read',
+      );
+      // Revert optimistic update on failure
+      setUnreadAlerts(previousAlerts);
+      setUnreadCount(previousAlerts.length);
+      toast.error('An error occurred.');
+    } finally {
+      // **Always refetch after attempt**
+      console.log('Refetching unread count after markAllRead attempt.');
+      // Use a slight delay to allow potential DB replication/cache update?
+      setTimeout(() => fetchInitialUnread(userId, userStripeAccounts), 500); // 0.5s delay
+    }
+  }, [supabase, userId, unreadAlerts, fetchInitialUnread, userStripeAccounts]);
+
+  const markSingleRead = useCallback(
+    async (alertId: string) => {
+      if (!userId) return;
+      console.log(`Calling API to mark alert ${alertId} as read for user ${userId}`);
+
+      // Optimistic update
+      const previousAlerts = [...unreadAlerts];
+      const previousCount = unreadCount;
+      setUnreadAlerts((prev) => prev.filter((a) => a.id !== alertId));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+
+      try {
+        const { error } = await supabase.rpc('mark_alerts_read', {
+          p_alert_ids: [alertId],
+          p_user_id: userId,
+        });
+
+        if (error) {
+          log.error(
+            { error: error.message, userId, alertId },
+            'Failed to mark single alert as read via RPC',
+          );
+          // Revert optimistic update
+          setUnreadAlerts(previousAlerts);
+          setUnreadCount(previousCount);
+          toast.error('Failed to mark alert as read.');
+        }
+      } catch (error) {
+        log.error({ error: error.message, userId, alertId }, 'Exception marking single alert read');
+        // Revert optimistic update
+        setUnreadAlerts(previousAlerts);
+        setUnreadCount(previousCount);
+        toast.error('An error occurred.');
+      } finally {
+        // **Always refetch after attempt**
+        console.log(`Refetching unread count after markSingleRead attempt for ${alertId}.`);
+        // Use a slight delay?
+        setTimeout(() => fetchInitialUnread(userId, userStripeAccounts), 500); // 0.5s delay
+      }
+    },
+    [supabase, userId, unreadAlerts, unreadCount, fetchInitialUnread, userStripeAccounts],
+  );
+
   // Handle incoming new alerts via Realtime
   const handleNewAlert = useCallback(
     (payload: { new: AlertPayload }) => {
@@ -239,95 +327,6 @@ export const AlertNotificationsProvider: React.FC<AlertNotificationsProviderProp
       supabase.removeChannel(channel);
     };
   }, [supabase, handleNewAlert, userId, userStripeAccounts]); // Depend on userId and accounts
-
-  // --- Actions --- //
-
-  const markAllRead = useCallback(async () => {
-    if (unreadAlerts.length === 0 || !userId) return;
-
-    const alertIdsToMark = unreadAlerts.map((alert) => alert.id);
-    console.log(`Calling API to mark ${alertIdsToMark.length} alerts as read for user ${userId}`);
-
-    // Optimistic update first
-    const previousAlerts = [...unreadAlerts];
-    setUnreadAlerts([]);
-    setUnreadCount(0);
-
-    try {
-      const { error } = await supabase.rpc('mark_alerts_read', {
-        p_alert_ids: alertIdsToMark,
-        p_user_id: userId,
-      });
-
-      if (error) {
-        log.error(
-          { error: error.message, userId, count: alertIdsToMark.length },
-          'Failed to mark all alerts as read via RPC',
-        );
-        // Revert optimistic update on failure
-        setUnreadAlerts(previousAlerts);
-        setUnreadCount(previousAlerts.length);
-        toast.error('Failed to mark alerts as read.');
-      }
-    } catch (error) {
-      log.error(
-        { error: error.message, userId, count: alertIdsToMark.length },
-        'Exception marking all alerts read',
-      );
-      // Revert optimistic update on failure
-      setUnreadAlerts(previousAlerts);
-      setUnreadCount(previousAlerts.length);
-      toast.error('An error occurred.');
-    } finally {
-      // **Always refetch after attempt**
-      console.log('Refetching unread count after markAllRead attempt.');
-      // Use a slight delay to allow potential DB replication/cache update?
-      setTimeout(() => fetchInitialUnread(userId, userStripeAccounts), 500); // 0.5s delay
-    }
-  }, [supabase, userId, unreadAlerts, fetchInitialUnread, userStripeAccounts]);
-
-  const markSingleRead = useCallback(
-    async (alertId: string) => {
-      if (!userId) return;
-      console.log(`Calling API to mark alert ${alertId} as read for user ${userId}`);
-
-      // Optimistic update
-      const previousAlerts = [...unreadAlerts];
-      const previousCount = unreadCount;
-      setUnreadAlerts((prev) => prev.filter((a) => a.id !== alertId));
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-
-      try {
-        const { error } = await supabase.rpc('mark_alerts_read', {
-          p_alert_ids: [alertId],
-          p_user_id: userId,
-        });
-
-        if (error) {
-          log.error(
-            { error: error.message, userId, alertId },
-            'Failed to mark single alert as read via RPC',
-          );
-          // Revert optimistic update
-          setUnreadAlerts(previousAlerts);
-          setUnreadCount(previousCount);
-          toast.error('Failed to mark alert as read.');
-        }
-      } catch (error) {
-        log.error({ error: error.message, userId, alertId }, 'Exception marking single alert read');
-        // Revert optimistic update
-        setUnreadAlerts(previousAlerts);
-        setUnreadCount(previousCount);
-        toast.error('An error occurred.');
-      } finally {
-        // **Always refetch after attempt**
-        console.log(`Refetching unread count after markSingleRead attempt for ${alertId}.`);
-        // Use a slight delay?
-        setTimeout(() => fetchInitialUnread(userId, userStripeAccounts), 500); // 0.5s delay
-      }
-    },
-    [supabase, userId, unreadAlerts, unreadCount, fetchInitialUnread, userStripeAccounts],
-  );
 
   const contextValue = {
     unreadCount,
