@@ -1,7 +1,7 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import createMDX from '@next/mdx';
+// import createMDX from '@next/mdx'; // <-- Disable plugin import
 import rehypeShiki from '@shikijs/rehype';
 
 // In ESM, __dirname is not defined by default – define it manually
@@ -43,6 +43,7 @@ let nextConfig = {
 };
 
 // Configure MDX options
+/* <-- Disable plugin configuration
 const withMDX = createMDX({
   extension: /\.mdx?$/,
   options: {
@@ -60,9 +61,10 @@ const withMDX = createMDX({
     ],
   },
 });
+*/
 
 // Apply the MDX config
-nextConfig = withMDX(nextConfig);
+// nextConfig = withMDX(nextConfig); // <-- Disable applying the plugin
 
 // Wrap the final config with Sentry
 export default withSentryConfig(

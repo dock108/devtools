@@ -9,7 +9,8 @@ interface DocPageProps {
 }
 
 export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
-  const doc = await getDocBySlug(params.slug);
+  const awaitedParams = await params;
+  const doc = await getDocBySlug(awaitedParams.slug);
 
   if (!doc) {
     return {
@@ -26,7 +27,8 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
 }
 
 export default async function DocPage({ params }: DocPageProps) {
-  const doc = await getDocBySlug(params.slug);
+  const awaitedParams = await params;
+  const doc = await getDocBySlug(awaitedParams.slug);
 
   if (!doc) {
     notFound();

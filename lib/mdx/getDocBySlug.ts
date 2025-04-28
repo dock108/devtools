@@ -26,6 +26,10 @@ export async function getDocBySlug(slug: string[]) {
       components: docsComponents,
       options: {
         parseFrontmatter: true,
+        mdxOptions: {
+          jsxImportSource: 'react',
+          tsx: true,
+        },
       },
     });
 
