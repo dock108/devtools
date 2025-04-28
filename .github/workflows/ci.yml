@@ -80,7 +80,7 @@ jobs:
           level: error
 
       - name: Type check (Strict)
-        run: npm run tsc -- --noEmit
+        run: npm run type-check # Use the correct script name from package.json
 
       - name: Unit tests
         id: unit-tests
