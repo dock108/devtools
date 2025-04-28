@@ -554,7 +554,7 @@ export function ConnectedAccountsManager({
                           <TooltipContent className="max-w-xs">
                             Stops Stripe from automatically sending funds to your bank. Guardian may
                             turn this off automatically when fraud is suspected. You can resume
-                            payouts once you've reviewed the transactions.
+                            payouts once you&apos;ve reviewed the transactions.
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
