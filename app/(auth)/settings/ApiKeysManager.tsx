@@ -195,8 +195,8 @@ export function ApiKeysManager({ initialApiKeys }: ApiKeysManagerProps) {
               <DialogHeader>
                 <DialogTitle>API Key Generated</DialogTitle>
                 <DialogDescription>
-                  Your new API key has been created. Please copy it now, as you won't be able to see
-                  it again.
+                  Your new API key has been created. Please copy it now, as you won&apos;t be able
+                  to see it again.
                 </DialogDescription>
               </DialogHeader>
               <div className="flex items-center space-x-2 mt-4 bg-muted p-3 rounded-md">
