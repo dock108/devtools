@@ -4,7 +4,6 @@ import NotificationStatus from '@/components/alerts/NotificationStatus';
 import { describe, it, expect } from 'vitest';
 
 describe('NotificationStatus Component', () => {
-
   it('should display nothing if status is null or empty', () => {
     render(<NotificationStatus deliveryStatus={null} />);
     expect(screen.queryByText('Notification Status')).not.toBeInTheDocument();
@@ -44,5 +43,4 @@ describe('NotificationStatus Component', () => {
   //   render(<NotificationStatus deliveryStatus={{ email: 'failed' }} isAdmin={false} />);
   //   expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
   // });
-
-}); 
+});
