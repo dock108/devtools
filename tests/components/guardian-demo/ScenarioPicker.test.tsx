@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ScenarioPicker } from '../ScenarioPicker';
+import { ScenarioPicker } from '@/components/guardian-demo/ScenarioPicker';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('ScenarioPicker', () => {

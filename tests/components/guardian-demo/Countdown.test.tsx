@@ -1,5 +1,5 @@
 import { render, screen, act } from '@testing-library/react';
-import { Countdown } from '../Countdown';
+import { Countdown } from '@/components/guardian-demo/Countdown';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('Countdown', () => {

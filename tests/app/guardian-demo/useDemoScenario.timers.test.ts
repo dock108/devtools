@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useDemoScenario } from '../useDemoScenario';
+import { useDemoScenario } from '@/app/guardian-demo/useDemoScenario';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock fetch

@@ -46,7 +46,7 @@
 - [-] tests/app/dashboard/accounts/ConnectedAccountsManager.test.tsx // Skipped: Incomplete tests (TODOs)
 - [-] tests/lib/stripe.test.ts // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)
 - [x] tests/app/guardian-demo/scenarios.test.ts ✅
-- [ ] tests/components/guardian-demo/Countdown.test.tsx
-- [ ] tests/components/guardian-demo/ScenarioPicker.test.tsx
-- [ ] tests/app/guardian-demo/useDemoScenario.timers.test.ts
-- [ ] tests/app/guardian-demo/useDemoScenario.test.ts
+- [-] tests/components/guardian-demo/Countdown.test.tsx // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)
+- [-] tests/components/guardian-demo/ScenarioPicker.test.tsx // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)
+- [-] tests/app/guardian-demo/useDemoScenario.timers.test.ts // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)
+- [-] tests/app/guardian-demo/useDemoScenario.test.ts // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)
