@@ -4,8 +4,9 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 // import { fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ConnectedAccountsManager } from './ConnectedAccountsManager';
+import { ConnectedAccountsManager } from '@/app/(dashboard)/accounts/ConnectedAccountsManager';
 import { SWRConfig } from 'swr';
+import toast from 'react-hot-toast';
 
 // Mocks
 vi.mock('next/navigation', () => ({
@@ -50,7 +51,7 @@ const mockAccounts = [
 
 const mockRuleSets = [{ id: 'ruleset-uuid-1', name: 'High Risk' }];
 
-describe.skip('ConnectedAccountsManager Component', () => {
+describe('ConnectedAccountsManager Component', () => {
   const renderComponent = (
     props: Partial<React.ComponentProps<typeof ConnectedAccountsManager>> = {},
   ) => {

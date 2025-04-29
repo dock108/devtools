@@ -36,16 +36,16 @@
 - [-] tests/routes/oauth-callback.test.ts // Skipped: Unimplemented (describe.skip)
 - [-] tests/admin/notification-channels.test.tsx // Skipped: Dropdown/dialog interaction issues
 - [-] tests/stripe/webhook.spec.ts
-- [-] tests/stripe/oauth.test.ts // Skipped: describe.skip in file (stabilization issues)
+- [-] tests/stripe/oauth.test.ts // Skipped: stabilization issues
 - [x] tests/rules/velocityBreach.test.ts
 - [x] tests/rules/geoMismatch.test.ts
 - [x] tests/rules/bankSwap.test.ts
 - [-] tests/scripts/generate-rss.test.ts // Skipped: Needs test structure/mocks (originally a script)
-- [ ] tests/packages/common/formatters.test.ts
-- [ ] tests/app/api/stripe/webhook/route.test.ts
-- [ ] tests/app/dashboard/accounts/ConnectedAccountsManager.test.tsx
-- [ ] tests/lib/stripe.test.ts
-- [ ] tests/app/guardian-demo/scenarios.test.ts
+- [-] tests/packages/common/formatters.test.ts // Skipped: Needs test structure (originally src file)
+- [-] tests/app/api/stripe/webhook/route.test.ts // Skipped: Logger mocking issue during import
+- [-] tests/app/dashboard/accounts/ConnectedAccountsManager.test.tsx // Skipped: Incomplete tests (TODOs)
+- [-] tests/lib/stripe.test.ts // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)
+- [x] tests/app/guardian-demo/scenarios.test.ts ✅
 - [ ] tests/components/guardian-demo/Countdown.test.tsx
 - [ ] tests/components/guardian-demo/ScenarioPicker.test.tsx
 - [ ] tests/app/guardian-demo/useDemoScenario.timers.test.ts

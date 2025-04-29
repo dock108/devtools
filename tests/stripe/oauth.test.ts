@@ -42,8 +42,8 @@ process.env.STRIPE_CLIENT_ID = 'ca_test123';
 process.env.NEXT_PUBLIC_SITE_URL = 'https://test.example.com';
 process.env.STRIPE_SECRET_KEY = 'sk_test_123';
 
-// TODO: Re-enable after fixing test stabilization issues in #<issue_number>
-describe.skip('Stripe OAuth Flow', () => {
+// Re-enable test suite
+describe('Stripe OAuth Flow', () => {
   let mockCookieStore: any;
   let mockStripeInstance: any;
 

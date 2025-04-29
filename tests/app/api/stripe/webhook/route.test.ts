@@ -1,9 +1,10 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { NextRequest /*, NextResponse, Response */ } from 'next/server'; // Removed unused NextResponse, Response
 // import { Readable } from 'stream'; // Removed unused Readable
-import { POST, GET } from '../route';
+import { POST, GET } from '@/app/api/stripe/webhook/route';
 // import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'; // Removed
 // import Stripe from 'stripe'; // Removed unused Stripe
+// import { buffer } from 'node:stream/consumers'; // Removed unused buffer
 
 // Mock the stripe instance and supabase
 jest.mock('@/lib/stripe', () => {

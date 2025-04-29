@@ -1,0 +1,214 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Fraud scenarios > velocity-breach scenario matches snapshot 1`] = `
+[
+  {
+    "delayMs": 0,
+    "payload": {
+      "business_profile": {
+        "name": "TechMart Solutions",
+        "url": "https://techmartsolutions.example.com",
+      },
+      "created": 1634567890,
+      "id": "acct_1O4X2jBtYGWWCuMs",
+      "metadata": {
+        "account_age_days": "256",
+        "risk_score": "low",
+      },
+      "object": "account",
+    },
+    "type": "account.updated",
+  },
+  {
+    "delayMs": 3000,
+    "payload": {
+      "amount": 12500,
+      "arrival_date": 1675123200,
+      "created": 1675036800,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQr5zBtYGWWCuMsAwTKB9qP",
+      "metadata": {
+        "ip_address": "104.28.124.56",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "created",
+    },
+    "type": "payout.created",
+  },
+  {
+    "delayMs": 4000,
+    "payload": {
+      "amount": 12500,
+      "arrival_date": 1675123200,
+      "created": 1675036800,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQr5zBtYGWWCuMsAwTKB9qP",
+      "metadata": {
+        "ip_address": "104.28.124.56",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "paid",
+    },
+    "type": "payout.paid",
+  },
+  {
+    "delayMs": 7000,
+    "payload": {
+      "amount": 5999,
+      "id": "ch_3PQrHvBtYGWWCuMs1MozIjcU",
+      "metadata": {
+        "customer_id": "cus_9876AsDf",
+        "order_id": "ORD-87654",
+      },
+      "object": "charge",
+    },
+    "type": "charge.succeeded",
+  },
+  {
+    "delayMs": 10000,
+    "payload": {
+      "amount": 5200,
+      "arrival_date": 1675124200,
+      "created": 1675037920,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQrKzBtYGWWCuMsLmPRd08q",
+      "metadata": {
+        "ip_address": "104.28.124.56",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "created",
+    },
+    "type": "payout.created",
+  },
+  {
+    "delayMs": 11000,
+    "payload": {
+      "amount": 5200,
+      "arrival_date": 1675124200,
+      "created": 1675037920,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQrKzBtYGWWCuMsLmPRd08q",
+      "metadata": {
+        "ip_address": "104.28.124.56",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "paid",
+    },
+    "type": "payout.paid",
+  },
+  {
+    "delayMs": 14000,
+    "payload": {
+      "amount": 8999,
+      "id": "ch_3PQrLtBtYGWWCuMs2NgYkJbF",
+      "metadata": {
+        "customer_id": "cus_7643YyHg",
+        "order_id": "ORD-87655",
+      },
+      "object": "charge",
+    },
+    "type": "charge.succeeded",
+  },
+  {
+    "delayMs": 17000,
+    "payload": {
+      "amount": 7500,
+      "arrival_date": 1675125800,
+      "created": 1675039140,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQrPyBtYGWWCuMs6bJxR3kT",
+      "metadata": {
+        "ip_address": "104.28.124.57",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "created",
+    },
+    "type": "payout.created",
+  },
+  {
+    "delayMs": 18000,
+    "payload": {
+      "amount": 7500,
+      "arrival_date": 1675125800,
+      "created": 1675039140,
+      "description": "STRIPE PAYOUT",
+      "flagged": true,
+      "id": "po_1PQrPyBtYGWWCuMs6bJxR3kT",
+      "metadata": {
+        "ip_address": "104.28.124.57",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "paid",
+    },
+    "type": "payout.paid",
+  },
+  {
+    "delayMs": 20000,
+    "payload": {
+      "business_profile": {
+        "name": "TechMart Solutions",
+        "url": "https://techmartsolutions.example.com",
+      },
+      "created": 1634567890,
+      "id": "acct_1O4X2jBtYGWWCuMs",
+      "metadata": {
+        "account_age_days": "256",
+        "risk_score": "elevated",
+        "velocity_flag": "true",
+      },
+      "object": "account",
+    },
+    "type": "account.updated",
+  },
+  {
+    "delayMs": 25000,
+    "payload": {
+      "amount": 13500,
+      "arrival_date": 1675126920,
+      "created": 1675040320,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQrTxBtYGWWCuMsNpQcZ4jR",
+      "metadata": {
+        "ip_address": "104.28.124.57",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "created",
+    },
+    "type": "payout.created",
+  },
+  {
+    "delayMs": 26000,
+    "payload": {
+      "amount": 13500,
+      "arrival_date": 1675126920,
+      "created": 1675040320,
+      "description": "STRIPE PAYOUT",
+      "id": "po_1PQrTxBtYGWWCuMsNpQcZ4jR",
+      "metadata": {
+        "guardian_action": "paused",
+        "guardian_reason": "velocity_breach",
+        "ip_address": "104.28.124.57",
+        "ip_country": "US",
+        "session_id": "sess_jk4783hd",
+      },
+      "object": "payout",
+      "status": "paused",
+    },
+    "type": "payout.updated",
+  },
+]
+`;
