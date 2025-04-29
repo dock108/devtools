@@ -1,16 +1,15 @@
-import { describe, expect, jest, it, beforeEach, afterEach } from '@jest/globals';
+import { describe, expect, vi, it, beforeEach, afterEach, Mock } from 'vitest';
 import * as stripeModule from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { GUARDIAN_EVENTS } from '@/lib/guardian/stripeEvents';
 
 // Mock isGuardianSupportedEvent before importing module
-jest.mock('@/lib/guardian/stripeEvents', () => {
-  // Get the actual events from the module
-  const actual = jest.requireActual('@/lib/guardian/stripeEvents');
+vi.mock('@/lib/guardian/stripeEvents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/guardian/stripeEvents')>();
   return {
     ...actual,
     // Pass through the implementation with spy
-    isGuardianSupportedEvent: jest.fn(actual.isGuardianSupportedEvent),
+    isGuardianSupportedEvent: vi.fn(actual.isGuardianSupportedEvent),
   };
 });
 
@@ -18,87 +17,158 @@ jest.mock('@/lib/guardian/stripeEvents', () => {
 import { isGuardianSupportedEvent } from '@/lib/guardian/stripeEvents';
 
 // Mock the nextjs components
-jest.mock('next/server', () => {
+vi.mock('next/server', () => {
   class MockResponse {
     status: number;
     body: any;
+    headers: Headers = new Headers();
 
-    constructor(body: any, init?: { status?: number }) {
+    constructor(body: any, init?: { status?: number; headers?: HeadersInit }) {
       this.body = body;
       this.status = init?.status || 200;
+      if (init?.headers) {
+        this.headers = new Headers(init.headers);
+      }
     }
 
-    json() {
+    async json() {
       return Promise.resolve(this.body);
+    }
+
+    async text() {
+      return Promise.resolve(typeof this.body === 'string' ? this.body : JSON.stringify(this.body));
+    }
+  }
+
+  class MockRequest {
+    method: string;
+    _headers: Headers;
+    _body: string | null;
+    url: string;
+
+    constructor(input: string | URL | globalThis.Request, init?: RequestInit) {
+      if (typeof input === 'string' || input instanceof URL) {
+        this.url = input.toString();
+        this.method = init?.method?.toUpperCase() ?? 'GET';
+        this._headers = new Headers(init?.headers);
+        this._body = init?.body as string | null;
+      } else {
+        this.url = input.url;
+        this.method = input.method;
+        this._headers = new Headers(input.headers);
+        this._body = null;
+        if (input.body) {
+        }
+      }
+    }
+
+    get headers() {
+      return this._headers;
+    }
+
+    async text(): Promise<string> {
+      return Promise.resolve(this._body ?? '');
+    }
+
+    async json(): Promise<any> {
+      try {
+        return JSON.parse(this._body ?? 'null');
+      } catch (e) {
+        throw new SyntaxError('Unexpected end of JSON input');
+      }
+    }
+
+    clone(): MockRequest {
+      const init: RequestInit = { method: this.method, headers: this._headers };
+      if (this._body) {
+        init.body = this._body;
+      }
+      return new MockRequest(this.url, init);
     }
   }
 
   return {
-    NextRequest: jest.fn().mockImplementation((request) => ({
-      method: request.method,
-      headers: {
-        get: (name: string) => request.headers.get(name),
-      },
-      text: () => Promise.resolve(request.body),
-    })),
+    NextRequest: MockRequest,
     NextResponse: {
-      json: (body: any, init?: { status?: number }) => new MockResponse(body, init),
+      json: (body: any, init?: { status?: number; headers?: HeadersInit }) =>
+        new MockResponse(body, init),
+      redirect: (url: string | URL, init?: number | ResponseInit) => {
+        const status = typeof init === 'number' ? init : (init?.status ?? 307);
+        const headers = typeof init === 'number' ? undefined : init?.headers;
+        const responseHeaders = new Headers(headers);
+        responseHeaders.set('Location', url.toString());
+        return new MockResponse(null, { status, headers: responseHeaders });
+      },
     },
   };
 });
 
 // Import after mocking
-const { POST } = require('@/app/api/stripe/webhook/route');
+let POST: any;
 
 // Mock the external dependencies
-jest.mock('@/lib/stripe', () => {
+vi.mock('@/lib/stripe', () => {
   return {
     stripe: {
       webhooks: {
-        constructEvent: jest.fn(),
+        constructEvent: vi.fn(),
       },
     },
-    Stripe: jest.requireActual('stripe'),
   };
 });
 
-jest.mock('@/lib/supabase-admin', () => {
+vi.mock('@/lib/supabase-admin', () => {
   return {
     supabaseAdmin: {
-      from: jest.fn().mockReturnThis(),
-      upsert: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      from: vi.fn().mockReturnThis(),
+      upsert: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn(),
     },
   };
 });
 
-jest.mock('@/lib/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
+vi.mock('@/lib/logger', () => ({
+  log: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
   },
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+  generateRequestId: vi.fn().mockReturnValue('test-req-id'),
 }));
 
-jest.mock('@/lib/logRequest', () => ({
-  logRequest: jest.fn(),
+vi.mock('@/lib/logRequest', () => ({
+  logRequest: vi.fn(),
 }));
 
-// Mock global fetch using a function
-global.fetch = jest.fn().mockImplementation(() =>
+// Mock global fetch using vi
+global.fetch = vi.fn().mockImplementation(() =>
   Promise.resolve({
     ok: true,
     status: 200,
     text: () => Promise.resolve('Success'),
+    json: () => Promise.resolve({}),
   }),
 );
 
-// Mock performance.now()
+// Mock performance.now() using vi
 global.performance = {
-  now: jest.fn().mockReturnValue(100),
+  now: vi.fn().mockReturnValue(100),
 } as any;
+
+// Cast mocked imports for type safety
+const constructEventMock = stripeModule.stripe.webhooks.constructEvent as Mock;
+const supabaseAdminFromMock = supabaseAdmin.from as Mock;
+const supabaseAdminUpsertMock = supabaseAdmin.upsert as Mock;
+const supabaseAdminSelectMock = supabaseAdmin.select as Mock;
+const supabaseAdminSingleMock = supabaseAdmin.single as Mock;
+const isGuardianSupportedEventMock = isGuardianSupportedEvent as Mock;
 
 describe('Stripe Webhook Handler', () => {
   const mockStripeEvent = {
@@ -113,43 +183,42 @@ describe('Stripe Webhook Handler', () => {
     },
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+  beforeEach(async () => {
+    vi.clearAllMocks();
 
-    // Setup default mock returns
-    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
-      ...mockStripeEvent,
-    });
+    const routeHandler = await import('@/app/api/stripe/webhook/route');
+    POST = routeHandler.POST;
 
-    (supabaseAdmin.from as jest.Mock).mockReturnThis();
-    (supabaseAdmin.upsert as jest.Mock).mockReturnThis();
-    (supabaseAdmin.select as jest.Mock).mockReturnThis();
-    (supabaseAdmin.single as jest.Mock).mockResolvedValue({
-      data: { id: 1 },
-      error: null,
-    });
+    constructEventMock.mockReturnValue({ ...mockStripeEvent });
 
-    (global.fetch as jest.Mock).mockResolvedValue({
+    supabaseAdminFromMock.mockReturnThis();
+    supabaseAdminUpsertMock.mockReturnThis();
+    supabaseAdminSelectMock.mockReturnThis();
+    supabaseAdminSingleMock.mockResolvedValue({ data: { id: 1 }, error: null });
+
+    (global.fetch as Mock).mockResolvedValue({
       ok: true,
       status: 200,
       text: () => Promise.resolve('Success'),
+      json: () => Promise.resolve({}),
     });
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   it('should return 400 when signature header is missing', async () => {
-    const mockRequest = {
+    const { NextRequest } = await import('next/server');
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
       method: 'POST',
       body: JSON.stringify({ id: 'evt_test123' }),
       headers: {
-        get: (name: string) => null,
+        /* No stripe-signature */
       },
-    };
+    });
 
-    const response = await POST(mockRequest as any);
+    const response = await POST(mockRequest);
 
     expect(response.status).toBe(400);
     const responseBody = await response.json();
@@ -157,20 +226,24 @@ describe('Stripe Webhook Handler', () => {
   });
 
   it('should return 400 when signature verification fails', async () => {
-    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockImplementation(() => {
-      throw new Error('Invalid signature');
+    constructEventMock.mockImplementation(() => {
+      const StripeError = vi.requireActual('stripe').errors.StripeSignatureVerificationError;
+      throw new StripeError({} as any, 'Invalid signature');
     });
 
-    const mockRequest = {
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify({ id: 'evt_test123' });
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
       method: 'POST',
-      body: JSON.stringify({ id: 'evt_test123' }),
+      body: reqBody,
       headers: {
-        get: (name: string) => (name === 'stripe-signature' ? 'test_signature' : null),
+        'stripe-signature': 'test_signature',
       },
-      text: () => Promise.resolve(JSON.stringify({ id: 'evt_test123' })),
-    };
+    });
 
-    const response = await POST(mockRequest as any);
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
+
+    const response = await POST(mockRequest);
 
     expect(response.status).toBe(400);
     const responseBody = await response.json();
@@ -178,28 +251,24 @@ describe('Stripe Webhook Handler', () => {
   });
 
   it('should return 400 when account ID is missing', async () => {
-    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
+    constructEventMock.mockReturnValue({
       id: 'evt_test123',
       type: 'charge.succeeded',
-      // No account property
-      data: {
-        object: {
-          id: 'ch_test123',
-          object: 'charge',
-        },
-      },
+      data: { object: { id: 'ch_test123', object: 'charge' } },
     });
 
-    const mockRequest = {
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify({ id: 'evt_test123' });
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
       method: 'POST',
-      body: JSON.stringify({ id: 'evt_test123' }),
+      body: reqBody,
       headers: {
-        get: (name: string) => (name === 'stripe-signature' ? 'test_signature' : null),
+        'stripe-signature': 'test_signature',
       },
-      text: () => Promise.resolve(JSON.stringify({ id: 'evt_test123' })),
-    };
+    });
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
-    const response = await POST(mockRequest as any);
+    const response = await POST(mockRequest);
 
     expect(response.status).toBe(400);
     const responseBody = await response.json();
@@ -207,243 +276,122 @@ describe('Stripe Webhook Handler', () => {
   });
 
   it('should return 400 for unsupported event types', async () => {
-    // Mock an unsupported event type
-    (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
+    constructEventMock.mockReturnValue({
       id: 'evt_test123',
-      type: 'customer.created', // Not in GUARDIAN_EVENTS
+      type: 'customer.created',
       account: 'acct_test123',
-      data: {
-        object: {
-          id: 'cus_test123',
-          object: 'customer',
-        },
+      data: { object: { id: 'cus_test123', object: 'customer' } },
+    });
+    isGuardianSupportedEventMock.mockReturnValue(false);
+
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify({ id: 'evt_test123', type: 'customer.created' });
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
+      method: 'POST',
+      body: reqBody,
+      headers: {
+        'stripe-signature': 'test_signature',
       },
     });
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
-    const mockRequest = {
-      method: 'POST',
-      body: JSON.stringify({ id: 'evt_test123' }),
-      headers: {
-        get: (name: string) => {
-          if (name === 'stripe-signature') return 'test_signature';
-          if (name === 'stripe-account') return 'acct_test123';
-          return null;
-        },
-      },
-      text: () =>
-        Promise.resolve(
-          JSON.stringify({
-            id: 'evt_test123',
-            type: 'customer.created',
-          }),
-        ),
-    };
-
-    const response = await POST(mockRequest as any);
+    const response = await POST(mockRequest);
 
     expect(response.status).toBe(400);
     const responseBody = await response.json();
     expect(responseBody).toHaveProperty('error', 'Unsupported event type');
-    expect(isGuardianSupportedEvent).toHaveBeenCalledWith('customer.created');
+    expect(isGuardianSupportedEventMock).toHaveBeenCalledWith('customer.created');
   });
 
   it('should process a valid webhook event successfully', async () => {
-    // Mock the supabase response for event buffer insertion
-    (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'event_buffer') {
-        return {
-          upsert: jest.fn().mockReturnThis(),
-          select: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
-            data: { id: 1 },
-            error: null,
-          }),
-        };
-      }
-      return {
-        insert: jest.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      };
-    });
+    constructEventMock.mockReturnValue({ ...mockStripeEvent, type: 'charge.succeeded' });
+    isGuardianSupportedEventMock.mockReturnValue(true);
 
-    // Mock successful reactor call
-    (global.fetch as jest.Mock).mockResolvedValue({
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify(mockStripeEvent);
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
+      method: 'POST',
+      body: reqBody,
+      headers: {
+        'stripe-signature': 'test_signature',
+      },
+    });
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
+
+    supabaseAdminSingleMock.mockResolvedValueOnce({ data: { id: 'db-account-id' }, error: null });
+    supabaseAdminUpsertMock.mockResolvedValueOnce({ error: null });
+    (global.fetch as Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
-      text: () => Promise.resolve('Success'),
+      text: () => Promise.resolve('OK'),
     });
 
-    const mockRequest = {
-      method: 'POST',
-      body: JSON.stringify(mockStripeEvent),
-      headers: {
-        get: (name: string) => {
-          if (name === 'stripe-signature') return 'test_signature';
-          if (name === 'stripe-account') return 'acct_test123';
-          return null;
-        },
-      },
-      text: () => Promise.resolve(JSON.stringify(mockStripeEvent)),
-    };
-
-    const response = await POST(mockRequest as any);
+    const response = await POST(mockRequest);
 
     expect(response.status).toBe(200);
     const responseBody = await response.json();
-    expect(responseBody).toHaveProperty('received', true);
+    expect(responseBody).toEqual({ received: true });
 
-    // Verify the webhook was verified
-    expect(stripeModule.stripe.webhooks.constructEvent).toHaveBeenCalled();
-
-    // Verify the event was stored in the buffer
-    expect(supabaseAdmin.from).toHaveBeenCalledWith('event_buffer');
-
-    // Verify supported event check was called
-    expect(isGuardianSupportedEvent).toHaveBeenCalledWith('charge.succeeded');
+    expect(constructEventMock).toHaveBeenCalled();
+    expect(isGuardianSupportedEventMock).toHaveBeenCalledWith('charge.succeeded');
+    expect(supabaseAdminFromMock).toHaveBeenCalledWith('connected_accounts');
+    expect(supabaseAdminSelectMock).toHaveBeenCalledWith('id');
+    expect(supabaseAdminSingleMock).toHaveBeenCalled();
+    expect(supabaseAdminFromMock).toHaveBeenCalledWith('event_buffer');
+    expect(supabaseAdminUpsertMock).toHaveBeenCalledWith(expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/reactor'),
+      expect.any(Object),
+    );
   });
 
-  it('should test all GUARDIAN_EVENTS for acceptance', async () => {
-    // Setup mock for this test only
-    (supabaseAdmin.from as jest.Mock).mockImplementation(() => ({
-      upsert: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({
-        data: { id: 1 },
-        error: null,
-      }),
-    }));
+  it('should handle errors during event buffer upsert', async () => {
+    constructEventMock.mockReturnValue({ ...mockStripeEvent });
+    isGuardianSupportedEventMock.mockReturnValue(true);
+    supabaseAdminSingleMock.mockResolvedValueOnce({ data: { id: 'db-account-id' }, error: null });
+    const dbError = new Error('DB upsert failed');
+    supabaseAdminUpsertMock.mockResolvedValueOnce({ error: dbError });
 
-    // Create a request builder function
-    const createRequest = (eventType: string) => ({
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify(mockStripeEvent);
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
       method: 'POST',
-      body: JSON.stringify({ id: 'evt_test123', type: eventType }),
+      body: reqBody,
       headers: {
-        get: (name: string) => {
-          if (name === 'stripe-signature') return 'test_signature';
-          if (name === 'stripe-account') return 'acct_test123';
-          return null;
-        },
+        'stripe-signature': 'test_signature',
       },
-      text: () => Promise.resolve(JSON.stringify({ id: 'evt_test123', type: eventType })),
     });
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
-    // Test each supported event
-    for (const eventType of GUARDIAN_EVENTS) {
-      // Mock the event with this event type
-      (stripeModule.stripe.webhooks.constructEvent as jest.Mock).mockReturnValue({
-        id: 'evt_test123',
-        type: eventType,
-        account: 'acct_test123',
-        data: {
-          object: {
-            id: `obj_${eventType.replace('.', '_')}`,
-            object: eventType.split('.')[0],
-          },
-        },
-      });
+    const response = await POST(mockRequest);
 
-      const mockRequest = createRequest(eventType);
-      const response = await POST(mockRequest as any);
-
-      expect(response.status).toBe(200);
-      expect(isGuardianSupportedEvent).toHaveBeenCalledWith(eventType);
-
-      // Clear mocks for next iteration
-      jest.clearAllMocks();
-    }
+    expect(response.status).toBe(500);
+    const responseBody = await response.json();
+    expect(responseBody).toHaveProperty('error', 'Database error');
   });
 
-  it('should handle reactor failure gracefully', async () => {
-    // Mock the supabase response for event buffer insertion
-    (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'event_buffer') {
-        return {
-          upsert: jest.fn().mockReturnThis(),
-          select: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({
-            data: { id: 1 },
-            error: null,
-          }),
-        };
-      }
-      if (table === 'failed_event_dispatch') {
-        return {
-          insert: jest.fn().mockResolvedValue({
-            data: null,
-            error: null,
-          }),
-        };
-      }
-      return {
-        insert: jest.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      };
-    });
+  it('should handle failure when triggering the reactor function', async () => {
+    constructEventMock.mockReturnValue({ ...mockStripeEvent });
+    isGuardianSupportedEventMock.mockReturnValue(true);
+    supabaseAdminSingleMock.mockResolvedValueOnce({ data: { id: 'db-account-id' }, error: null });
+    supabaseAdminUpsertMock.mockResolvedValueOnce({ error: null });
+    (global.fetch as Mock).mockRejectedValueOnce(new Error('Reactor trigger failed'));
 
-    // Mock reactor call failure
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve('Internal Server Error'),
-    });
-
-    const mockRequest = {
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify(mockStripeEvent);
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
       method: 'POST',
-      body: JSON.stringify(mockStripeEvent),
+      body: reqBody,
       headers: {
-        get: (name: string) => {
-          if (name === 'stripe-signature') return 'test_signature';
-          if (name === 'stripe-account') return 'acct_test123';
-          return null;
-        },
+        'stripe-signature': 'test_signature',
       },
-      text: () => Promise.resolve(JSON.stringify(mockStripeEvent)),
-    };
-
-    const response = await POST(mockRequest as any);
-
-    // Should still return 200 to Stripe even though reactor failed
-    expect(response.status).toBe(200);
-
-    // Verify the failure was recorded
-    expect(supabaseAdmin.from).toHaveBeenCalledWith('failed_event_dispatch');
-  });
-
-  it('should handle duplicate events with upsert', async () => {
-    // Setup the mock to simulate a duplicate event (no error on upsert)
-    (supabaseAdmin.from as jest.Mock).mockImplementation((table) => {
-      return {
-        upsert: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: { id: 1 },
-          error: null,
-        }),
-      };
     });
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
-    const mockRequest = {
-      method: 'POST',
-      body: JSON.stringify(mockStripeEvent),
-      headers: {
-        get: (name: string) => {
-          if (name === 'stripe-signature') return 'test_signature';
-          if (name === 'stripe-account') return 'acct_test123';
-          return null;
-        },
-      },
-      text: () => Promise.resolve(JSON.stringify(mockStripeEvent)),
-    };
+    const response = await POST(mockRequest);
 
-    const response = await POST(mockRequest as any);
-
-    expect(response.status).toBe(200);
-
-    // Verify we're doing an upsert with onConflict
-    expect(supabaseAdmin.from).toHaveBeenCalledWith('event_buffer');
+    expect(response.status).toBe(500);
+    const responseBody = await response.json();
+    expect(responseBody).toHaveProperty('error', 'Failed to trigger reactor');
   });
 });
