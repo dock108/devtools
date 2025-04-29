@@ -1,6 +1,6 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { POST, GET } from '@/app/api/guardian/alerts/feedback/route';
-// import { createAdminClient } from '@/lib/supabase/admin'; // Original import - no longer needed directly
+import { createAdminClient } from '@/lib/supabase/admin'; // Original import
 import { Database } from '@/types/supabase'; // Import Database type
 import { createMockSupabase } from '@/tests/__utils__/mockSupabase';
 

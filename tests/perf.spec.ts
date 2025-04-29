@@ -1,4 +1,9 @@
 import { test, expect, describe, beforeAll, afterAll } from '@jest/globals';
+
+// Explicitly mock the logger here
+// const mockLogger = { ... }; // REMOVED
+// jest.mock('@/lib/logger', () => ({ logger: mockLogger })); // REMOVED
+
 import { evaluateRulesEdge } from '../lib/guardian/rules/edge';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';

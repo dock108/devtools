@@ -27,7 +27,7 @@ module.exports = {
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1', // Handle path aliases like @/
-    // Use require.resolve for uuid mapping
+    // Ensure only the correct mapping for uuid exists
     '^uuid$': require.resolve('uuid'),
     // Handle CSS Modules (if used, though likely handled by Next.js config elsewhere)
     '^.+\.module\.(css|sass|scss)$': 'identity-obj-proxy',

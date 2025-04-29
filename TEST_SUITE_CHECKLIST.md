@@ -1,10 +1,10 @@
 # Test Suite Checklist
 
 - [x] tests/metrics.spec.ts ✅
-- [ ] tests/notify.spec.ts
-- [ ] tests/perf.spec.ts
-- [ ] tests/feedback.spec.ts
-- [ ] tests/event_buffer.spec.ts
+- [ ] tests/notify.spec.ts // Skipped: Vitest/Jest incompatibility
+- [-] tests/perf.spec.ts // Skipped: unresolved logger mocking issue
+- [-] tests/feedback.spec.ts // Skipped: unresolved Next.js API route mocking issues
+- [x] tests/event_buffer.spec.ts
 - [ ] tests/backfill.spec.ts
 - [ ] tests/scenarios.spec.ts
 - [ ] tests/blog.spec.ts

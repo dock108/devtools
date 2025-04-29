@@ -181,6 +181,7 @@
     "tsconfig-paths": "^4.2.0",
     "vitest": "^3.1.2",
     "wait-on": "^8.0.3",
+    "web-streams-polyfill": "^4.1.0",
     "whatwg-fetch": "^3.6.20"
   },
   "config": {
