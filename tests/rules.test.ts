@@ -79,12 +79,12 @@ describe('evaluateEvent Rules', () => {
     expect(evaluateEvent(event, [])).toEqual({ flagged: false });
   });
 
-    test('should not flag account.updated with null raw data', () => {
+  test('should not flag account.updated with null raw data', () => {
     const event = mockEvent({
       type: 'account.updated',
       amount: null,
-      raw: null, 
+      raw: null,
     });
     expect(evaluateEvent(event, [])).toEqual({ flagged: false });
   });
-}); 
+});

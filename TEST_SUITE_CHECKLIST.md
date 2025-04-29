@@ -1,6 +1,6 @@
 # Test Suite Checklist
 
-- [ ] tests/metrics.spec.ts
+- [x] tests/metrics.spec.ts ✅
 - [ ] tests/notify.spec.ts
 - [ ] tests/perf.spec.ts
 - [ ] tests/feedback.spec.ts
@@ -19,9 +19,9 @@
 - [ ] tests/rule-set-schema.test.ts
 - [ ] tests/formatters.test.ts
 - [ ] **tests**/waitlist.test.ts
-- [ ] **tests**/rules.test.ts
+- [x] **tests**/rules.test.ts
 - [ ] **tests**/api/contact.test.ts
-- [ ] tests/guardian/customRuleSet.test.ts
+- [x] tests/guardian/customRuleSet.test.ts
 - [ ] tests/guardian/ruleEngine.test.ts
 - [ ] tests/ui/NotificationStatus.test.tsx
 - [ ] tests/components/docs/SidebarNav.test.tsx
