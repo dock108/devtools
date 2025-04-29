@@ -57,9 +57,12 @@ jest.mock('@/lib/logger', () => ({ logger: mockLogger }));
 jest.mock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
 
 // Dummy environment variables
-process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
+// process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321'; // Incorrect/Unused var name
+process.env.SUPABASE_URL = 'http://localhost:54321'; // Correct var name
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'dummy-anon-key';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'dummy-service-role-key';
+// process.env.SUPABASE_SERVICE_ROLE_KEY = 'dummy-service-role-key'; // Invalid JWT
+process.env.SUPABASE_SERVICE_ROLE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSJ9.vI9obAHOGyVVKa3pD--kJlyxp-Z2zV9UUMAhKpNLAcU'; // Valid dummy JWT
 process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
 process.env.RESEND_API_KEY = 're_dummy';

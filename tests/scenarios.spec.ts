@@ -1,7 +1,48 @@
 import { test, expect } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import { generateStripeEvent } from './utils/generators';
+// import { createMockStripeEvent } from './guardian/ruleEngine.core.test'; // Not exported
 import { evaluateRulesEdge } from '../lib/guardian/rules/edge';
+
+// Utility function to create a mock Stripe event (copied from ruleEngine.core.test.ts)
+const createMockStripeEvent = (type: string, options: Record<string, any> = {}) => {
+  const { accountId = 'acct_test123', data = {}, metadata = {} } = options;
+  const eventId = 'evt_' + Math.random().toString(36).substring(2, 10);
+  let payloadObject = { metadata };
+  if (type.startsWith('payout.')) {
+    payloadObject = {
+      id: 'po_' + Math.random().toString(36).substring(2, 10),
+      object: 'payout',
+      ...data,
+      metadata,
+    };
+  } else if (type.startsWith('account.')) {
+    payloadObject = { id: accountId, object: 'account', ...data, metadata };
+  } else if (type.startsWith('review.')) {
+    payloadObject = {
+      id: 'rev_' + Math.random().toString(36).substring(2, 10),
+      object: 'review',
+      ...data,
+      metadata,
+    };
+  } // Add other types if needed
+
+  return {
+    id: eventId,
+    type,
+    account: accountId,
+    data: {
+      object: payloadObject,
+      previous_attributes: options.previous_attributes,
+    },
+    object: 'event',
+    api_version: '2020-08-27',
+    created: Math.floor(Date.now() / 1000),
+    livemode: false,
+    pending_webhooks: 0,
+    request: { id: null, idempotency_key: null },
+  } as any; // Using 'any' for simplicity in test setup
+};
 
 // Mock Supabase client
 const mockSupabase = {
@@ -114,7 +155,7 @@ describe('Guardian Fraud Scenarios', () => {
     };
 
     // Create a failed charge event
-    const chargeFailedEvent = generateStripeEvent('charge.failed', {
+    const chargeFailedEvent = createMockStripeEvent('charge.failed', {
       accountId: 'acct_test123',
       metadata: { amount: 1000 },
     });
@@ -132,7 +173,7 @@ describe('Guardian Fraud Scenarios', () => {
 
   test('SUDDEN_PAYOUT_DISABLE should trigger when payouts are disabled', async () => {
     // Create an account.updated event with payouts_enabled changing from true to false
-    const payoutDisableEvent = generateStripeEvent('account.updated', {
+    const payoutDisableEvent = createMockStripeEvent('account.updated', {
       accountId: 'acct_test123',
       data: {
         object: {
@@ -159,7 +200,7 @@ describe('Guardian Fraud Scenarios', () => {
 
   test('HIGH_RISK_REVIEW should trigger for review.opened with reason="rule"', async () => {
     // Create a review.opened event with reason="rule"
-    const highRiskReviewEvent = generateStripeEvent('review.opened', {
+    const highRiskReviewEvent = createMockStripeEvent('review.opened', {
       accountId: 'acct_test123',
       data: {
         object: {
@@ -184,7 +225,7 @@ describe('Guardian Fraud Scenarios', () => {
 
   test('HIGH_RISK_REVIEW should not trigger for other review reasons', async () => {
     // Create a review.opened event with a different reason
-    const otherReviewEvent = generateStripeEvent('review.opened', {
+    const otherReviewEvent = createMockStripeEvent('review.opened', {
       accountId: 'acct_test123',
       data: {
         object: {

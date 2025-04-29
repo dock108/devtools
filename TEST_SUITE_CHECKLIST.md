@@ -5,12 +5,12 @@
 - [-] tests/perf.spec.ts // Skipped: unresolved logger mocking issue
 - [-] tests/feedback.spec.ts // Skipped: unresolved Next.js API route mocking issues
 - [x] tests/event_buffer.spec.ts
-- [ ] tests/backfill.spec.ts
-- [ ] tests/scenarios.spec.ts
-- [ ] tests/blog.spec.ts
-- [ ] tests/risk_score.spec.ts
-- [ ] tests/rule_sets.spec.ts
-- [ ] tests/logging.spec.ts
+- [-] tests/backfill.spec.ts // Skipped: uses EdgeRuntime, blocked by polyfill issue
+- [-] tests/scenarios.spec.ts // Skipped: unresolved logger mocking issue
+- [x] tests/blog.spec.ts ✅
+- [-] tests/risk_score.spec.ts // Skipped: requires live Supabase connection
+- [-] tests/rule_sets.spec.ts // Skipped: requires live Supabase connection with data
+- [x] tests/logging.spec.ts ✅
 - [ ] tests/retention.spec.ts
 - [ ] tests/transactional.spec.ts
 - [ ] tests/reactor.spec.ts

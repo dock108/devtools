@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, test, expect } from '@jest/globals';
 import { getAllPosts } from '@/lib/blog'; // Adjust path if needed
 
 // Mock the fs module if running in an environment without file system access
 // Or ensure tests run where fs is available (e.g., Node environment)
 
 describe('Blog Utility Functions', () => {
-  it('getAllPosts() should return at least 3 posts sorted by date descending', () => {
+  test('getAllPosts() should return at least 3 posts sorted by date descending', () => {
     const posts = getAllPosts();
 
     // Check if it returns an array

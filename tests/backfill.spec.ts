@@ -3,6 +3,7 @@ import nock from 'nock';
 import { EdgeRuntime } from 'edge-runtime'; // To simulate the Deno edge environment
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { RELEVANT_EVENT_TYPES } from '@/lib/guardian/stripeEvents'; // Use path alias
 
 // --- Test Setup --- //
 // Note: Strict type checking may require ensuring mock data and function signatures align perfectly.
@@ -88,6 +89,8 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
         // Add explicit return type
         return !type.startsWith('customer.');
       },
+      // Also mock the RELEVANT_EVENT_TYPES if it's used by the code under test after mocking
+      RELEVANT_EVENT_TYPES: [], // Provide a default mock value
     }));
 
     // Mock the fetch call to the reactor
@@ -335,7 +338,6 @@ describe('Guardian Backfill Edge Function (tests/backfill.spec.ts)', () => {
   });
 
   test('should stop if Stripe returns fewer events than limit (end of stream)', async () => {
-  it('should stop if Stripe returns fewer events than limit (end of stream)', async () => {
     // Implementation of this test case
   });
 
