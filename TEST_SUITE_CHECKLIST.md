@@ -30,10 +30,10 @@
 - [ ] tests/e2e/docs.test.ts
 - [ ] tests/e2e/contact.test.ts
 - [x] tests/lib/mdx/getDocBySlug.test.ts ✅
-- [ ] tests/db/rls.spec.ts
-- [ ] tests/unit/send-email-alert.test.ts
-- [ ] tests/unit/send-slack-alert.test.ts
-- [ ] tests/routes/oauth-callback.test.ts
+- [-] tests/db/rls.spec.ts // Skipped: Requires specific test users in local Supabase
+- [x] tests/unit/send-email-alert.test.ts ✅
+- [x] tests/unit/send-slack-alert.test.ts ✅
+- [-] tests/routes/oauth-callback.test.ts // Skipped: Unimplemented (describe.skip)
 - [ ] tests/admin/notification-channels.test.tsx
 - [ ] tests/stripe/webhook.spec.ts
 - [ ] tests/stripe/oauth.test.ts
