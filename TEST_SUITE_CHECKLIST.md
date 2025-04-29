@@ -41,7 +41,6 @@
 - [x] tests/rules/geoMismatch.test.ts
 - [x] tests/rules/bankSwap.test.ts
 - [-] tests/scripts/generate-rss.test.ts // Skipped: Needs test structure/mocks (originally a script)
-- [-] tests/packages/common/formatters.test.ts // Skipped: Needs test structure (originally src file)
 - [-] tests/app/api/stripe/webhook/route.test.ts // Skipped: Logger mocking issue during import
 - [-] tests/app/dashboard/accounts/ConnectedAccountsManager.test.tsx // Skipped: Incomplete tests (TODOs)
 - [-] tests/lib/stripe.test.ts // Skipped: Jest/Vitest config conflict (CJS/ESM import issue)

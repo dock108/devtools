@@ -76,7 +76,6 @@ _Affected Files:_
 _Affected Files:_
 
 - `tests/scripts/generate-rss.test.ts` (Originally a script, needs test structure/mocks)
-- `tests/packages/common/formatters.test.ts` (Originally a source file, needs test structure)
   _Issue:_ Files moved into `tests` were originally source code or runnable scripts, lacking test suites (`describe`/`it`) and necessary mocks.
 
 ### Intentionally Skipped (`describe.skip`)
