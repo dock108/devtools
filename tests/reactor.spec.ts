@@ -1,7 +1,47 @@
 import { test, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { faker } from '@faker-js/faker';
-import { generateStripeEvent } from './utils/generators';
+import { generateStripeEvent } from './utils/generators'; // Restore original incorrect import
+
+// Utility function to create a mock Stripe event (copied from ruleEngine.core.test.ts)
+const createMockStripeEvent = (type: string, options: Record<string, any> = {}) => {
+  const { accountId = 'acct_test123', data = {}, metadata = {} } = options;
+  const eventId = 'evt_' + Math.random().toString(36).substring(2, 10);
+  let payloadObject = { metadata };
+  if (type.startsWith('payout.')) {
+    payloadObject = {
+      id: 'po_' + Math.random().toString(36).substring(2, 10),
+      object: 'payout',
+      ...data,
+      metadata,
+    };
+  } else if (type.startsWith('account.')) {
+    payloadObject = { id: accountId, object: 'account', ...data, metadata };
+  } else if (type.startsWith('review.')) {
+    payloadObject = {
+      id: 'rev_' + Math.random().toString(36).substring(2, 10),
+      object: 'review',
+      ...data,
+      metadata,
+    };
+  } // Add other types if needed
+
+  return {
+    id: eventId,
+    type,
+    account: accountId,
+    data: {
+      object: payloadObject,
+      previous_attributes: options.previous_attributes,
+    },
+    object: 'event',
+    api_version: '2020-08-27',
+    created: Math.floor(Date.now() / 1000),
+    livemode: false,
+    pending_webhooks: 0,
+    request: { id: null, idempotency_key: null },
+  } as any; // Using 'any' for simplicity in test setup
+};
 
 // Test environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -35,7 +75,7 @@ describe('Guardian Reactor tests', () => {
 
   test('Should process a valid event and mark it as processed', async () => {
     // Insert a test event to the buffer
-    const chargeFailedEvent = generateStripeEvent('charge.failed', {
+    const chargeFailedEvent = createMockStripeEvent('charge.failed', {
       accountId: testStripeAccountId,
       metadata: { amount: 5000 },
     });
@@ -78,7 +118,7 @@ describe('Guardian Reactor tests', () => {
 
   test('Should ensure idempotency by not processing the same event twice', async () => {
     // Insert a test event to the buffer
-    const chargeSucceededEvent = generateStripeEvent('charge.succeeded', {
+    const chargeSucceededEvent = createMockStripeEvent('charge.succeeded', {
       accountId: testStripeAccountId,
       metadata: { amount: 2000 },
     });
@@ -129,7 +169,7 @@ describe('Guardian Reactor tests', () => {
   test('Should create alerts when rules are triggered', async () => {
     // Insert a suspicious event that should trigger an alert
     // (Assuming we have a rule that triggers on high-value charge.failed events)
-    const suspiciousEvent = generateStripeEvent('charge.failed', {
+    const suspiciousEvent = createMockStripeEvent('charge.failed', {
       accountId: testStripeAccountId,
       metadata: { amount: 99999 }, // Very high amount to trigger rules
     });

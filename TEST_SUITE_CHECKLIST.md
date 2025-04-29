@@ -14,11 +14,11 @@
 - [ ] tests/retention.spec.ts
 - [ ] tests/transactional.spec.ts
 - [ ] tests/reactor.spec.ts
-- [ ] tests/validation.spec.ts
-- [ ] tests/alert-dispatch.integration.test.ts
-- [ ] tests/rule-set-schema.test.ts
-- [ ] tests/formatters.test.ts
-- [ ] **tests**/waitlist.test.ts
+- [ ] tests/validation.spec.ts ✅
+- [-] tests/alert-dispatch.integration.test.ts // Skipped: Deno dependency / URL import issue
+- [x] tests/rule-set-schema.test.ts ✅
+- [x] tests/formatters.test.ts ✅
+- [-] **tests**/waitlist.test.ts // Skipped: `describe.skip` in file (stabilization/functionality issues)
 - [x] **tests**/rules.test.ts
 - [ ] **tests**/api/contact.test.ts
 - [x] tests/guardian/customRuleSet.test.ts
