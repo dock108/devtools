@@ -66,11 +66,13 @@ describe('SidebarNav', () => {
     // Find the active link (getting-started)
     const activeLink = screen.getByText('Quick Start');
 
-    // Check that it has the active class (using the parent element since the text is inside a Link component)
-    expect(activeLink.parentElement).toHaveClass('bg-accent/80');
+    // Check that IT has the active class, not its parent
+    expect(activeLink).toHaveClass('bg-accent/80');
 
     // Check that other links do not have the active class
     const inactiveLink = screen.getByText('Introduction');
-    expect(inactiveLink.parentElement).not.toHaveClass('bg-accent/80');
+    expect(inactiveLink).not.toHaveClass('bg-accent/80');
+    // Optionally, check if it has the inactive class
+    // expect(inactiveLink).toHaveClass('text-muted-foreground');
   });
 });

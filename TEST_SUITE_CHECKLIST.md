@@ -20,12 +20,12 @@
 - [x] tests/formatters.test.ts ✅
 - [-] **tests**/waitlist.test.ts // Skipped: `describe.skip` in file (stabilization/functionality issues)
 - [x] **tests**/rules.test.ts
-- [ ] **tests**/api/contact.test.ts
+- [-] **tests**/api/contact.test.ts // Skipped: unresolved Next.js API route mocking issues
 - [x] tests/guardian/customRuleSet.test.ts
-- [ ] tests/guardian/ruleEngine.test.ts
-- [ ] tests/ui/NotificationStatus.test.tsx
-- [ ] tests/components/docs/SidebarNav.test.tsx
-- [ ] tests/components/RuleSetEditor.test.tsx
+- [x] tests/guardian/ruleEngine.test.ts ✅
+- [x] tests/ui/NotificationStatus.test.tsx ✅
+- [x] tests/components/docs/SidebarNav.test.tsx ✅
+- [x] tests/components/RuleSetEditor.test.tsx ✅
 - [ ] tests/e2e/smoke.spec.ts
 - [ ] tests/e2e/docs.test.ts
 - [ ] tests/e2e/contact.test.ts

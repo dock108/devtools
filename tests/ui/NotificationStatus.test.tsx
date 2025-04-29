@@ -1,46 +1,130 @@
 // tests/ui/NotificationStatus.test.tsx
 import { render, screen } from '@testing-library/react';
 import NotificationStatus from '@/components/alerts/NotificationStatus';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import useSWR, { mutate } from 'swr'; // Import directly
+
+// Mock the SWR module
+vi.mock('swr');
+
+// Type cast the mocked hook for easier use
+const useSWRMock = useSWR as Mock;
+// Keep the real mutate function if needed, or mock it
+const mutateMock = mutate as Mock | undefined; // Or vi.fn() if needs mocking
 
 describe('NotificationStatus Component', () => {
-  it('should display nothing if status is null or empty', () => {
-    render(<NotificationStatus deliveryStatus={null} />);
-    expect(screen.queryByText('Notification Status')).not.toBeInTheDocument();
-    render(<NotificationStatus deliveryStatus={{}} />);
-    expect(screen.queryByText('Notification Status')).not.toBeInTheDocument();
+  beforeEach(() => {
+    // Reset mocks before each test
+    useSWRMock.mockClear();
+    if (mutateMock) mutateMock.mockClear();
   });
 
-  it('should display delivered status for email and slack', () => {
-    render(<NotificationStatus deliveryStatus={{ email: 'delivered', slack: 'delivered' }} />);
-    expect(screen.getByText(/Email: Delivered/i)).toBeInTheDocument();
-    expect(screen.getByText(/Slack: Delivered/i)).toBeInTheDocument();
-    // Check for icons if necessary (e.g., by testing for SVG title or class)
+  it('should display loading state initially', () => {
+    useSWRMock.mockReturnValue({ data: undefined, error: null, isLoading: true });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(screen.getByText(/Loading notification status.../i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
   });
 
-  it('should display failed status correctly', () => {
-    render(<NotificationStatus deliveryStatus={{ email: 'failed' }} />);
-    expect(screen.getByText(/Email: Failed/i)).toBeInTheDocument();
+  it('should display error state', () => {
+    const error = new Error('Fetch failed');
+    useSWRMock.mockReturnValue({ data: undefined, error: error, isLoading: false });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(screen.getByText(/Error loading status./i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
   });
 
-  it('should display not_configured status correctly', () => {
-    render(<NotificationStatus deliveryStatus={{ slack: 'not_configured' }} />);
-    expect(screen.getByText(/Slack: Not Configured/i)).toBeInTheDocument();
+  it('should display nothing found message when status is null', () => {
+    useSWRMock.mockReturnValue({ data: { deliveryStatus: null }, error: null, isLoading: false });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(screen.getByText(/No notification status tracked./i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
   });
 
-  it('should display unknown status correctly', () => {
-    render(<NotificationStatus deliveryStatus={{ email: 'some_weird_status' }} />);
-    expect(screen.getByText(/Email: Unknown/i)).toBeInTheDocument();
+  it('should display nothing found message when status is empty object', () => {
+    useSWRMock.mockReturnValue({ data: { deliveryStatus: {} }, error: null, isLoading: false });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(screen.getByText(/No notification status tracked./i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
   });
 
-  // TODO: Add test for retry link visibility (requires mocking isAdmin prop)
-  // it('should display retry link for failed status if admin', () => {
-  //   render(<NotificationStatus deliveryStatus={{ email: 'failed' }} isAdmin={true} />);
-  //   expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-  // });
+  it('should display delivered status for email and slack', async () => {
+    useSWRMock.mockReturnValue({
+      data: { deliveryStatus: { email: 'delivered', slack: 'delivered' } },
+      error: null,
+      isLoading: false,
+    });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(await screen.findByText(/Email: Delivered/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Slack: Delivered/i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
+  });
 
-  // it('should not display retry link if not admin', () => {
-  //   render(<NotificationStatus deliveryStatus={{ email: 'failed' }} isAdmin={false} />);
-  //   expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
-  // });
+  it('should display failed status correctly', async () => {
+    useSWRMock.mockReturnValue({
+      data: { deliveryStatus: { email: 'failed' } },
+      error: null,
+      isLoading: false,
+    });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(await screen.findByText(/Email: Failed/i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
+  });
+
+  it('should display not_configured status correctly', async () => {
+    useSWRMock.mockReturnValue({
+      data: { deliveryStatus: { slack: 'not_configured' } },
+      error: null,
+      isLoading: false,
+    });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(await screen.findByText(/Slack: Not Configured/i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
+  });
+
+  it('should display unknown status correctly', async () => {
+    useSWRMock.mockReturnValue({
+      data: { deliveryStatus: { email: 'some_weird_status' } },
+      error: null,
+      isLoading: false,
+    });
+    render(<NotificationStatus alertId="123" isAdmin={false} />);
+    expect(await screen.findByText(/Email: Unknown/i)).toBeInTheDocument();
+    expect(useSWRMock).toHaveBeenCalledWith(
+      '/api/alerts/123/notification-status',
+      expect.any(Function),
+      expect.any(Object),
+    );
+  });
+
+  // TODO: Add test for retry link visibility
+  // TODO: Test retry button functionality (requires mocking fetch and mutate)
 });

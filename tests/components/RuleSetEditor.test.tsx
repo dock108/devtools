@@ -2,32 +2,39 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RuleSetEditor } from '@/components/accounts/RuleSetEditor';
 import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 
-// Mock dependencies
-jest.mock('@/utils/supabase/client', () => ({
-  createClient: jest.fn(),
+// Mock dependencies using vi
+vi.mock('@/utils/supabase/client', () => ({
+  createClient: vi.fn(),
 }));
 
-jest.mock('sonner', () => ({
+vi.mock('sonner', () => ({
   toast: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
-// TODO: Re-enable after fixing test assertion failures in #<issue_number>
-describe.skip('RuleSetEditor', () => {
+// Convert createClient to Mock type for TypeScript
+const createClientMock = createClient as Mock;
+
+// Remove .skip to enable the test suite
+describe('RuleSetEditor', () => {
   const mockAccountId = 'acct_123';
+  // Define the mock Supabase client structure with vi.fn()
   const mockSupabase = {
-    from: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    eq: jest.fn(),
+    from: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (createClient as jest.Mock).mockReturnValue(mockSupabase);
+    // Clear mocks using vi
+    vi.clearAllMocks();
+    // Configure the mock return value
+    createClientMock.mockReturnValue(mockSupabase);
   });
 
   it('renders the edit thresholds button', () => {
@@ -53,9 +60,11 @@ describe.skip('RuleSetEditor', () => {
     const button = screen.getByRole('button', { name: /edit thresholds/i });
     fireEvent.click(button);
 
-    const textarea = await screen.findByRole('textbox');
-    expect(textarea).toHaveValue(expect.stringContaining('"velocityBreach"'));
-    expect(textarea).toHaveValue(expect.stringContaining('"maxPayouts": 3'));
+    // Find and cast textarea
+    const textarea = (await screen.findByRole('textbox')) as HTMLTextAreaElement;
+    // Check the .value property directly
+    expect(textarea.value).toEqual(expect.stringContaining('"velocityBreach"'));
+    expect(textarea.value).toEqual(expect.stringContaining('"maxPayouts": 3'));
   });
 
   it('shows custom rule set when provided', async () => {
@@ -68,13 +77,16 @@ describe.skip('RuleSetEditor', () => {
     const button = screen.getByRole('button', { name: /edit thresholds/i });
     fireEvent.click(button);
 
-    const textarea = await screen.findByRole('textbox');
-    expect(textarea).toHaveValue(expect.stringContaining('"maxPayouts": 5'));
-    expect(textarea).toHaveValue(expect.stringContaining('"windowSeconds": 120'));
+    // Find and cast textarea
+    const textarea = (await screen.findByRole('textbox')) as HTMLTextAreaElement;
+    // Check the .value property directly
+    expect(textarea.value).toEqual(expect.stringContaining('"maxPayouts": 5'));
+    expect(textarea.value).toEqual(expect.stringContaining('"windowSeconds": 120'));
   });
 
   it('validates and saves valid JSON', async () => {
-    mockSupabase.eq.mockResolvedValue({ error: null });
+    // Mock the eq function specifically for this test case
+    (mockSupabase.eq as Mock).mockResolvedValue({ error: null });
 
     render(<RuleSetEditor accountId={mockAccountId} ruleSet={null} />);
 
@@ -132,7 +144,7 @@ describe.skip('RuleSetEditor', () => {
     // Valid JSON but missing required properties according to schema
     const textarea = await screen.findByRole('textbox');
     fireEvent.change(textarea, {
-      target: { value: '{ "velocityBreach": { "maxPayouts": 0 } }' },
+      target: { value: '{ "velocityBreach": { "maxPayouts": 0 } }' }, // maxPayouts=0 violates schema >= 1
     });
 
     const saveButton = screen.getByRole('button', { name: /save changes/i });
@@ -150,13 +162,15 @@ describe.skip('RuleSetEditor', () => {
     const button = screen.getByRole('button', { name: /edit thresholds/i });
     fireEvent.click(button);
 
-    const textarea = await screen.findByRole('textbox');
+    // Find and cast textarea
+    const textarea = (await screen.findByRole('textbox')) as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '{}' } });
 
     const resetButton = screen.getByRole('button', { name: /reset to default/i });
     fireEvent.click(resetButton);
 
-    expect(textarea).toHaveValue(expect.stringContaining('"velocityBreach"'));
+    // Check the .value property directly after reset
+    expect(textarea.value).toEqual(expect.stringContaining('"velocityBreach"'));
     expect(toast.info).toHaveBeenCalledWith('Reset to default settings');
   });
 });
