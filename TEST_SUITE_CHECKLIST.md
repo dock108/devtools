@@ -49,3 +49,5 @@
 - [ ] tests/app/guardian-demo/scenarios.test.ts
 - [ ] tests/components/guardian-demo/Countdown.test.tsx
 - [ ] tests/components/guardian-demo/ScenarioPicker.test.tsx
+- [ ] tests/app/guardian-demo/useDemoScenario.timers.test.ts
+- [ ] tests/app/guardian-demo/useDemoScenario.test.ts
