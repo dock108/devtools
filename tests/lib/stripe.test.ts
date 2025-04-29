@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 
 describe('stripe singleton', () => {
   const originalEnv = process.env;
-  
+
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv };
@@ -28,10 +28,10 @@ describe('stripe singleton', () => {
     });
 
     require('../stripe');
-    
+
     expect(mockStripeConstructor).toHaveBeenCalledWith('test_key', {
       apiVersion: '2024-04-10',
       appInfo: { name: 'Stripe Guardian', version: '0.1.0' },
     });
   });
-}); 
+});

@@ -44,7 +44,7 @@ describe('ScenarioPicker', () => {
         currentScenario=""
         onChange={mockOnChange}
         onRestart={mockOnRestart}
-      />
+      />,
     );
 
     // Open the select dropdown
@@ -64,18 +64,18 @@ describe('ScenarioPicker', () => {
         currentScenario=""
         onChange={mockOnChange}
         onRestart={mockOnRestart}
-      />
+      />,
     );
 
     // Open the select dropdown
     fireEvent.click(screen.getByRole('combobox'));
-    
+
     // Select an option
     fireEvent.click(screen.getByText('Bank Account Swap'));
 
     // Check if onChange was called with the correct value
     expect(mockOnChange).toHaveBeenCalledWith('bank-swap');
-    
+
     // Check if localStorage.setItem was called with the correct key and value
     expect(localStorageMock.setItem).toHaveBeenCalledWith('sg:scenario', 'bank-swap');
   });
@@ -91,12 +91,12 @@ describe('ScenarioPicker', () => {
         currentScenario=""
         onChange={mockOnChange}
         onRestart={mockOnRestart}
-      />
+      />,
     );
 
     // Check if localStorage.getItem was called with the correct key
     expect(localStorageMock.getItem).toHaveBeenCalledWith('sg:scenario');
-    
+
     // Check if onChange was called with the value from localStorage
     expect(mockOnChange).toHaveBeenCalledWith('geo-mismatch');
   });
@@ -109,7 +109,7 @@ describe('ScenarioPicker', () => {
         currentScenario="velocity-breach"
         onChange={mockOnChange}
         onRestart={mockOnRestart}
-      />
+      />,
     );
 
     // localStorage.getItem should be called but onChange should not be called
@@ -125,7 +125,7 @@ describe('ScenarioPicker', () => {
         currentScenario="velocity-breach"
         onChange={mockOnChange}
         onRestart={mockOnRestart}
-      />
+      />,
     );
 
     // Click the restart button
@@ -134,4 +134,4 @@ describe('ScenarioPicker', () => {
     // Check if onRestart was called
     expect(mockOnRestart).toHaveBeenCalledTimes(1);
   });
-}); 
+});

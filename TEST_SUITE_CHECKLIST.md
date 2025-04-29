@@ -26,8 +26,8 @@
 - [x] tests/ui/NotificationStatus.test.tsx ✅
 - [x] tests/components/docs/SidebarNav.test.tsx ✅
 - [x] tests/components/RuleSetEditor.test.tsx ✅
-- [ ] tests/e2e/smoke.spec.ts
-- [ ] tests/e2e/docs.test.ts
+- [-] tests/e2e/smoke.spec.ts // Skipped: E2E server/env/timeout issues
+- [-] tests/e2e/docs.test.ts // Skipped: User request (complexity)
 - [ ] tests/e2e/contact.test.ts
 - [x] tests/lib/mdx/getDocBySlug.test.ts ✅
 - [-] tests/db/rls.spec.ts // Skipped: Requires specific test users in local Supabase
@@ -36,16 +36,16 @@
 - [-] tests/routes/oauth-callback.test.ts // Skipped: Unimplemented (describe.skip)
 - [-] tests/admin/notification-channels.test.tsx // Skipped: Dropdown/dialog interaction issues
 - [-] tests/stripe/webhook.spec.ts
-- [ ] tests/stripe/oauth.test.ts
+- [-] tests/stripe/oauth.test.ts // Skipped: describe.skip in file (stabilization issues)
 - [x] tests/rules/velocityBreach.test.ts
 - [x] tests/rules/geoMismatch.test.ts
 - [x] tests/rules/bankSwap.test.ts
-- [ ] scripts/generate-rss.test.ts
-- [ ] packages/common/src/formatters.test.ts
-- [ ] components/blog/BlogFooterSnippets.test.tsx
-- [ ] app/api/stripe/webhook/**tests**/route.test.ts
-- [ ] app/(dashboard)/accounts/ConnectedAccountsManager.test.tsx
-- [ ] lib/**tests**/stripe.test.ts
-- [ ] app/guardian-demo/**tests**/scenarios.test.ts
-- [ ] components/guardian-demo/**tests**/Countdown.test.tsx
-- [ ] components/guardian-demo/**tests**/ScenarioPicker.test.tsx
+- [ ] tests/scripts/generate-rss.test.ts
+- [ ] tests/packages/common/formatters.test.ts
+- [ ] tests/components/blog/BlogFooterSnippets.test.tsx
+- [ ] tests/app/api/stripe/webhook/route.test.ts
+- [ ] tests/app/dashboard/accounts/ConnectedAccountsManager.test.tsx
+- [ ] tests/lib/stripe.test.ts
+- [ ] tests/app/guardian-demo/scenarios.test.ts
+- [ ] tests/components/guardian-demo/Countdown.test.tsx
+- [ ] tests/components/guardian-demo/ScenarioPicker.test.tsx

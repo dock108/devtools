@@ -10,7 +10,7 @@
  */
 export function formatCurrency(
   value: number,
-  options: Partial<Intl.NumberFormatOptions> = {}
+  options: Partial<Intl.NumberFormatOptions> = {},
 ): string {
   const formatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -19,7 +19,7 @@ export function formatCurrency(
     maximumFractionDigits: 2,
     ...options,
   });
-  
+
   return formatter.format(value);
 }
 
@@ -36,4 +36,4 @@ export const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
   maximumFractionDigits: 2,
-}); 
+});
