@@ -91,17 +91,24 @@ export const geoMismatch = async (
   let mismatchCount = 0;
   const chargeCountries = new Set<string>();
 
-  // Assuming recentCharges context contains event_buffer entries
-  // TODO: Adapt if context provides parsed event objects
-  for (const chargeEvent of ctx.recentCharges as Tables<'event_buffer'>[]) {
-    const chargePayload = chargeEvent.payload;
-    const chargeCountry = getChargeCountry(chargePayload);
-    if (chargeCountry) {
-      chargeCountries.add(chargeCountry);
-      if (chargeCountry !== bankCountry) {
-        mismatchCount++;
+  // Add check to ensure recentCharges exists and is iterable
+  if (Array.isArray(ctx.recentCharges)) {
+    for (const chargeEvent of ctx.recentCharges as Tables<'event_buffer'>[]) {
+      const chargePayload = chargeEvent.payload;
+      const chargeCountry = getChargeCountry(chargePayload);
+      if (chargeCountry) {
+        chargeCountries.add(chargeCountry);
+        if (chargeCountry !== bankCountry) {
+          mismatchCount++;
+        }
       }
     }
+  } else {
+    // Optionally log if recentCharges is missing when expected
+    logger.warn(
+      { accountId, payoutId: payout.id },
+      'Recent charges data missing or invalid in context for geo-mismatch rule.',
+    );
   }
 
   logger.info(
@@ -122,7 +129,9 @@ export const geoMismatch = async (
         alertType: AlertType.GeoMismatch,
         severity: Severity.Medium,
         message: `Potential geo-mismatch: ${mismatchCount} recent charge(s) from countries (${Array.from(chargeCountries).join(', ')}) differ from payout bank country (${bankCountry}).`,
+        accountId: accountId,
         payoutId: payout.id,
+        createdAt: new Date().toISOString(),
       },
     ];
   }

@@ -38,7 +38,7 @@
 - [ ] tests/stripe/webhook.spec.ts
 - [ ] tests/stripe/oauth.test.ts
 - [x] tests/rules/velocityBreach.test.ts
-- [ ] tests/rules/geoMismatch.test.ts
+- [x] tests/rules/geoMismatch.test.ts
 - [ ] tests/rules/bankSwap.test.ts
 - [ ] scripts/generate-rss.test.ts
 - [ ] packages/common/src/formatters.test.ts
