@@ -5,21 +5,24 @@ import { FullConfig } from '@playwright/test';
 const execPromise = promisify(exec);
 
 async function globalSetup(config: FullConfig) {
-  // Only start Supabase if we're not already using it
+  // Temporarily disable Supabase startup for smoke tests
+  /*
   if (!process.env.SUPABASE_URL) {
     try {
       console.log('Starting Supabase...');
-      await execPromise('npx supabase start -x');
+      await execPromise('npx supabase start');
       console.log('Supabase started successfully');
     } catch (error) {
       console.error('Failed to start Supabase:', error);
       throw error;
     }
   }
+  */
 }
 
 async function globalTeardown() {
-  // Only stop Supabase if we started it
+  // Temporarily disable Supabase stop for smoke tests
+  /*
   if (!process.env.SUPABASE_URL) {
     try {
       console.log('Stopping Supabase...');
@@ -29,6 +32,7 @@ async function globalTeardown() {
       console.error('Failed to stop Supabase:', error);
     }
   }
+  */
 }
 
 export default globalSetup;

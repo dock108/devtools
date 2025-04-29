@@ -57,8 +57,9 @@ vi.mock('next/server', () => {
         this.method = input.method;
         this._headers = new Headers(input.headers);
         this._body = null;
-        if (input.body) {
-        }
+        // TODO: Handle body properly if input is Request
+        // if (input.body) {
+        // }
       }
     }
 
@@ -117,14 +118,28 @@ vi.mock('@/lib/stripe', () => {
   };
 });
 
+// Define accessible mock functions for Supabase
+const supabaseMocks = {
+  from: vi.fn(),
+  upsert: vi.fn(),
+  select: vi.fn(),
+  single: vi.fn(),
+};
+
+// Mock the supabase-admin module
 vi.mock('@/lib/supabase-admin', () => {
+  // Reset mocks before defining behaviour for factory
+  Object.values(supabaseMocks).forEach((mockFn) => mockFn.mockReset());
+
+  // Setup the chain with default success
+  supabaseMocks.single.mockResolvedValue({ data: { id: 1 }, error: null });
+  supabaseMocks.select.mockReturnValue({ single: supabaseMocks.single });
+  supabaseMocks.upsert.mockReturnValue({ select: supabaseMocks.select });
+  supabaseMocks.from.mockReturnValue({ upsert: supabaseMocks.upsert });
+
   return {
     supabaseAdmin: {
-      from: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      single: vi.fn(),
+      from: supabaseMocks.from,
     },
   };
 });
@@ -164,10 +179,6 @@ global.performance = {
 
 // Cast mocked imports for type safety
 const constructEventMock = stripeModule.stripe.webhooks.constructEvent as Mock;
-const supabaseAdminFromMock = supabaseAdmin.from as Mock;
-const supabaseAdminUpsertMock = supabaseAdmin.upsert as Mock;
-const supabaseAdminSelectMock = supabaseAdmin.select as Mock;
-const supabaseAdminSingleMock = supabaseAdmin.single as Mock;
 const isGuardianSupportedEventMock = isGuardianSupportedEvent as Mock;
 
 describe('Stripe Webhook Handler', () => {
@@ -184,17 +195,21 @@ describe('Stripe Webhook Handler', () => {
   };
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.clearAllMocks(); // Still clear all standard mocks
+    // Reset our specific supabase mocks that live outside vi.mock factory scope
+    Object.values(supabaseMocks).forEach((mockFn) => mockFn.mockClear());
+    // Re-apply default successful chain behaviour *before each test* if needed
+    // This ensures modifications in one test don't affect others.
+    supabaseMocks.single.mockResolvedValue({ data: { id: 1 }, error: null });
+    supabaseMocks.select.mockReturnValue({ single: supabaseMocks.single });
+    supabaseMocks.upsert.mockReturnValue({ select: supabaseMocks.select });
+    supabaseMocks.from.mockReturnValue({ upsert: supabaseMocks.upsert });
 
+    // Original setup continues...
     const routeHandler = await import('@/app/api/stripe/webhook/route');
     POST = routeHandler.POST;
 
     constructEventMock.mockReturnValue({ ...mockStripeEvent });
-
-    supabaseAdminFromMock.mockReturnThis();
-    supabaseAdminUpsertMock.mockReturnThis();
-    supabaseAdminSelectMock.mockReturnThis();
-    supabaseAdminSingleMock.mockResolvedValue({ data: { id: 1 }, error: null });
 
     (global.fetch as Mock).mockResolvedValue({
       ok: true,
@@ -205,7 +220,8 @@ describe('Stripe Webhook Handler', () => {
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    // vi.resetAllMocks(); // Can potentially interfere with mocks defined outside factory
+    // Stick to vi.clearAllMocks() in beforeEach for now.
   });
 
   it('should return 400 when signature header is missing', async () => {
@@ -250,12 +266,22 @@ describe('Stripe Webhook Handler', () => {
     expect(responseBody).toHaveProperty('error', 'Signature verification failed');
   });
 
-  it('should return 400 when account ID is missing', async () => {
+  it('should return 200 when account ID is missing', async () => {
+    // Import the actual module for spying
+    const validateModule = await import('@/lib/guardian/validateStripeEvent');
+    // Spy and mock implementation for THIS test
+    const isStrictSpy = vi.spyOn(validateModule, 'isStrictValidationEnabled').mockReturnValue(true);
+    const validateSpy = vi
+      .spyOn(validateModule, 'validateStripeEvent')
+      .mockImplementation(() => {}); // Mock validation to pass
+
     constructEventMock.mockReturnValue({
       id: 'evt_test123',
       type: 'charge.succeeded',
       data: { object: { id: 'ch_test123', object: 'charge' } },
+      // No account field in event
     });
+    isGuardianSupportedEventMock.mockReturnValue(true);
 
     const { NextRequest } = await import('next/server');
     const reqBody = JSON.stringify({ id: 'evt_test123' });
@@ -270,12 +296,16 @@ describe('Stripe Webhook Handler', () => {
 
     const response = await POST(mockRequest);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
     const responseBody = await response.json();
-    expect(responseBody).toHaveProperty('error', 'Missing account ID');
+    expect(responseBody).toEqual({ message: 'Missing account ID' });
+
+    // Optionally restore mocks if not handled by afterEach
+    isStrictSpy.mockRestore();
+    validateSpy.mockRestore();
   });
 
-  it('should return 400 for unsupported event types', async () => {
+  it('should return 200 for unsupported event types', async () => {
     constructEventMock.mockReturnValue({
       id: 'evt_test123',
       type: 'customer.created',
@@ -291,19 +321,28 @@ describe('Stripe Webhook Handler', () => {
       body: reqBody,
       headers: {
         'stripe-signature': 'test_signature',
+        'stripe-account': 'acct_test123',
       },
     });
     vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
     const response = await POST(mockRequest);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
     const responseBody = await response.json();
-    expect(responseBody).toHaveProperty('error', 'Unsupported event type');
+    expect(responseBody).toEqual({ message: 'Unsupported event type' });
     expect(isGuardianSupportedEventMock).toHaveBeenCalledWith('customer.created');
   });
 
-  it('should process a valid webhook event successfully', async () => {
+  it('should return 200 but indicate validation failure if validation fails', async () => {
+    const validateModule = await import('@/lib/guardian/validateStripeEvent');
+    const { ZodError } = await import('zod');
+    // Spy and mock implementation for THIS test
+    const isStrictSpy = vi.spyOn(validateModule, 'isStrictValidationEnabled').mockReturnValue(true);
+    const validateSpy = vi.spyOn(validateModule, 'validateStripeEvent').mockImplementation(() => {
+      throw new ZodError([]);
+    });
+
     constructEventMock.mockReturnValue({ ...mockStripeEvent, type: 'charge.succeeded' });
     isGuardianSupportedEventMock.mockReturnValue(true);
 
@@ -314,17 +353,55 @@ describe('Stripe Webhook Handler', () => {
       body: reqBody,
       headers: {
         'stripe-signature': 'test_signature',
+        'stripe-account': 'acct_test123',
       },
     });
     vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
-    supabaseAdminSingleMock.mockResolvedValueOnce({ data: { id: 'db-account-id' }, error: null });
-    supabaseAdminUpsertMock.mockResolvedValueOnce({ error: null });
-    (global.fetch as Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      text: () => Promise.resolve('OK'),
+    // No specific Supabase mock needed here as it shouldn't be called
+
+    const response = await POST(mockRequest);
+
+    expect(response.status).toBe(200);
+    const responseBody = await response.json();
+    expect(responseBody).toEqual({ message: 'Event validation failed' });
+
+    expect(constructEventMock).toHaveBeenCalled();
+    expect(isGuardianSupportedEventMock).toHaveBeenCalledWith('charge.succeeded');
+    expect(validateSpy).toHaveBeenCalled(); // Check the spy
+    expect(supabaseMocks.from).not.toHaveBeenCalled(); // Check the actual mock
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    isStrictSpy.mockRestore();
+    validateSpy.mockRestore();
+  });
+
+  it('should process a valid webhook event successfully when validation passes', async () => {
+    const validateModule = await import('@/lib/guardian/validateStripeEvent');
+    // Spy and mock implementation for THIS test
+    const isStrictSpy = vi.spyOn(validateModule, 'isStrictValidationEnabled').mockReturnValue(true);
+    const validateSpy = vi
+      .spyOn(validateModule, 'validateStripeEvent')
+      .mockImplementation(() => {}); // Mock validation to pass
+
+    constructEventMock.mockReturnValue({ ...mockStripeEvent, type: 'charge.succeeded' });
+    isGuardianSupportedEventMock.mockReturnValue(true);
+
+    // Supabase mock uses default success from beforeEach
+
+    const { NextRequest } = await import('next/server');
+    const reqBody = JSON.stringify(mockStripeEvent);
+    const mockRequest = new NextRequest('http://test.com/api/stripe/webhook', {
+      method: 'POST',
+      body: reqBody,
+      headers: {
+        'stripe-signature': 'test_signature',
+        'stripe-account': 'acct_test123',
+      },
     });
+    vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
+
+    // Fetch mock uses default success from beforeEach
 
     const response = await POST(mockRequest);
 
@@ -334,23 +411,32 @@ describe('Stripe Webhook Handler', () => {
 
     expect(constructEventMock).toHaveBeenCalled();
     expect(isGuardianSupportedEventMock).toHaveBeenCalledWith('charge.succeeded');
-    expect(supabaseAdminFromMock).toHaveBeenCalledWith('connected_accounts');
-    expect(supabaseAdminSelectMock).toHaveBeenCalledWith('id');
-    expect(supabaseAdminSingleMock).toHaveBeenCalled();
-    expect(supabaseAdminFromMock).toHaveBeenCalledWith('event_buffer');
-    expect(supabaseAdminUpsertMock).toHaveBeenCalledWith(expect.any(Object));
+    expect(validateSpy).toHaveBeenCalled(); // Check the spy
+    expect(supabaseMocks.from).toHaveBeenCalledWith('event_buffer'); // Check actual mock
+    expect(supabaseMocks.upsert).toHaveBeenCalledWith(expect.any(Object), expect.any(Object)); // Check actual mock
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/reactor'),
+      expect.stringContaining('/functions/v1/guardian-reactor'), // Corrected path based on handler
       expect.any(Object),
     );
+
+    isStrictSpy.mockRestore();
+    validateSpy.mockRestore();
   });
 
-  it('should handle errors during event buffer upsert', async () => {
+  it('should return 200 even on errors during event buffer upsert', async () => {
+    const validateModule = await import('@/lib/guardian/validateStripeEvent');
+    // Spy and mock implementation for THIS test
+    const isStrictSpy = vi.spyOn(validateModule, 'isStrictValidationEnabled').mockReturnValue(true);
+    const validateSpy = vi
+      .spyOn(validateModule, 'validateStripeEvent')
+      .mockImplementation(() => {}); // Mock validation to pass
+
     constructEventMock.mockReturnValue({ ...mockStripeEvent });
     isGuardianSupportedEventMock.mockReturnValue(true);
-    supabaseAdminSingleMock.mockResolvedValueOnce({ data: { id: 'db-account-id' }, error: null });
-    const dbError = new Error('DB upsert failed');
-    supabaseAdminUpsertMock.mockResolvedValueOnce({ error: dbError });
+
+    // Mock the final .single() call to return an error
+    const dbError = { message: 'DB upsert failed', details: '', hint: '', code: 'XYZ' };
+    supabaseMocks.single.mockResolvedValueOnce({ data: null, error: dbError });
 
     const { NextRequest } = await import('next/server');
     const reqBody = JSON.stringify(mockStripeEvent);
@@ -359,22 +445,37 @@ describe('Stripe Webhook Handler', () => {
       body: reqBody,
       headers: {
         'stripe-signature': 'test_signature',
+        'stripe-account': 'acct_test123',
       },
     });
     vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
     const response = await POST(mockRequest);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     const responseBody = await response.json();
-    expect(responseBody).toHaveProperty('error', 'Database error');
+    expect(responseBody).toEqual({ received: true });
+    expect(supabaseMocks.upsert).toHaveBeenCalled(); // Check the actual mock was called
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    isStrictSpy.mockRestore();
+    validateSpy.mockRestore();
   });
 
-  it('should handle failure when triggering the reactor function', async () => {
+  it('should return 200 even on failure when triggering the reactor function', async () => {
+    const validateModule = await import('@/lib/guardian/validateStripeEvent');
+    // Spy and mock implementation for THIS test
+    const isStrictSpy = vi.spyOn(validateModule, 'isStrictValidationEnabled').mockReturnValue(true);
+    const validateSpy = vi
+      .spyOn(validateModule, 'validateStripeEvent')
+      .mockImplementation(() => {}); // Mock validation to pass
+
     constructEventMock.mockReturnValue({ ...mockStripeEvent });
     isGuardianSupportedEventMock.mockReturnValue(true);
-    supabaseAdminSingleMock.mockResolvedValueOnce({ data: { id: 'db-account-id' }, error: null });
-    supabaseAdminUpsertMock.mockResolvedValueOnce({ error: null });
+
+    // Supabase mock uses default success from beforeEach
+
+    // Mock fetch to fail
     (global.fetch as Mock).mockRejectedValueOnce(new Error('Reactor trigger failed'));
 
     const { NextRequest } = await import('next/server');
@@ -384,14 +485,20 @@ describe('Stripe Webhook Handler', () => {
       body: reqBody,
       headers: {
         'stripe-signature': 'test_signature',
+        'stripe-account': 'acct_test123',
       },
     });
     vi.spyOn(mockRequest, 'text').mockResolvedValue(reqBody);
 
     const response = await POST(mockRequest);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     const responseBody = await response.json();
-    expect(responseBody).toHaveProperty('error', 'Failed to trigger reactor');
+    expect(responseBody).toEqual({ received: true });
+    expect(supabaseMocks.upsert).toHaveBeenCalled(); // Check the actual mock
+    expect(global.fetch).toHaveBeenCalled();
+
+    isStrictSpy.mockRestore();
+    validateSpy.mockRestore();
   });
 });

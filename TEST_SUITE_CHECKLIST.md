@@ -35,7 +35,7 @@
 - [x] tests/unit/send-slack-alert.test.ts ✅
 - [-] tests/routes/oauth-callback.test.ts // Skipped: Unimplemented (describe.skip)
 - [-] tests/admin/notification-channels.test.tsx // Skipped: Dropdown/dialog interaction issues
-- [ ] tests/stripe/webhook.spec.ts
+- [-] tests/stripe/webhook.spec.ts
 - [ ] tests/stripe/oauth.test.ts
 - [x] tests/rules/velocityBreach.test.ts
 - [x] tests/rules/geoMismatch.test.ts

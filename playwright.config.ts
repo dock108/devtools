@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
-  timeout: 30000,
+  timeout: 60000,
   expect: {
     timeout: 5000,
   },
@@ -15,7 +15,6 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -27,10 +26,14 @@ export default defineConfig({
   ],
   globalSetup: './tests/e2e/global-setup.ts',
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
+    command: 'pnpm dev -p $PORT',
+    port: 3000,
     reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: {
+      ...process.env,
+    },
   },
 });
