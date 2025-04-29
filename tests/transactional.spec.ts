@@ -1,70 +1,56 @@
-import { test, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 
-// Mock Supabase client
-jest.mock('@supabase/supabase-js', () => {
-  const mockTransaction = jest.fn();
-  const mockFrom = jest.fn();
-  const mockSelect = jest.fn();
-  const mockInsert = jest.fn();
-  const mockMaybeSingle = jest.fn();
-  const mockSingle = jest.fn();
-  const mockEq = jest.fn();
+// Mock Supabase client using vi
+vi.mock('@supabase/supabase-js', () => {
+  const mockTransaction = vi.fn();
+  const mockFrom = vi.fn();
+  // Keep mocks for chaining if needed
+  const mockSelect = vi.fn().mockReturnThis();
+  const mockInsert = vi.fn().mockReturnThis();
+  const mockMaybeSingle = vi.fn();
+  const mockSingle = vi.fn();
+  const mockEq = vi.fn().mockReturnThis();
 
   return {
-    createClient: jest.fn(() => ({
+    createClient: vi.fn(() => ({
       transaction: mockTransaction,
       from: mockFrom,
+      // Add mocked methods needed for chaining if not handled by mockReturnThis
+      select: mockSelect,
+      insert: mockInsert,
+      eq: mockEq,
+      maybeSingle: mockMaybeSingle,
+      single: mockSingle,
     })),
   };
 });
 
 describe('Guardian Reactor Transactional Processing', () => {
-  let mockSupabase;
-  let mockTx;
-  let mockFromFn;
-  let mockSelectFn;
-  let mockInsertFn;
-  let mockEqFn;
+  let mockSupabase: any; // Use any or define a mock type
+  let mockTx: any; // Use any or define a mock type
+  let mockFromFn: any;
 
-  beforeEach(() => {
-    // Reset all mocks
-    jest.clearAllMocks();
+  beforeEach(async () => {
+    // Make beforeEach async if needed
+    // Reset all mocks using vi
+    vi.clearAllMocks();
 
     // Create mock implementation for transaction callback
     mockTx = {
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
     };
 
     // Mock implementation for the main Supabase client
-    mockFromFn = jest.fn().mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: {
-              id: 'evt_123',
-              payload: {
-                id: 'evt_123',
-                account: 'acct_123',
-                type: 'charge.failed',
-              },
-            },
-            error: null,
-          }),
-        }),
-      }),
-    });
-
-    // Set up the mocked supabase client
-    const { createClient } = require('@supabase/supabase-js');
+    // Simplified setup, assuming the mock factory handles the client creation
+    const { createClient } = await import('@supabase/supabase-js'); // Use dynamic import if needed
     mockSupabase = createClient();
-    mockSupabase.from.mockImplementation(mockFromFn);
 
     // Mock transaction to execute the callback with mockTx
-    mockSupabase.transaction.mockImplementation(async (callback) => {
+    mockSupabase.transaction.mockImplementation(async (callback: (tx: any) => any) => {
       try {
         const result = await callback(mockTx);
         return { data: result, error: null };
@@ -74,195 +60,183 @@ describe('Guardian Reactor Transactional Processing', () => {
     });
   });
 
-  test('successfully processes a new event and creates alerts', async () => {
+  afterEach(() => {
+    // Optional: vi.resetAllMocks() if needed for cleaner state
+  });
+
+  // Rename test to it
+  it('successfully processes a new event and creates alerts', async () => {
     // Setup mocks for this test
-    mockTx.from.mockImplementation((table) => {
+    mockTx.from.mockImplementation((table: string) => {
       if (table === 'processed_events') {
         return {
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockResolvedValue({
-              error: null, // No error, insert successful
-            }),
-          }),
+          insert: vi.fn().mockReturnThis(), // Need select after insert
+          select: vi.fn().mockResolvedValue({ error: null }),
         };
       } else if (table === 'alerts') {
         return {
-          insert: jest.fn().mockResolvedValue({
-            error: null, // No error, alerts inserted
-          }),
+          insert: vi.fn().mockResolvedValue({ error: null }),
         };
       }
+      // Default return mockTx for chaining if needed
       return mockTx;
     });
 
-    // Import the handler module (just mocked definition for test)
-    const handleRequest = async (event) => {
-      await mockSupabase.transaction(async (tx) => {
-        const { error: dupError } = await tx
+    // ... (rest of test logic using mockTx as defined)
+    // Example handler structure (adapt as needed)
+    const handleRequest = async (event: any) => {
+      const { data, error } = await mockSupabase.transaction(async (tx: any) => {
+        const insertResult = await tx
           .from('processed_events')
           .insert({ stripe_event_id: 'evt_123' })
-          .select();
+          .select(); // Chain select
+
+        const dupError = insertResult.error;
 
         if (dupError?.code === '23505') {
-          // unique_violation
           return { skipped: true };
         }
+        if (dupError) throw dupError; // Throw other insert errors
 
         // Simulate alert creation
-        await tx.from('alerts').insert([
+        const alertResult = await tx.from('alerts').insert([
           {
             stripe_account_id: 'acct_123',
             alert_type: 'FAILED_CHARGE_BURST',
             event_id: 'evt_123',
           },
         ]);
+        if (alertResult.error) throw alertResult.error;
 
         return { processed: true, alertCount: 1 };
       });
-
-      return true;
-    };
-
-    // Execute the handler
-    const result = await handleRequest({ body: { event_buffer_id: 'evt_123' } });
-
-    // Verify transaction was called
-    expect(mockSupabase.transaction).toHaveBeenCalledTimes(1);
-
-    // Verify processed_events insertion was attempted
-    expect(mockTx.from).toHaveBeenCalledWith('processed_events');
-
-    // Verify we attempted to create alerts
-    expect(mockTx.from).toHaveBeenCalledWith('alerts');
-
-    expect(result).toBe(true);
-  });
-
-  test('skips duplicate events correctly (idempotency check)', async () => {
-    // Setup mocks for this test - simulate duplicate event error
-    mockTx.from.mockImplementation((table) => {
-      if (table === 'processed_events') {
-        return {
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockResolvedValue({
-              error: { code: '23505' }, // Unique violation error
-            }),
-          }),
-        };
-      }
-      return mockTx;
-    });
-
-    // Import the handler module (just mocked definition for test)
-    const handleRequest = async (event) => {
-      const { data, error } = await mockSupabase.transaction(async (tx) => {
-        const { error: dupError } = await tx
-          .from('processed_events')
-          .insert({ stripe_event_id: 'evt_123' })
-          .select();
-
-        if (dupError?.code === '23505') {
-          // unique_violation
-          return { skipped: true };
-        }
-
-        // This should never be called for duplicate events
-        await tx.from('alerts').insert([
-          {
-            stripe_account_id: 'acct_123',
-            alert_type: 'FAILED_CHARGE_BURST',
-            event_id: 'evt_123',
-          },
-        ]);
-
-        return { processed: true, alertCount: 1 };
-      });
-
+      if (error) throw error;
       return data;
     };
 
-    // Execute the handler
-    const result = await handleRequest({ body: { event_buffer_id: 'evt_123' } });
+    await handleRequest({ body: { event_buffer_id: 'evt_123' } });
 
-    // Verify transaction was called
     expect(mockSupabase.transaction).toHaveBeenCalledTimes(1);
-
-    // Verify processed_events insertion was attempted
     expect(mockTx.from).toHaveBeenCalledWith('processed_events');
-
-    // Verify we did NOT attempt to create alerts
-    expect(mockTx.from).not.toHaveBeenCalledWith('alerts');
-
-    // Verify we got the skipped result
-    expect(result).toEqual({ skipped: true });
+    expect(mockTx.from).toHaveBeenCalledWith('alerts');
+    // Add assertion for successful return if needed
   });
 
-  test('rolls back transaction on error', async () => {
-    // Setup mocks for this test
-    mockTx.from.mockImplementation((table) => {
+  // Rename test to it
+  it('skips duplicate events correctly (idempotency check)', async () => {
+    // Setup mocks for duplicate error
+    mockTx.from.mockImplementation((table: string) => {
       if (table === 'processed_events') {
         return {
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockResolvedValue({
-              error: null, // No error, insert successful
-            }),
-          }),
-        };
-      } else if (table === 'alerts') {
-        return {
-          insert: jest.fn().mockRejectedValue(new Error('Simulated rule engine error')),
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ error: { code: '23505' } }), // Simulate duplicate error on select
         };
       }
       return mockTx;
     });
 
-    // Import the handler module (just mocked definition for test)
-    const handleRequest = async (event) => {
-      try {
-        const { data, error } = await mockSupabase.transaction(async (tx) => {
-          const { error: dupError } = await tx
+    // ... (rest of test logic)
+    // Example handler structure (adapt as needed)
+    const handleRequest = async (event: any) => {
+      const { data, error } = await mockSupabase.transaction(async (tx: any) => {
+        const insertResult = await tx
+          .from('processed_events')
+          .insert({ stripe_event_id: 'evt_123' })
+          .select(); // Chain select
+
+        const dupError = insertResult.error;
+
+        if (dupError?.code === '23505') {
+          return { skipped: true };
+        }
+        if (dupError) throw dupError; // Throw other insert errors
+
+        // This should not be reached
+        const alertResult = await tx.from('alerts').insert([
+          {
+            stripe_account_id: 'acct_123',
+            alert_type: 'FAILED_CHARGE_BURST',
+            event_id: 'evt_123',
+          },
+        ]);
+        if (alertResult.error) throw alertResult.error;
+
+        return { processed: true, alertCount: 1 };
+      });
+      if (error) throw error;
+      return data;
+    };
+
+    const result = await handleRequest({ body: { event_buffer_id: 'evt_123' } });
+
+    expect(mockSupabase.transaction).toHaveBeenCalledTimes(1);
+    expect(mockTx.from).toHaveBeenCalledWith('processed_events');
+    expect(mockTx.from).not.toHaveBeenCalledWith('alerts');
+    expect(result).toEqual({ skipped: true });
+  });
+
+  // Rename test to it
+  it('rolls back transaction on error', async () => {
+    // Setup mocks for error during alert insertion
+    mockTx.from.mockImplementation((table: string) => {
+      if (table === 'processed_events') {
+        return {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ error: null }), // Insert succeeds
+        };
+      } else if (table === 'alerts') {
+        return {
+          insert: vi.fn().mockRejectedValue(new Error('Simulated rule engine error')), // Error on alert insert
+        };
+      }
+      return mockTx;
+    });
+
+    // ... (rest of test logic)
+    // Example handler structure (adapt as needed)
+    const handleRequest = async (event: any) => {
+      let caughtError: Error | null = null;
+      const { data, error } = await mockSupabase
+        .transaction(async (tx: any) => {
+          const insertResult = await tx
             .from('processed_events')
             .insert({ stripe_event_id: 'evt_123' })
-            .select();
+            .select(); // Chain select
+
+          const dupError = insertResult.error;
 
           if (dupError?.code === '23505') {
-            // unique_violation
             return { skipped: true };
           }
+          if (dupError) throw dupError; // Throw other insert errors
 
           // This will throw
-          await tx.from('alerts').insert([
+          const alertResult = await tx.from('alerts').insert([
             {
               stripe_account_id: 'acct_123',
               alert_type: 'FAILED_CHARGE_BURST',
               event_id: 'evt_123',
             },
           ]);
+          // Error is thrown before this check
+          // if (alertResult.error) throw alertResult.error;
 
-          return { processed: true, alertCount: 1 };
+          return { processed: true, alertCount: 1 }; // Should not be reached
+        })
+        .catch((e: Error) => {
+          caughtError = e;
+          return { data: null, error: e }; // Transaction returns error
         });
 
-        return { data, error };
-      } catch (e) {
-        return { data: null, error: e };
-      }
+      return { data, error: error || caughtError };
     };
 
-    // Execute the handler
     const result = await handleRequest({ body: { event_buffer_id: 'evt_123' } });
 
-    // Verify transaction was called
     expect(mockSupabase.transaction).toHaveBeenCalledTimes(1);
-
-    // Verify processed_events insertion was attempted
     expect(mockTx.from).toHaveBeenCalledWith('processed_events');
-
-    // Verify we attempted to create alerts
     expect(mockTx.from).toHaveBeenCalledWith('alerts');
-
-    // Verify we got an error result
-    expect(result.error).toBeTruthy();
-
-    // Transaction should be rolled back, no processed_events entry should exist
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result.error?.message).toContain('Simulated rule engine error');
   });
 });

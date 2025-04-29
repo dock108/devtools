@@ -11,10 +11,10 @@
 - [-] tests/risk_score.spec.ts // Skipped: requires live Supabase connection
 - [-] tests/rule_sets.spec.ts // Skipped: requires live Supabase connection with data
 - [x] tests/logging.spec.ts ✅
-- [ ] tests/retention.spec.ts
-- [ ] tests/transactional.spec.ts
-- [ ] tests/reactor.spec.ts
-- [ ] tests/validation.spec.ts ✅
+- [-] tests/retention.spec.ts // Skipped: Requires live/local Supabase connection
+- [x] tests/transactional.spec.ts ✅
+- [-] tests/reactor.spec.ts // Skipped: Requires env vars (SUPABASE\_\*) and connection
+- [x] tests/validation.spec.ts ✅
 - [-] tests/alert-dispatch.integration.test.ts // Skipped: Deno dependency / URL import issue
 - [x] tests/rule-set-schema.test.ts ✅
 - [x] tests/formatters.test.ts ✅

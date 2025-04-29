@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
@@ -14,7 +14,7 @@ const skipTests = !SUPABASE_URL || !SUPABASE_SERVICE_KEY;
 
 describe('Guardian Retention Tests', () => {
   if (skipTests) {
-    test.skip('Skipping retention tests - Supabase connection details missing', () => {});
+    it.skip('Skipping retention tests - Supabase connection details missing', () => {});
     return;
   }
 
@@ -104,7 +104,7 @@ describe('Guardian Retention Tests', () => {
     await supabase.from('event_buffer').delete().eq('stripe_account_id', testAccountId);
   });
 
-  test('should scrub event payload older than TTL days', async () => {
+  it('should scrub event payload older than TTL days', async () => {
     // 1. Run the scrub function
     const { error: rpcError } = await supabase.rpc('scrub_event_buffer', {
       ttl_days: ttlDays,
@@ -140,7 +140,7 @@ describe('Guardian Retention Tests', () => {
     expect(recentEvent.payload.data.object.description).toEqual('Test charge with PII'); // Check PII still exists
   });
 
-  test('should not re-scrub already scrubbed events', async () => {
+  it('should not re-scrub already scrubbed events', async () => {
     // 1. Manually scrub the event first
     const { error: updateError } = await supabase
       .from('event_buffer')
@@ -164,7 +164,7 @@ describe('Guardian Retention Tests', () => {
     expect(scrubbedEvent.payload).toEqual({ data: { id: 'test' } }); // Should still be the manually set payload
   });
 
-  test('should purge events older than TTL + purgeDelay days', async () => {
+  it('should purge events older than TTL + purgeDelay days', async () => {
     // Note: The edge function combines scrub and purge. Here we test purge separately.
     // We could also invoke the edge function if deployed/mocked.
 

@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs/promises';
 import { getAllDocs } from '@/lib/mdx/getDocBySlug';
 
-// Mock the fs module
+// Mock the fs module - Add the 'default' key
 vi.mock('fs/promises', () => ({
-  readdir: vi.fn(),
-  readFile: vi.fn(),
+  default: {
+    readdir: vi.fn(),
+    readFile: vi.fn(),
+  },
 }));
 
 describe('getAllDocs', () => {
