@@ -59,7 +59,9 @@ export const velocityBreach = async (
         alertType: AlertType.Velocity,
         severity: Severity.High,
         message: `🚨 ${recentCount} payouts detected within ${windowSeconds} seconds (threshold: ${maxPayouts}).`,
-        payoutId: payoutId, // Include the ID of the payout that triggered the breach
+        accountId: accountId,
+        payoutId: payoutId,
+        createdAt: new Date().toISOString(),
       },
     ];
   }

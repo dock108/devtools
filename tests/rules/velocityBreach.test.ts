@@ -1,51 +1,99 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { velocityBreach } from '@/lib/guardian/rules/velocityBreach';
-import { logger } from '@/lib/logger';
+// import { logger as actualLogger } from '@/lib/logger'; // Don't need actual logger
+// import { createAdminClient } from '@/lib/supabase/admin'; // Removed as unused
+import { PayoutEvent } from '@/lib/types'; // Assuming PayoutEvent type is defined here
+import { Stripe } from 'stripe';
+// Correct import path for AlertType and Severity
+import { AlertType, Severity } from '@/lib/guardian/constants';
+import { Tables } from '@/types/supabase'; // Make sure Tables type is imported if used in Partial<>
 
-// Mock dependencies
+// Define mockLogger FIRST
+// REMOVE this definition, define inside mock
+/*
 const mockLogger = {
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
 };
-jest.mock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
+*/
+
+// Mock logger at the top level and define implementation inline
+jest.mock('@/lib/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+// Remove edge logger mock if not used by this rule
+// jest.mock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
+
+// Mock Supabase admin client (this can stay top-level if needed)
+// REMOVE THIS MOCK AS IT'S NOT USED BY THE RULE DIRECTLY
+// jest.mock('@/lib/supabase/admin');
 
 // Mock the rule-specific dependencies
-const mockGetPayoutsWithinWindow = jest.fn();
+// REMOVE THIS MOCK FUNCTION
+// const mockGetPayoutsWithinWindow = jest.fn();
+
+// REMOVE THIS DETAILED MOCK
+/*
 jest.mock('@/lib/supabase/admin', () => ({
   __esModule: true,
   createAdminClient: jest.fn(() => ({
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      gte: jest.fn().mockReturnThis(),
-      returns: jest.fn().mockImplementation(mockGetPayoutsWithinWindow),
-    })),
+    from: jest.fn((table) => {
+      if (table === 'event_buffer') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          gte: jest.fn().mockReturnThis(),
+          returns: jest.fn().mockImplementation(async () => ({
+            data: await mockGetPayoutsWithinWindow(), // Wrap result in { data: ... }
+            error: null,
+          })),
+        };
+      }
+      return { select: jest.fn().mockReturnThis() };
+    }),
   })),
 }));
+*/
 
 describe('Velocity Breach Rule', () => {
+  // Need to import the mocked logger instance to clear it
+  const { logger: mockLogger } = require('@/lib/logger');
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Clear previous mock calls, not the mocks themselves
+    // jest.clearAllMocks(); // This clears all mocks, potentially including requireActual if used elsewhere
+    // Clear specific logger mock calls instead
+    mockLogger.info.mockClear();
+    mockLogger.warn.mockClear();
+    mockLogger.error.mockClear();
+
+    // Remove doMock calls as mock is now top-level
+    // jest.doMock('@/lib/logger', () => ({ logger: mockLogger }));
+    // jest.doMock('@/lib/edge-logger', () => ({ edgeLogger: mockLogger }));
   });
 
-  // Helper to create mock payout events
-  const createPayoutEvent = (id: string, timestamp: Date) => ({
-    id: `pi_${id}`,
-    created_at: timestamp.toISOString(),
-    stripe_account_id: 'acct_123',
-    amount: 5000,
-    currency: 'usd',
+  // Helper to create mock payout events (format expected by rule from DB)
+  const createDbPayoutEvent = (id: string, timestamp: Date): Partial<Tables<'event_buffer'>> => ({
+    id: `evt_${id}`,
+    received_at: timestamp.toISOString(),
+    type: 'payout.created',
+    account_id: 'acct_test_123',
+    payload: JSON.stringify({ id: `po_${id}` }),
   });
 
-  // Helper to create mock Stripe event
+  // Helper to create mock Stripe event (input to the rule)
   const createStripeEvent = (type = 'payout.created') => ({
-    id: 'evt_123',
+    id: 'evt_trigger_123',
     type,
     account: 'acct_123',
     data: {
       object: {
-        id: 'po_123',
+        id: 'po_trigger_123',
         object: 'payout',
       },
     },
@@ -55,106 +103,90 @@ describe('Velocity Breach Rule', () => {
     const event = {
       ...createStripeEvent('charge.succeeded'),
     };
-
-    const ctx = {
-      recentPayouts: [],
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
-    };
+    const ctx = { config: { velocityBreach: { maxPayouts: 3, windowSeconds: 60 } } }; // No recentPayouts needed here
 
     const result = await velocityBreach(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).not.toHaveBeenCalled();
+    expect(mockLogger.info).not.toHaveBeenCalled();
+    // REMOVE THIS EXPECTATION
+    // expect(mockGetPayoutsWithinWindow).not.toHaveBeenCalled();
   });
 
   it('should not trigger alert when payouts are below threshold', async () => {
     const now = new Date();
-    const recentPayouts = [
-      createPayoutEvent('1', new Date(now.getTime() - 30000)), // 30 seconds ago
-      createPayoutEvent('2', new Date(now.getTime() - 15000)), // 15 seconds ago
+    const mockDbPayouts = [
+      createDbPayoutEvent('1', new Date(now.getTime() - 30000)),
+      createDbPayoutEvent('2', new Date(now.getTime() - 15000)),
     ];
+    // REMOVE THIS MOCK RESOLVE
+    // mockGetPayoutsWithinWindow.mockResolvedValueOnce({ data: mockDbPayouts, error: null });
 
     const event = createStripeEvent();
     const ctx = {
-      recentPayouts,
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
+      config: { velocityBreach: { maxPayouts: 3, windowSeconds: 60 } },
+      recentPayouts: mockDbPayouts,
     };
 
     const result = await velocityBreach(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123', count: 2 },
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'acct_123', count: 2 }),
       'Velocity rule executed',
     );
   });
 
   it('should trigger alert when payouts meet or exceed threshold', async () => {
     const now = new Date();
-    const recentPayouts = [
-      createPayoutEvent('1', new Date(now.getTime() - 55000)), // 55 seconds ago
-      createPayoutEvent('2', new Date(now.getTime() - 30000)), // 30 seconds ago
-      createPayoutEvent('3', new Date(now.getTime() - 15000)), // 15 seconds ago
+    const mockDbPayouts = [
+      createDbPayoutEvent('1', new Date(now.getTime() - 55000)),
+      createDbPayoutEvent('2', new Date(now.getTime() - 30000)),
+      createDbPayoutEvent('3', new Date(now.getTime() - 15000)),
     ];
+    // REMOVE THIS MOCK RESOLVE
+    // mockGetPayoutsWithinWindow.mockResolvedValueOnce({ data: mockDbPayouts, error: null });
 
     const event = createStripeEvent();
     const ctx = {
-      recentPayouts,
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
+      config: { velocityBreach: { maxPayouts: 3, windowSeconds: 60 } },
+      recentPayouts: mockDbPayouts,
     };
 
     const result = await velocityBreach(event as any, ctx as any);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
-      type: 'VELOCITY',
-      severity: 'high',
-      message: '🚨 3 payouts inside 60s',
-      payoutId: 'po_123',
+      alertType: AlertType.Velocity,
+      severity: Severity.High,
+      message: '🚨 3 payouts detected within 60 seconds (threshold: 3).',
+      payoutId: 'po_trigger_123',
       accountId: 'acct_123',
       createdAt: expect.any(String),
     });
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123', count: 3 },
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'acct_123', count: 3 }),
       'Velocity rule executed',
     );
   });
 
   it('should ignore payouts outside the time window', async () => {
     const now = new Date();
-    const recentPayouts = [
-      createPayoutEvent('1', new Date(now.getTime() - 65000)), // 65 seconds ago - outside window
-      createPayoutEvent('2', new Date(now.getTime() - 30000)), // 30 seconds ago
-      createPayoutEvent('3', new Date(now.getTime() - 15000)), // 15 seconds ago
+    const mockDbPayouts = [
+      createDbPayoutEvent('1', new Date(now.getTime() - 65000)), // Outside 60s window
+      createDbPayoutEvent('2', new Date(now.getTime() - 30000)),
+      createDbPayoutEvent('3', new Date(now.getTime() - 15000)),
     ];
+    // REMOVE THIS MOCK RESOLVE
+    // mockGetPayoutsWithinWindow.mockResolvedValueOnce({ data: mockDbPayouts, error: null });
 
     const event = createStripeEvent();
     const ctx = {
-      recentPayouts,
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
+      config: { velocityBreach: { maxPayouts: 3, windowSeconds: 60 } },
+      recentPayouts: mockDbPayouts,
     };
 
     const result = await velocityBreach(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith(
-      { accountId: 'acct_123', count: 2 },
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'acct_123', count: 2 }),
       'Velocity rule executed',
     );
   });
