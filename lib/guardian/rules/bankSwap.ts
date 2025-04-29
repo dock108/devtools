@@ -53,12 +53,19 @@ export const bankSwap = async (
     return [];
   }
 
+  // Calculate time difference for message
+  const timeDiffMinutes = Math.round(
+    (Date.now() - new Date(recentBankChangeEvent.received_at!).getTime()) / 60000,
+  );
+
   return [
     {
       alertType: AlertType.BankSwap,
       severity: Severity.High,
-      message: `Potential bank swap: External account created ~${Math.round((Date.now() - new Date(recentBankChangeEvent.received_at!).getTime()) / 60000)} min before a $${payoutAmount.toFixed(2)} payout.`,
+      message: `Potential bank swap: External account created ~${timeDiffMinutes} min before a $${payoutAmount.toFixed(2)} payout.`,
+      accountId: accountId,
       payoutId: payout.id,
+      createdAt: new Date().toISOString(),
     },
   ];
 };

@@ -39,7 +39,7 @@
 - [ ] tests/stripe/oauth.test.ts
 - [x] tests/rules/velocityBreach.test.ts
 - [x] tests/rules/geoMismatch.test.ts
-- [ ] tests/rules/bankSwap.test.ts
+- [x] tests/rules/bankSwap.test.ts
 - [ ] scripts/generate-rss.test.ts
 - [ ] packages/common/src/formatters.test.ts
 - [ ] components/blog/BlogFooterSnippets.test.tsx

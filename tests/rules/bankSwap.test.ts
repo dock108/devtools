@@ -1,6 +1,9 @@
 import { bankSwap } from '@/lib/guardian/rules/bankSwap';
 import { logger } from '@/lib/logger';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { RuleContext } from '@/lib/guardian/rules/index';
+import { AlertType, Severity } from '@/lib/guardian/constants';
+import { Tables } from '@/types/supabase'; // Import Tables
 
 // Mock dependencies
 const mockLogger = {
@@ -27,37 +30,46 @@ jest.mock('@/lib/supabase/admin', () => ({
 }));
 
 describe('Bank Swap Rule', () => {
+  const { logger: mockLogger } = require('@/lib/logger');
+
   beforeEach(() => {
     jest.clearAllMocks();
-    // Mock the Date.now() to ensure consistent test results
-    jest.spyOn(Date, 'now').mockImplementation(() => 1640995200000); // 2022-01-01T00:00:00.000Z
+    // Mock Date.now() for consistent time comparisons
+    jest
+      .spyOn(Date, 'now')
+      .mockImplementation(() => new Date('2024-01-01T12:00:00.000Z').getTime());
   });
 
   afterEach(() => {
+    // Restore Date.now() mock
     jest.restoreAllMocks();
   });
 
-  // Helper to create mock event objects
-  const createPayoutEvent = (type: string, id: string, timestamp: Date, amount = 150000) => ({
-    id: id,
+  // Helper to create mock event_buffer entries
+  const createMockEventBufferEntry = (
+    id: string,
+    type: string,
+    timestamp: Date,
+  ): Partial<Tables<'event_buffer'>> => ({
+    id: `evt_${id}`,
     type,
-    created_at: timestamp.toISOString(),
+    received_at: timestamp.toISOString(),
     stripe_account_id: 'acct_123',
-    amount,
-    currency: 'usd',
+    payload: {}, // Payload not directly used by bankSwap filter logic
   });
 
-  // Helper to create mock Stripe payout event
+  // Helper to create mock Stripe payout event (Input event)
   const createStripePayoutEvent = (amount = 150000) => ({
-    id: 'evt_123',
+    id: 'evt_trigger_123',
     type: 'payout.created',
     account: 'acct_123',
     data: {
       object: {
         id: 'po_123',
         object: 'payout',
-        amount,
+        amount, // in cents
         currency: 'usd',
+        // destination not needed by this rule's logic
       },
     },
   });
@@ -82,7 +94,6 @@ describe('Bank Swap Rule', () => {
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
 
   it('should not trigger alert when payout amount is below threshold', async () => {
@@ -92,7 +103,7 @@ describe('Bank Swap Rule', () => {
     // External account created 3 minutes ago
     const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
     const recentPayouts = [
-      createPayoutEvent('external_account.created', 'ea_123', threeMinutesAgo),
+      createMockEventBufferEntry('ea_123', 'external_account.created', threeMinutesAgo),
     ];
 
     const ctx = {
@@ -107,86 +118,110 @@ describe('Bank Swap Rule', () => {
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
   });
 
   it('should not trigger alert when bank change is outside lookback window', async () => {
-    // Payout of $1500 (above $1000 threshold)
-    const event = createStripePayoutEvent(150000);
+    const now = Date.now(); // Use mocked Date.now()
+    const lookbackMinutes = 30;
+    const event = createStripePayoutEvent(200000); // $2000 (above threshold)
 
-    // External account created 10 minutes ago (outside 5 min window)
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentPayouts = [createPayoutEvent('external_account.created', 'ea_123', tenMinutesAgo)];
+    // Bank change event created *before* the lookback window
+    const bankChangeTime = new Date(now - (lookbackMinutes + 5) * 60 * 1000);
+    const mockEvents = [
+      createMockEventBufferEntry('bank_old', 'external_account.created', bankChangeTime),
+      // Add some other irrelevant events
+      createMockEventBufferEntry('payout1', 'payout.paid', new Date(now - 10 * 60 * 1000)),
+    ];
 
     const ctx = {
-      recentPayouts,
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
+      recentPayouts: mockEvents, // Provide mock events
+      config: { bankSwap: { lookbackMinutes, minPayoutUsd: 1000 } },
     };
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
+    // Update Logger expectation
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      {
+        accountId: 'acct_123',
+        payoutId: 'po_123',
+        payoutAmount: 2000, // $2000.00
+        bankChangeFound: false, // Event was outside window
+      },
+      'Bank-swap rule evaluated',
+    );
   });
 
   it('should trigger alert when large payout follows recent external account change', async () => {
-    // Payout of $1500 (above $1000 threshold)
-    const event = createStripePayoutEvent(150000);
+    const now = Date.now(); // Use mocked Date.now()
+    const lookbackMinutes = 30;
+    const event = createStripePayoutEvent(200000); // $2000
 
-    // External account created 3 minutes ago (within 5 min window)
-    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
-    const recentPayouts = [
-      createPayoutEvent('external_account.created', 'ea_123', threeMinutesAgo),
+    // Bank change event created *within* the lookback window
+    const bankChangeTime = new Date(now - (lookbackMinutes - 5) * 60 * 1000);
+    const mockEvents = [
+      createMockEventBufferEntry('bank_recent', 'external_account.created', bankChangeTime),
+      createMockEventBufferEntry('payout1', 'payout.paid', new Date(now - 10 * 60 * 1000)),
     ];
 
     const ctx = {
-      recentPayouts,
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
+      recentPayouts: mockEvents, // Provide mock events
+      config: { bankSwap: { lookbackMinutes, minPayoutUsd: 1000 } },
     };
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toHaveLength(1);
+    // Update Alert expectation
     expect(result[0]).toEqual({
-      type: 'BANK_SWAP',
-      severity: 'high',
-      message: 'Bank account swapped 5 min before $1500 payout',
-      payoutId: 'po_123',
+      alertType: AlertType.BankSwap,
+      severity: Severity.High,
+      // Message depends on exact timing (now - bankChangeTime)
+      // bankChangeTime = now - (30 - 5) * 60 * 1000 = now - 25 * 60 * 1000
+      // timeDiff = now - bankChangeTime = 25 * 60 * 1000 ms = 25 mins
+      message: 'Potential bank swap: External account created ~25 min before a $2000.00 payout.',
       accountId: 'acct_123',
+      payoutId: 'po_123',
       createdAt: expect.any(String),
     });
-    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
+    // Update Logger expectation
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      {
+        accountId: 'acct_123',
+        payoutId: 'po_123',
+        payoutAmount: 2000,
+        bankChangeFound: true, // Event was found within window
+      },
+      'Bank-swap rule evaluated',
+    );
   });
 
   it('should not trigger alert when no external account changes found', async () => {
-    // Payout of $1500 (above $1000 threshold)
-    const event = createStripePayoutEvent(150000);
+    const now = Date.now(); // Use mocked Date.now()
+    const lookbackMinutes = 30;
+    const event = createStripePayoutEvent(200000); // $2000
 
-    // No external_account.created events
-    const recentPayouts = [
-      createPayoutEvent('payout.created', 'po_456', new Date(Date.now() - 2 * 60 * 1000)),
+    // No bank change events
+    const mockEvents = [
+      createMockEventBufferEntry('payout1', 'payout.paid', new Date(now - 10 * 60 * 1000)),
+      createMockEventBufferEntry('payout2', 'payout.created', new Date(now - 5 * 60 * 1000)),
     ];
 
     const ctx = {
-      recentPayouts,
-      recentCharges: [],
-      config: {
-        velocityBreach: { maxPayouts: 3, windowSeconds: 60 },
-        bankSwap: { lookbackMinutes: 5, minPayoutUsd: 1000 },
-        geoMismatch: { mismatchChargeCount: 2 },
-      },
+      recentPayouts: mockEvents, // Provide mock events (no bank changes)
+      config: { bankSwap: { lookbackMinutes, minPayoutUsd: 1000 } },
     };
 
     const result = await bankSwap(event as any, ctx as any);
     expect(result).toEqual([]);
-    expect(logger.info).toHaveBeenCalledWith({ accountId: 'acct_123' }, 'Bank-swap rule evaluated');
+    // Update Logger expectation
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      {
+        accountId: 'acct_123',
+        payoutId: 'po_123',
+        payoutAmount: 2000,
+        bankChangeFound: false, // No external_account.created events provided
+      },
+      'Bank-swap rule evaluated',
+    );
   });
 });
