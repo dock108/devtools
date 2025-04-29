@@ -40,9 +40,8 @@
 - [x] tests/rules/velocityBreach.test.ts
 - [x] tests/rules/geoMismatch.test.ts
 - [x] tests/rules/bankSwap.test.ts
-- [ ] tests/scripts/generate-rss.test.ts
+- [-] tests/scripts/generate-rss.test.ts // Skipped: Needs test structure/mocks (originally a script)
 - [ ] tests/packages/common/formatters.test.ts
-- [ ] tests/components/blog/BlogFooterSnippets.test.tsx
 - [ ] tests/app/api/stripe/webhook/route.test.ts
 - [ ] tests/app/dashboard/accounts/ConnectedAccountsManager.test.tsx
 - [ ] tests/lib/stripe.test.ts
