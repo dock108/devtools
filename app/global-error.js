@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import * as Sentry from '@sentry/nextjs';
+// import * as Sentry from '@sentry/nextjs';
 
 export default function GlobalError({ error, reset }) {
   useEffect(() => {
@@ -20,7 +20,9 @@ export default function GlobalError({ error, reset }) {
           </p>
           <button
             onClick={() => {
-              Sentry.captureException(error);
+              // Sentry.captureException(error);
+              // Consider adding alternative error reporting here if needed
+              reset(); // Call reset directly now
             }}
             className="mt-4 rounded-md bg-destructive px-4 py-2 text-sm text-destructive-foreground hover:bg-destructive/80"
           >

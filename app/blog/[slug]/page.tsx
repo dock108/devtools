@@ -7,14 +7,16 @@ import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight'; // Or your preferred highlighter
 import { getAllPosts, getPrevNextPosts, PostFrontMatter } from '@/lib/blog';
-import { Container } from '@/components/Container';
+import { Container } from '@/components/ui/container';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/date';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronLeft, Github, Twitter } from 'lucide-react';
 import siteConfig from '@/lib/siteConfig';
 import DemoCTA from '@/components/mdx/DemoCTA'; // Keep for mapping
 import { Alert } from '@/components/ui/alert'; // Changed to named import
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface BlogPostPageProps {
   params: { slug: string };

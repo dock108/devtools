@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Run lint-staged but continue even if it fails (exit code 0)
-npm run lint-staged || echo "Linting had some issues, but we'll allow the commit to proceed."

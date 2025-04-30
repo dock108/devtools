@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation'; // Use App Router's navigation
-import { Container } from '@/components/Container';
+import { Container } from '@/components/ui/container';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,6 +18,9 @@ import { useUser } from '@/lib/hooks/useUser'; // Assuming a hook to get user st
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { isPro } from '@/lib/guardian/plan'; // Import the plan helper
+import { Metadata } from 'next';
+import { createClient } from '@/utils/supabase/server';
+import { AlertFeedback } from './AlertFeedback'; // Client component for feedback
 // import { getSubscription } from '@/lib/supabase/user'; // Removed
 // import ManageSubscriptionButton from './ManageSubscriptionButton'; // Commented out
 

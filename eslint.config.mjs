@@ -78,7 +78,7 @@ const eslintConfig = [
         ecmaFeatures: { jsx: true },
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: ['./tsconfig.eslint.json'], // Project config ONLY for TS files
+        project: ['./tsconfig.json'],
       },
     },
     plugins: {
@@ -90,7 +90,7 @@ const eslintConfig = [
     },
     settings: {
       'import/resolver': {
-        typescript: { project: './tsconfig.eslint.json' },
+        typescript: { project: './tsconfig.json' },
         node: true,
       },
       react: { version: 'detect' },

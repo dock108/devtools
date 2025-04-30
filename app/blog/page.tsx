@@ -1,6 +1,7 @@
 // import { PostMeta } from '@/lib/mdx';
-import { getAllPosts } from '@/lib/blog';
-import { Container } from '@/components/Container';
+import { getAllPosts, PostMeta } from '@/lib/blog';
+import Link from 'next/link';
+import { Container } from '@/components/ui/container';
 import BlogCard from '@/components/blog/BlogCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { Metadata } from 'next';

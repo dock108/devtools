@@ -1,4 +1,4 @@
-import { withSentryConfig } from '@sentry/nextjs';
+// import { withSentryConfig } from '@sentry/nextjs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 // import createMDX from '@next/mdx'; // <-- Disable plugin import
@@ -65,6 +65,9 @@ const withMDX = createMDX({
 // Apply the MDX config
 // nextConfig = withMDX(nextConfig); // <-- Disable applying the plugin
 
+export default nextConfig; // Remove withSentryConfig wrapper
+
+/* Remove Sentry config block
 // Wrap the final config with Sentry
 export default withSentryConfig(
   nextConfig,
@@ -96,3 +99,4 @@ export default withSentryConfig(
     automaticVercelMonitors: true,
   },
 );
+*/

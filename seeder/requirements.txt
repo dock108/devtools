@@ -1,6 +1,0 @@
-stripe==11.*
-python-dotenv>=0.19.0
-supabase>=1.0.0,<2.0.0 # Use supabase-py client
-
-# Linux x64 binary for Stripe CLI. Comment out if not needed.
-stripe-cli-linux-x64==1.* 

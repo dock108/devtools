@@ -1,5 +1,0 @@
-{
-  "velocityBreach": { "maxPayouts": 3, "windowSeconds": 60 },
-  "bankSwap": { "lookbackMinutes": 5, "minPayoutUsd": 1000 },
-  "geoMismatch": { "mismatchChargeCount": 2 }
-} 

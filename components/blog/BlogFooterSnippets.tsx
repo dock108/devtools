@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { getAllPosts, PostMeta } from '@/lib/blog'; // Assuming PostMeta is exported
-import { Container } from '@/components/Container';
+import { Container } from '@/components/ui/container';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/date';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Github, Twitter, Mail } from 'lucide-react';
 
 // Helper function to truncate text
 function truncateText(text: string, maxLength: number): string {

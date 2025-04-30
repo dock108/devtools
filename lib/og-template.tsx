@@ -1,40 +1,88 @@
 import { ImageResponse } from '@vercel/og';
 
-export const runtime = 'edge';
 export const size = { width: 1200, height: 630 };
 
-export default function template({
-  title,
-  subtitle,
-  accent = '#38bdf8',
-}: {
+interface OgTemplateProps {
   title: string;
   subtitle?: string;
-  accent?: string;
-}) {
+  accent?: string; // Keep accent for potential future use
+}
+
+export default function template({ title, subtitle }: OgTemplateProps) {
   return new ImageResponse(
     (
       <div
-        tw="flex h-full w-full flex-col justify-center bg-white px-24"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 30% 30%, rgba(0,0,0,0.03), transparent 60%)',
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0f172a', // Dark background (slate-900 approx)
+          color: 'white',
+          fontFamily: '"Inter", sans-serif', // Assuming Inter font
+          padding: '60px',
         }}
       >
-        <div tw="flex items-center text-[42px] font-bold uppercase text-gray-900 mb-10 tracking-[.2em]">
-          DOCK108
-        </div>
+        {/* Logo Placeholder - Assumes logo.png is in public/ */}
+        <img
+          src={`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/logo.png`}
+          width="140" // Match header logo width
+          height="32" // Match header logo height
+          style={{
+            position: 'absolute',
+            top: 40,
+            left: 60,
+          }}
+        />
+
+        {/* Main Content Area */}
         <div
-          tw="text-[60px] leading-[1.1] font-black text-gray-900"
-          style={{ color: accent }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            maxWidth: '900px',
+          }}
         >
-          {title}
+          <h1
+            style={{
+              fontSize: '72px',
+              fontWeight: 700,
+              lineHeight: 1.1,
+              marginBottom: '20px',
+              color: '#f8fafc', // Lighter text (slate-50 approx)
+            }}
+          >
+            {title}
+          </h1>
+          {subtitle && (
+            <p
+              style={{
+                fontSize: '36px',
+                color: '#94a3b8', // Muted text (slate-400 approx)
+                lineHeight: 1.4,
+              }}
+            >
+              {subtitle}
+            </p>
+          )}
         </div>
-        {subtitle && (
-          <div tw="mt-8 text-[32px] text-gray-700 max-w-[900px]">{subtitle}</div>
-        )}
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      // TODO: Add font fetching if needed
+      // fonts: [
+      //   {
+      //     name: 'Inter',
+      //     data: await fetch(new URL('../../assets/Inter-Regular.woff', import.meta.url)).then((res) => res.arrayBuffer()),
+      //     weight: 400,
+      //     style: 'normal',
+      //   },
+      // ],
+    }
   );
 } 

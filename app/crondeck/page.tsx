@@ -1,6 +1,6 @@
 'use client';
 
-import { Container } from '@/components/Container';
+import { Container } from '@/components/ui/container';
 // import Image from 'next/image'; // Removed
 import { Badge } from '@/components/ui/badge';
 // import CrondeckHero from '@/components/products/CrondeckHero'; // Commented out
@@ -9,6 +9,8 @@ import { Clock, Check, ListChecks, BellRing, LineChart } from 'lucide-react';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { Metadata } from 'next';
 
 // Placeholder components - replace or refine
 // Removed local Badge component

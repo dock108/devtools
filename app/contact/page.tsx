@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import ContactForm from './ContactForm';
-import { Container } from '@/components/Container';
+import { Container } from '@/components/ui/container';
 import Link from 'next/link';
 
 const supportEmail = process.env.NEXT_PUBLIC_FROM_EMAIL ?? 'support@dock108.ai';

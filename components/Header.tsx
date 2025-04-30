@@ -1,10 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { Container } from './Container';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from './ui/button';
-import { useSession } from '@/hooks/useSession';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -13,48 +11,56 @@ import {
   DropdownMenuContent,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { supabaseBrowser as supabase } from '@/lib/supabase-browser';
 import { md5 } from '@/utils/md5';
 import { useEffect, useState } from 'react';
 import { ShieldAlert, Plug, Cog, LogOut, BellIcon } from 'lucide-react';
-import { useAlertNotifications } from '@/app/context/useAlertNotifications';
+import { Container } from '@/components/ui/container';
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, loading } = useSession();
   const [connectedAccounts, setConnectedAccounts] = useState<any[] | null>(null);
-  const { unreadCount, markAllRead } = useAlertNotifications();
+
+  // Placeholder state until session logic is restored
+  const session = null; // TODO: Replace with actual session logic (e.g., from context or server component)
+  const loading = false; // TODO: Replace with actual loading state
+  const unreadCount = 0; // TODO: Replace with actual notification count logic
+  const markAllRead = () => {}; // TODO: Replace with actual markAllRead logic
 
   useEffect(() => {
-    if (session?.user?.id) {
-      const fetchAccounts = async () => {
-        const { data, error } = await supabase
-          .from('connected_accounts')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .limit(1);
+    // This logic depended on supabase and session, needs replacement
+    // if (session?.user?.id) {
+    //   const fetchAccounts = async () => {
+    //     const { data, error } = await supabase
+    //       .from('connected_accounts')
+    //       .select('id')
+    //       .eq('user_id', session.user.id)
+    //       .limit(1);
 
-        if (error) {
-          console.error('Error fetching connected accounts:', error);
-          setConnectedAccounts([]);
-        } else {
-          setConnectedAccounts(data || []);
-        }
-      };
-      fetchAccounts();
-    } else {
-      setConnectedAccounts(null);
-    }
-  }, [session]);
+    //     if (error) {
+    //       console.error('Error fetching connected accounts:', error);
+    //       setConnectedAccounts([]);
+    //     } else {
+    //       setConnectedAccounts(data || []);
+    //     }
+    //   };
+    //   fetchAccounts();
+    // } else {
+    //   setConnectedAccounts(null);
+    // }
+    console.warn('TODO: Restore fetchAccounts logic in Header.tsx');
+    setConnectedAccounts(null); // Temporarily set to null
+  }, [session]); // Keep dependency array or adjust based on new session logic
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // This logic depended on supabase, needs replacement
+    // await supabase.auth.signOut();
+    console.warn('TODO: Restore sign out logic in Header.tsx');
     router.push('/login');
   };
 
   const handleAlertsClick = () => {
-    markAllRead();
+    markAllRead(); // This function is now a placeholder
   };
 
   const showConnectLink = session && connectedAccounts !== null && connectedAccounts.length === 0;

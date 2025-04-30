@@ -8,7 +8,6 @@ import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
-import { Providers } from './providers'; // Import the new client component
 import BetaBanner from '@/components/ui/BetaBanner'; // Import BetaBanner
 import { BlogFooterSnippets } from '@/components/blog/BlogFooterSnippets'; // Import the component
 
@@ -37,19 +36,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>{/* Google Font preconnects removed as we're using self-hosted Inter */}</head>
       <body>
-        {/* Render Beta Banner at the very top if applicable */}
-        <BetaBanner />
-        {/* Use the Providers client component to wrap content */}
-        <Providers>
-          <div className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow">{children}</main>
-            {/* Render BlogFooterSnippets directly again */}
-            <BlogFooterSnippets />
-            <Footer />
-            <Toaster position="bottom-right" />
-          </div>
-        </Providers>
       </body>
     </html>
   );

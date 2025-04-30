@@ -1,5 +1,7 @@
 import { ProductCard } from '@/components/ProductCard';
-import { Container } from '@/components/Container';
+import { Container } from '@/components/ui/container';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   return (
