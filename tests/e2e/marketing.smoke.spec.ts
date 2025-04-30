@@ -18,7 +18,7 @@ test('docs link in header navigates to documentation', async ({ page }) => {
   await page.getByRole('link', { name: 'Docs', exact: true }).click();
 
   // Check that we navigated to the docs page
-  await page.waitForURL('/docs/getting-started');
+  await page.waitForURL('/docs');
 
   // Verify the docs content loaded
   await expect(page.locator('h1')).toBeVisible();

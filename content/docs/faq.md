@@ -151,6 +151,6 @@ You can cancel your subscription at any time. Your access will continue until th
 
 ## Next Steps
 
-- [Learn how to get started with Guardian](/docs/getting-started)
+- [Learn how to get started with Guardian](/docs)
 - [Understand how alerts work](/docs/alerts)
 - [Configure notification preferences](/docs/notifications)

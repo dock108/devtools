@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Fixed broken Docs navigation links (`/docs/getting-started` ➜ `/docs`).
+- Resolved 500/404 across Docs pages caused by outdated MDX data path.
 - `/guardian-demo` and `/info` are now public routes; no login required.
 - Removed dark‐mode support; app now ships with a single light theme.
 

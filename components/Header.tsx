@@ -91,7 +91,7 @@ export function Header() {
             Blog
           </Link>
           <Link
-            href="/docs/getting-started"
+            href="/docs"
             data-current={pathname.startsWith('/docs')}
             className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
           >

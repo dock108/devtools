@@ -6,7 +6,7 @@ import docsConfig from '@/lib/docs.config';
 
 // Mock the next/navigation hooks
 vi.mock('next/navigation', () => ({
-  usePathname: vi.fn(() => '/docs/getting-started'),
+  usePathname: vi.fn(() => '/docs'),
 }));
 
 // Mock the docsConfig
@@ -22,7 +22,7 @@ vi.mock('@/lib/docs.config', () => ({
         },
         {
           title: 'Quick Start',
-          href: '/docs/getting-started',
+          href: '/docs',
           description: 'Get up and running with Stripe Guardian',
         },
       ],
@@ -63,14 +63,14 @@ describe('SidebarNav', () => {
   it('highlights the active link', () => {
     render(<SidebarNav />);
 
-    // Find the active link (getting-started)
-    const activeLink = screen.getByText('Quick Start');
+    // Find the active link (now Introduction, assuming /docs is the current path)
+    const activeLink = screen.getByText('Introduction');
 
     // Check that IT has the active class, not its parent
     expect(activeLink).toHaveClass('bg-accent/80');
 
     // Check that other links do not have the active class
-    const inactiveLink = screen.getByText('Introduction');
+    const inactiveLink = screen.getByText('Quick Start');
     expect(inactiveLink).not.toHaveClass('bg-accent/80');
     // Optionally, check if it has the inactive class
     // expect(inactiveLink).toHaveClass('text-muted-foreground');

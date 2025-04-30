@@ -32,7 +32,7 @@ export async function Footer() {
             Twitter
           </Link>
           <Link
-            href="/docs/getting-started"
+            href="/docs"
             className="font-medium underline underline-offset-4 text-sm text-muted-foreground hover:text-foreground"
           >
             Docs

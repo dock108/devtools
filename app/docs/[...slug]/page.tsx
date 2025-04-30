@@ -65,8 +65,7 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for the page
-export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
-  const slug = params.slug;
+export async function generateMetadata({ params: { slug } }: DocPageProps): Promise<Metadata> {
   try {
     const filePath = path.join(process.cwd(), 'content/docs', `${slug.join('/')}.md`);
     const file = await fs.readFile(filePath, 'utf8');
@@ -87,8 +86,7 @@ export async function generateMetadata({ params }: DocPageProps): Promise<Metada
 }
 
 // Render the doc page
-export default async function DocPage({ params }: DocPageProps) {
-  const slug = params.slug;
+export default async function DocPage({ params: { slug } }: DocPageProps) {
   let fileContent: string;
   try {
     const filePath = path.join(process.cwd(), 'content/docs', `${slug.join('/')}.md`);

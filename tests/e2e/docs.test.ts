@@ -21,7 +21,7 @@ test.describe('Documentation Site', () => {
     await page.getByRole('link', { name: 'Getting Started' }).click();
 
     // Wait for navigation to complete
-    await page.waitForURL('/docs/getting-started');
+    await page.waitForURL('/docs');
 
     // Check that the doc content loaded
     await expect(page.locator('h1')).toContainText('Getting Started with Stripe Guardian');
@@ -53,7 +53,7 @@ test.describe('Documentation Site', () => {
     await page.getByRole('link', { name: 'Quick Start' }).click();
 
     // Wait for navigation to complete
-    await page.waitForURL('/docs/getting-started');
+    await page.waitForURL('/docs');
 
     // Check that we navigated to the right page
     await expect(page.locator('h1')).toContainText('Getting Started with Stripe Guardian');
