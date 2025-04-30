@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/guardian-demo` now uses only static mock data fetched from JSON scenarios; removed all Supabase/auth dependencies, realtime simulation, and the "Realtime subscription skipped" console noise.
 - Guardian demo now guarantees a ≥ 45 s uninterrupted run before visitors can change traffic scenario.
 - Connected-Accounts: delete button now removes Stripe account & alerts with confirmation + toast feedback.
+- Fixed Stripe Connect flow: Corrected CSP directives, added client-side handling for success/error redirects with toasts and data refresh.
 
 **April 28 2025** – Added typed Supabase mock & regenerated types/supabase.d.ts (Fix-block 2).
 **April 28 2025** – Replaced Vitest with Jest in all remaining suites (#Fix-block 1).

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   linkStripeAccountServerAction,
   disconnectStripeAccountServerAction,
@@ -73,20 +73,38 @@ export function ConnectedAccountsManager({
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
 
-  // Update local state if initialAccounts changes (e.g., after revalidation)
+  // Update local state if initialAccounts changes (e.g., after revalidation/refresh)
   useEffect(() => {
     setAccounts(initialAccounts);
   }, [initialAccounts]);
 
-  // Check for error flags from OAuth callback
+  // Check for OAuth callback flags and show toasts/refresh
   useEffect(() => {
     const error = searchParams.get('error');
-    if (error === 'duplicate_link') {
-      toast.error('This Stripe account is already linked.');
-      window.history.replaceState(null, '', '/settings/connected-accounts');
+    const success = searchParams.get('success');
+    const newPath = '/settings/connected-accounts'; // Clean path
+
+    if (error) {
+      if (error === 'access_denied') {
+        toast.warning('Stripe connection cancelled.');
+      } else {
+        toast.error('Could not connect Stripe account. Please try again.');
+        console.error('Stripe OAuth Error Param:', error);
+      }
+      // Remove error param from URL
+      window.history.replaceState(null, '', newPath);
+    } else if (success === 'true') {
+      toast.success('Stripe account connected successfully!');
+      // Remove success param from URL
+      window.history.replaceState(null, '', newPath);
+      // Refresh server-fetched data
+      router.refresh();
     }
-  }, [searchParams]);
+    // Only run once on mount after checking params
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only once after mount
 
   const handleAddAccount = () => {
     startLinkTransition(async () => {

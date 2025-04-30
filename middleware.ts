@@ -14,21 +14,36 @@ const allowedOrigins =
     : [PROD_ORIGIN, DEV_ORIGIN, 'https://connect.stripe.com']; // Allow dev and Stripe Connect in non-prod
 
 const securityHeaders = (origin: string | null): Record<string, string> => {
-  // Basic CSP, relax frame-ancestors to allow self and stripe connect
-  const csp =
-    "default-src 'self';" +
-    "style-src 'self' 'unsafe-inline';" +
-    "font-src 'self' data:;" +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval';" +
-    "img-src 'self' data: https://www.gravatar.com;" +
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://connect.stripe.com https://r.stripe.com;" +
-    `frame-ancestors 'self' ${allowedOrigins.includes('https://connect.stripe.com') ? 'https://connect.stripe.com' : ''};`; // Allow framing from connect.stripe.com if allowed
+  // Define CSP parts
+  const defaultSrc = "default-src 'self';";
+  const scriptSrc = "script-src 'self' 'unsafe-inline' 'unsafe-eval';"; // Keep existing, maybe tighten later
+  const styleSrc =
+    "style-src 'self' 'unsafe-inline' https://connect.stripe.com https://stripe.com;"; // ADD Stripe
+  const imgSrc =
+    "img-src 'self' data: https://www.gravatar.com https://*.stripe.com https://*.stripe.network;"; // ADD Stripe
+  const connectSrc =
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://connect.stripe.com https://r.stripe.com;"; // Already includes connect.stripe.com and r.stripe.com
+  const fontSrc = "font-src 'self' data:;";
+  const frameSrc = "frame-src 'self' https://connect.stripe.com https://stripe.com;"; // ADD Stripe
+  const frameAncestors = "frame-ancestors 'self' https://connect.stripe.com https://stripe.com;"; // ADD Stripe
+
+  // Combine directives
+  const csp = [
+    defaultSrc,
+    scriptSrc,
+    styleSrc,
+    imgSrc,
+    connectSrc,
+    fontSrc,
+    frameSrc,
+    frameAncestors,
+  ].join(' ');
 
   return {
     'Content-Security-Policy': csp,
-    // 'X-Frame-Options': 'DENY', // Remove this as CSP frame-ancestors is preferred
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // X-Frame-Options is redundant with frame-ancestors
   };
 };
 

@@ -92,8 +92,76 @@ test.describe.skip('Connected Accounts Dashboard', () => {
 test.describe('Connected Accounts Management', () => {
   test.use({ storageState: 'playwright/.auth/user.json' });
 
+  // Helper to get row count
+  const getRowCount = async (page) => {
+    return page.locator('table tbody tr').count();
+  };
+
   test('should display connected accounts', async ({ page }) => {
-    // ... existing test ...
+    await page.goto('/settings/connected-accounts');
+    await expect(page.locator('table tbody tr').first()).toBeVisible(); // Check at least one row
+  });
+
+  test('should connect a new Stripe account successfully', async ({ page }) => {
+    await page.goto('/settings/connected-accounts');
+    const initialCount = await getRowCount(page);
+
+    // Mock the server action that generates the link
+    // We don't need to mock the actual network request if we intercept the navigation
+    // Instead, we simulate the redirect *back* after clicking
+
+    // Click the Add Account button
+    const addButton = page.getByRole('button', { name: /Add Account/i });
+    await addButton.click();
+
+    // Wait for potential navigation attempt (though it happens client-side)
+    // Since window.location.href is used, we can't easily intercept like a form post.
+    // Instead, we simulate the redirect back from Stripe with success.
+    // We assume the button click triggers the flow and we land back on the page.
+    await page.goto('/settings/connected-accounts?success=true');
+
+    // Verify success toast
+    await expect(
+      page.locator('[data-sonner-toast][data-type="success"] >> text=Stripe account connected'),
+    ).toBeVisible();
+
+    // Verify table is refreshed and row count increased
+    // router.refresh() might take a moment
+    await expect(page.locator('table tbody tr')).toHaveCount(initialCount + 1, { timeout: 5000 });
+  });
+
+  test('should show warning toast if connection cancelled', async ({ page }) => {
+    await page.goto('/settings/connected-accounts');
+    const initialCount = await getRowCount(page);
+
+    // Simulate redirect back with access_denied error
+    await page.goto('/settings/connected-accounts?error=access_denied');
+
+    // Verify warning toast
+    await expect(
+      page.locator('[data-sonner-toast][data-type="warning"] >> text=Stripe connection cancelled'),
+    ).toBeVisible();
+
+    // Verify row count hasn't changed
+    await expect(page.locator('table tbody tr')).toHaveCount(initialCount);
+  });
+
+  test('should show error toast if connection fails', async ({ page }) => {
+    await page.goto('/settings/connected-accounts');
+    const initialCount = await getRowCount(page);
+
+    // Simulate redirect back with generic error
+    await page.goto('/settings/connected-accounts?error=connect_failed');
+
+    // Verify error toast
+    await expect(
+      page.locator(
+        '[data-sonner-toast][data-type="error"] >> text=Could not connect Stripe account',
+      ),
+    ).toBeVisible();
+
+    // Verify row count hasn't changed
+    await expect(page.locator('table tbody tr')).toHaveCount(initialCount);
   });
 
   test('should allow deleting a connected account', async ({ page }) => {
