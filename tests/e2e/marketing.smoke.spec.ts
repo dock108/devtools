@@ -8,6 +8,13 @@ for (const route of routes) {
     await expect(page).toHaveTitle(/Dock108/i);
     // basic content check
     await expect(page.locator('body')).not.toHaveText(/404|Error/i);
+
+    // Specific check for guardian-demo content
+    if (route === '/guardian-demo') {
+      await expect(page.getByRole('heading', { name: 'Action Log', level: 2 })).toBeVisible({
+        timeout: 5000,
+      }); // Wait up to 5s for dynamic content
+    }
   });
 }
 

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved 500/404 across Docs pages caused by outdated MDX data path.
 - `/guardian-demo` and `/info` are now public routes; no login required.
 - Removed dark‐mode support; app now ships with a single light theme.
+- Fixed `/guardian-demo` blank screen: removed server-side cookie check and reinstated mock-alert fallback when unauthenticated. (Note: The page now uses predefined scenarios for all visitors, replacing previous live/mock logic.)
 
 **April 28 2025** – Added typed Supabase mock & regenerated types/supabase.d.ts (Fix-block 2).
 **April 28 2025** – Replaced Vitest with Jest in all remaining suites (#Fix-block 1).
