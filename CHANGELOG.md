@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Fixed bell-icon route (`/guardian/alert` ➜ `/guardian/alerts`).
+- `guardian-sync` now imports Stripe via `npm:`; removed unused cors helper.
+- Added `guardian-sync` Edge Function to invoke `sync_business_account()` on `account.updated`.
+- Fixed `sync_business_account()` to map new Stripe 2024-10 business-profile paths.
 - Fixed broken Docs navigation links (`/docs/getting-started` ➜ `/docs`).
 - Resolved 500/404 across Docs pages caused by outdated MDX data path.
 - `/guardian-demo` and `/info` are now public routes; no login required.

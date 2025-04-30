@@ -103,7 +103,7 @@ export function Header() {
           ) : session ? (
             <div className="flex items-center space-x-4">
               <Link
-                href="/guardian/alerts"
+                href="/stripe-guardian/alerts"
                 onClick={handleAlertsClick}
                 className="relative text-slate-300 hover:text-white"
                 aria-label={`View alerts (${unreadCount} unread)`}
