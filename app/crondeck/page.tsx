@@ -110,7 +110,7 @@ export default function CrondeckPage() {
 
         <Container className="py-24 sm:py-32 lg:flex lg:items-center lg:gap-x-10 lg:py-40">
           <div className="mx-auto max-w-2xl lg:mx-0 lg:flex-auto">
-            <Badge colorVar={accentColor}>CRONDECK</Badge>
+            <Badge style={{ backgroundColor: accentColor, color: 'white', borderColor: accentColor }}>CRONDECK</Badge>
             <h1 className="mt-6 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
               Never miss a Cron job again—monitor every schedule in one dashboard.
             </h1>

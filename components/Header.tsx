@@ -89,20 +89,20 @@ export function Header() {
           >
             Products
           </Link>
-          <Link
+          {/* <Link
             href="/blog"
             data-current={pathname.startsWith('/blog')}
             className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
           >
             Blog
-          </Link>
-          <Link
+          </Link> */}
+          {/* <Link
             href="/docs"
             data-current={pathname.startsWith('/docs')}
             className="transition hover:underline data-[current=true]:font-semibold data-[current=true]:underline text-slate-300 hover:text-white"
           >
             Docs
-          </Link>
+          </Link> */}
 
           {loading || (session && connectedAccounts === null) ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-slate-700"></div>
