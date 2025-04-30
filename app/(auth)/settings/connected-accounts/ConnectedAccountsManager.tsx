@@ -44,18 +44,10 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { Loader2, Trash2, Copy, PlusCircle, Info, BellOff, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BackfillProgress } from '@/components/progress/BackfillProgress';
+import { Database } from '@/types/supabase';
+import { deleteAccount } from '@/lib/api/deleteAccount';
 
-// Define the structure of a connected account based on fetched data
-interface ConnectedAccount {
-  id: string;
-  stripe_account_id: string;
-  business_name: string | null;
-  created_at: string;
-  payouts_paused: boolean;
-  paused_by: string | null;
-  paused_reason: string | null;
-  alerts_muted_until: string | null;
-}
+type ConnectedAccount = Database['public']['Tables']['connected_accounts']['Row'];
 
 const MUTE_OPTIONS = [
   { value: '60', label: '1 Hour' },
@@ -78,6 +70,7 @@ export function ConnectedAccountsManager({
   const [muteDuration, setMuteDuration] = useState<string>('360');
   const [isTogglingMute, startMuteToggleTransition] = useTransition();
   const [togglingMuteAccountId, setTogglingMuteAccountId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
 
@@ -266,6 +259,40 @@ export function ConnectedAccountsManager({
     return { muted: false, text: 'Alerts active' };
   };
 
+  const handleDelete = async (accountToDelete: ConnectedAccount) => {
+    if (removingId) return; // Prevent double clicks
+
+    // Use confirm dialog as per instructions
+    if (
+      !confirm(
+        `Remove account ${accountToDelete.business_name || accountToDelete.stripe_account_id}? This will delete all associated alerts and cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setRemovingId(accountToDelete.stripe_account_id); // Use stripe_account_id for RPC
+    const originalAccounts = [...accounts]; // Store original state for rollback
+
+    // Optimistic update
+    setAccounts((currentAccounts) =>
+      currentAccounts.filter((acc) => acc.stripe_account_id !== accountToDelete.stripe_account_id),
+    );
+
+    const { error } = await deleteAccount(accountToDelete.stripe_account_id);
+
+    if (error) {
+      toast.error('Could not delete account. Try again.');
+      // Rollback optimistic update
+      setAccounts(originalAccounts);
+    } else {
+      toast.success('Account removed successfully.');
+      // No further action needed, optimistic update is now confirmed
+    }
+
+    setRemovingId(null); // Reset removing state
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -316,7 +343,7 @@ export function ConnectedAccountsManager({
                     const isLoadingPayouts =
                       isTogglingPayouts && togglingPayoutsAccountId === account.stripe_account_id;
                     return (
-                      <TableRow key={account.id}>
+                      <TableRow key={account.stripe_account_id}>
                         <TableCell className="font-medium">
                           {account.business_name || 'N/A'}
                         </TableCell>
@@ -336,7 +363,7 @@ export function ConnectedAccountsManager({
                             <TooltipTrigger asChild>
                               <div className="flex items-center">
                                 <Switch
-                                  id={`payout-switch-${account.id}`}
+                                  id={`payout-switch-${account.stripe_account_id}`}
                                   checked={!account.payouts_paused}
                                   onCheckedChange={() => handleTogglePayouts(account)}
                                   disabled={isLoadingPayouts || isDisconnecting}
@@ -473,6 +500,20 @@ export function ConnectedAccountsManager({
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive h-8 w-8"
+                            onClick={() => handleDelete(account)}
+                            disabled={removingId === account.stripe_account_id}
+                            aria-label="Delete connected account"
+                          >
+                            {removingId === account.stripe_account_id ? (
+                              <span className="text-xs">Removing...</span>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -490,7 +531,7 @@ export function ConnectedAccountsManager({
                 const isLoadingPayouts =
                   isTogglingPayouts && togglingPayoutsAccountId === account.stripe_account_id;
                 return (
-                  <Card key={account.id} className="border shadow-sm">
+                  <Card key={account.stripe_account_id} className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                       <CardTitle className="text-lg">{account.business_name || 'N/A'}</CardTitle>
                       <AlertDialog
@@ -578,7 +619,7 @@ export function ConnectedAccountsManager({
                           <TooltipTrigger asChild>
                             <div className="flex items-center">
                               <Switch
-                                id={`payout-switch-mobile-${account.id}`}
+                                id={`payout-switch-mobile-${account.stripe_account_id}`}
                                 checked={!account.payouts_paused}
                                 onCheckedChange={() => handleTogglePayouts(account)}
                                 disabled={isLoadingPayouts || isDisconnecting}

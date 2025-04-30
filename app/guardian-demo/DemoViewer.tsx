@@ -1,115 +1,217 @@
 'use client';
 
-import { useDemoScenario } from './useDemoScenario';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { EventTable } from '../../components/guardian-demo/EventTable';
-import ActionLog from '../../components/guardian-demo/ActionLog';
-import SlackAlert from '../../components/guardian-demo/SlackAlert';
-import { ScenarioPicker } from '../../components/guardian-demo/ScenarioPicker';
-import { getScenarios } from './getScenarios';
-import { useState, useEffect } from 'react';
-// import { AlertTable } from './AlertTable';
-// import { PayoutTable } from './PayoutTable';
-// import { Timeline } from './Timeline';
-// import { log } from '@/lib/logger';
-import toast from 'react-hot-toast';
+import type { DemoEvent } from './useFakeStripeEvents'; // Keep type definition if needed by EventTable
+import type { ScenarioEvent } from './useDemoScenario'; // Type for raw scenario data
 
-// Get scenarios at build time
-const scenarioList = getScenarios();
-const scenarioIds = scenarioList.map((s) => s.id);
-const scenarioLabels = scenarioList.reduce<Record<string, string>>((acc, s) => {
-  acc[s.id] = s.label;
-  return acc;
-}, {});
+// Define available scenarios and their display names
+const scenarios = {
+  'velocity-breach': 'Medium traffic / Few fraud alerts', // Default
+  'bank-swap': 'High traffic / Multiple fraud spikes',
+  'geo-mismatch': 'Low traffic / Geo mismatch alert',
+};
+type ScenarioId = keyof typeof scenarios;
+
+// Simulation settings
+const simulationRates: Record<ScenarioId, number> = {
+  'velocity-breach': 2000, // ms per event
+  'bank-swap': 1500,
+  'geo-mismatch': 3000,
+};
+const MIN_RUN_MS = 45_000;
+const MAX_DISPLAYED_EVENTS = 50; // Limit displayed events for performance
 
 export function DemoViewer() {
-  // Default to the first scenario instead of empty string
-  const [scenario, setScenario] = useState<string>(scenarioIds.length > 0 ? scenarioIds[0] : '');
-  const [speed, setSpeed] = useState(1);
+  const [scenarioId, setScenarioId] = useState<ScenarioId>('velocity-breach');
+  const [displayedEvents, setDisplayedEvents] = useState<DemoEvent[]>([]);
+  const [currentScenarioEvents, setCurrentScenarioEvents] = useState<ScenarioEvent[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Loading on initial load/scenario fetch
+  const [error, setError] = useState<string | null>(null);
+  const [canSwitch, setCanSwitch] = useState<boolean>(false);
 
-  // We don't need fallback events anymore since we always use scenarios
-  const scenarioData = useDemoScenario(scenario, {
-    onExpire: () => handleReset(true),
-    speed,
-  });
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Use scenario events
-  const { events, isRunning /*, totalDelayMs */ } = scenarioData;
-
-  const [log, setLog] = useState<string[]>(['Monitoring started…']);
-  const [alert, setAlert] = useState<{ text: string }>();
-
-  // Check for scenario completion
+  // --- 45-second Lock Timer --- //
   useEffect(() => {
-    // If the scenario was running but now stopped and has played all events
-    if (!isRunning && events.length > 0 && events.length === scenarioData.total) {
-      toast.success('Scenario complete. Click Restart to replay.');
+    console.log('Starting 45s lock timer');
+    const unlockTimer = setTimeout(() => {
+      console.log('Unlocking scenario switching');
+      setCanSwitch(true);
+    }, MIN_RUN_MS);
+
+    // Clear timer on unmount
+    return () => {
+      console.log('Clearing 45s lock timer');
+      clearTimeout(unlockTimer);
+    };
+  }, []); // Run only once on mount
+
+  // --- Clear Interval Utility --- //
+  const clearSimulationInterval = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      console.log('Cleared simulation interval');
     }
-  }, [isRunning, events.length, scenarioData.total]);
+  }, []);
 
-  function handleReset(auto = false) {
-    scenarioData.restart();
-    setLog([auto ? 'Demo auto‑restarted after 5 min idle.' : 'Monitoring restarted…']);
-    setAlert(undefined);
-  }
-
-  const handleScenarioChange = (newScenario: string) => {
-    setScenario(newScenario);
-    handleReset(false);
-  };
-
-  // Update the log message based on the scenario type
+  // --- Fetch Scenario Data --- //
   useEffect(() => {
-    const latest = events[events.length - 1];
-    if (!latest?.flagged) return;
+    async function loadScenarioData() {
+      console.log(`Loading scenario: ${scenarioId}`);
+      setIsLoading(true);
+      setError(null);
+      clearSimulationInterval(); // Stop previous simulation
+      setDisplayedEvents([]); // Clear displayed events
+      setCurrentIndex(0); // Reset index
 
-    const amt = (latest.amount ?? 0) / 100;
-    let logMessage = `⚠️ Fraud detected in payout ${latest.id.slice(0, 8)}…`;
-    let alertMessage = `🚨 Payout auto‑paused: $${amt.toFixed(2)} (${latest.id.slice(0, 8)}…)`;
-
-    // Different messages based on scenario type
-    if (scenario === 'velocity-breach') {
-      logMessage = `⚠️ Velocity breach detected — 3 payouts in under 60s.`;
-      alertMessage += ` – velocity breach`;
-    } else if (scenario === 'bank-swap') {
-      logMessage = `⚠️ Bank account swap detected — new account added recently.`;
-      alertMessage += ` – suspicious bank account change`;
-    } else if (scenario === 'geo-mismatch') {
-      logMessage = `⚠️ Geo-location mismatch detected — payout from unusual location.`;
-      alertMessage += ` – unusual location`;
+      try {
+        const response = await fetch(`/guardian-demo/scenarios/${scenarioId}.json`);
+        if (!response.ok) {
+          throw new Error(`Failed to load scenario: ${response.statusText}`);
+        }
+        const loadedEvents: ScenarioEvent[] = await response.json();
+        setCurrentScenarioEvents(loadedEvents);
+        console.log(`Scenario ${scenarioId} loaded with ${loadedEvents.length} events`);
+      } catch (err) {
+        console.error('Error loading demo scenario:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load scenario data.');
+        setCurrentScenarioEvents([]);
+      } finally {
+        setIsLoading(false);
+      }
     }
 
-    setLog((l) =>
-      [logMessage, `⏸ Auto-pause triggered for payout ${latest.id.slice(0, 8)}…`, ...l].slice(
-        0,
-        20,
-      ),
-    );
+    // Only load if switching is allowed OR it's the initial load (canSwitch is false)
+    if (canSwitch || !intervalRef.current) {
+      // The !intervalRef.current condition ensures initial load happens before lock
+      loadScenarioData();
+    } else {
+      // If trying to switch too early, we just keep the old scenario running
+      // (because the select is disabled, this useEffect won't run with a new ID)
+    }
 
-    setAlert({
-      text: alertMessage,
-    });
-  }, [events, scenario]);
+    // Cleanup interval on scenario change or unmount
+    return () => clearSimulationInterval();
+  }, [scenarioId, canSwitch, clearSimulationInterval]);
+
+  // --- Simulation Interval --- //
+  useEffect(() => {
+    // Don't start interval if loading, errored, or no events loaded
+    if (isLoading || error || currentScenarioEvents.length === 0) {
+      clearSimulationInterval(); // Ensure stopped
+      return;
+    }
+
+    // Start the interval if not already running
+    // This effect should ONLY run when the scenario loads/changes, or loading/error state changes.
+    // It should NOT run on every currentIndex change.
+    if (!intervalRef.current) {
+      const rate = simulationRates[scenarioId];
+      console.log(`Starting simulation interval for ${scenarioId} at ${rate}ms/event`);
+
+      intervalRef.current = setInterval(() => {
+        // Read current state directly inside the interval callback
+        // Use refs or rely on React's state update timing for currentIndex
+        // Directly reading state here is generally safe for intervals
+
+        // Use functional update for index to ensure we get the latest value
+        setCurrentIndex((prevIndex) => {
+          // Check if finished based on the index we *had* before this update
+          if (prevIndex >= currentScenarioEvents.length) {
+            console.log('Scenario finished (index check). Clearing interval.');
+            clearSimulationInterval(); // Clear from within if finished
+            return prevIndex; // Keep index as is
+          }
+
+          const eventData = currentScenarioEvents[prevIndex];
+
+          // This check might be redundant if the index check above works
+          if (!eventData) {
+            console.log('Scenario finished (no event data). Clearing interval.');
+            clearSimulationInterval();
+            return prevIndex; // Stop index from incrementing
+          }
+
+          // Transform event
+          const uniqueId = `${eventData.payload.id || 'event'}-${eventData.type}-${prevIndex}-${Date.now()}`;
+          const newDemoEvent: DemoEvent = {
+            id: uniqueId,
+            type: eventData.type,
+            amount: eventData.type === 'payout.paid' ? eventData.payload.amount : undefined,
+            created: Date.now(), // Show as happening now
+            flagged:
+              eventData.payload.flagged === true ||
+              (eventData.payload.metadata &&
+                eventData.payload.metadata.guardian_action === 'paused'),
+          };
+
+          // Update displayed events
+          setDisplayedEvents((prevDisplayed) =>
+            [newDemoEvent, ...prevDisplayed].slice(0, MAX_DISPLAYED_EVENTS),
+          );
+
+          const nextIndex = prevIndex + 1;
+          // Check if *this was* the last event, clear interval if so
+          if (nextIndex >= currentScenarioEvents.length) {
+            console.log('Scenario finished (last event processed). Clearing interval.');
+            clearSimulationInterval(); // Clear from within
+          }
+
+          return nextIndex; // Return the updated index
+        });
+      }, rate);
+    }
+
+    // Cleanup function for THIS effect runs if deps change OR component unmounts
+    return () => {
+      console.log('Cleanup for simulation interval effect (deps changed or unmount)');
+      // The intervalRef is cleared by clearSimulationInterval if called from within the interval
+      // This cleanup handles the case where the effect re-runs due to external dep change (e.g. scenarioId)
+      clearSimulationInterval();
+    };
+
+    // REMOVED currentIndex from dependencies
+  }, [
+    isLoading,
+    error,
+    currentScenarioEvents,
+    scenarioId,
+    clearSimulationInterval,
+    simulationRates,
+  ]);
 
   return (
     <>
-      <div className="mt-4">
-        <ScenarioPicker
-          scenarios={scenarioIds}
-          scenarioLabels={scenarioLabels}
-          currentScenario={scenario}
-          onChange={handleScenarioChange}
-          onRestart={() => handleReset(false)}
-          speed={speed}
-          onSpeedChange={setSpeed}
-        />
+      <div className="mt-4 mb-6 flex items-center gap-4">
+        <label htmlFor="scenario-select" className="font-medium">
+          Select Scenario:
+        </label>
+        <select
+          id="scenario-select"
+          className="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          value={scenarioId}
+          onChange={(e) => setScenarioId(e.target.value as ScenarioId)}
+          disabled={!canSwitch || isLoading} // Disable if lock active or loading new scenario
+        >
+          {Object.entries(scenarios).map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+        {isLoading && <span className="text-sm text-gray-500">Loading...</span>}
+        {!canSwitch && !isLoading && (
+          <span className="text-sm text-gray-500">(Scenario switch locked for 45s)</span>
+        )}
       </div>
-      <section className="mt-4 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <EventTable events={events} className="w-full" />
-        <div>
-          <h2 className="mb-2 text-lg font-semibold">Action Log</h2>
-          <ActionLog entries={log} />
-          <SlackAlert alert={alert} />
-        </div>
+
+      {error && <p className="text-red-600">Error: {error}</p>}
+
+      <section className="mt-4">
+        <EventTable events={displayedEvents} className="w-full" />
       </section>
     </>
   );

@@ -286,7 +286,8 @@ export const AlertNotificationsProvider: React.FC<AlertNotificationsProviderProp
   // Subscribe to Realtime changes on mount
   useEffect(() => {
     if (!userId || userStripeAccounts.length === 0) {
-      console.log('Realtime subscription skipped (no user or no accounts).');
+      // console.log('Realtime subscription skipped (no user or no accounts).');
+      setIsLoading(false);
       return; // Don't subscribe until we have user/accounts
     }
 

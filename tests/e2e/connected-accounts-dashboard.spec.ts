@@ -88,3 +88,79 @@ test.describe.skip('Connected Accounts Dashboard', () => {
   // TODO: Add tests for backfill progress component display within the table/cards
   // TODO: Add tests for responsive/mobile card view
 });
+
+test.describe('Connected Accounts Management', () => {
+  test.use({ storageState: 'playwright/.auth/user.json' });
+
+  test('should display connected accounts', async ({ page }) => {
+    // ... existing test ...
+  });
+
+  test('should allow deleting a connected account', async ({ page }) => {
+    await page.goto('/settings/connected-accounts');
+
+    // Assuming table rows have a specific identifier or structure
+    const accountRows = page.locator('table tbody tr');
+    const initialCount = await accountRows.count();
+    expect(initialCount).toBeGreaterThan(0);
+
+    // Find the delete button for the first row
+    const firstRow = accountRows.first();
+    const deleteButton = firstRow.locator('button[aria-label="Delete connected account"]');
+    await expect(deleteButton).toBeVisible();
+
+    // Mock the RPC call for success
+    await page.route('**/rpc/delete_account', (route) => {
+      route.fulfill({ status: 200, body: '' }); // Simulate successful RPC call
+    });
+
+    // Handle the confirmation dialog
+    page.once('dialog', (dialog) => {
+      expect(dialog.message()).toContain('Remove account');
+      dialog.accept();
+    });
+
+    // Click delete
+    await deleteButton.click();
+
+    // Verify row count decreases (optimistic update)
+    await expect(accountRows).toHaveCount(initialCount - 1, { timeout: 2000 });
+
+    // Verify success toast (adjust selector if needed)
+    await expect(
+      page.locator('[data-sonner-toast][data-type="success"] >> text=Account removed'),
+    ).toBeVisible();
+  });
+
+  test('should show error toast if delete fails', async ({ page }) => {
+    await page.goto('/settings/connected-accounts');
+
+    const accountRows = page.locator('table tbody tr');
+    const initialCount = await accountRows.count();
+    expect(initialCount).toBeGreaterThan(0);
+
+    const firstRow = accountRows.first();
+    const deleteButton = firstRow.locator('button[aria-label="Delete connected account"]');
+
+    // Mock the RPC call for failure
+    await page.route('**/rpc/delete_account', (route) => {
+      route.fulfill({ status: 500, body: 'Internal Server Error' }); // Simulate failed RPC call
+    });
+
+    // Handle confirmation
+    page.once('dialog', (dialog) => dialog.accept());
+
+    // Click delete
+    await deleteButton.click();
+
+    // Verify row count does NOT decrease (rollback)
+    await expect(accountRows).toHaveCount(initialCount, { timeout: 2000 });
+
+    // Verify error toast
+    await expect(
+      page.locator('[data-sonner-toast][data-type="error"] >> text=Could not delete account'),
+    ).toBeVisible();
+  });
+
+  // ... other tests ...
+});
