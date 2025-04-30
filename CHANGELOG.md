@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Instant profile refresh after edits (using `router.refresh()`).
+- Added `prose-dock` Tailwind typography variant; Blog & Docs now centred, readable, and styled.
+- Unified Blog & Docs typography using `prose lg:prose-lg max-w-3xl mx-auto`.
 - Fixed bell-icon route (`/guardian/alert` ➜ `/guardian/alerts`).
 - `guardian-sync` now imports Stripe via `npm:`; removed unused cors helper.
 - Added `guardian-sync` Edge Function to invoke `sync_business_account()` on `account.updated`.

@@ -5,6 +5,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 import { Profile } from '@/lib/supabase/user'; // Import type
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ profile }: ProfileFormProps) {
+  const router = useRouter(); // Get router instance
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     // Use profile data for defaults only if profile exists
@@ -59,6 +61,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
     if (result.success) {
       toast.success('Profile updated successfully!');
+      router.refresh(); // Refresh the current route
     } else {
       toast.error(`Error updating profile: ${result.error || 'Unknown error'}`);
     }

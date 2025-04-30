@@ -84,6 +84,24 @@ module.exports = {
             // e.g., code color, link color
           },
         },
+        dock: {
+          css: {
+            maxWidth: '100%',
+            h1: { fontWeight: '700', letterSpacing: '-.02em' },
+            h2: { marginTop: theme('spacing.10'), fontWeight: '600' },
+            h3: { fontWeight: '600' },
+            p: { marginTop: theme('spacing.4') },
+            ul: { marginTop: theme('spacing.4'), paddingLeft: theme('spacing.6') },
+            ol: { marginTop: theme('spacing.4'), paddingLeft: theme('spacing.6') },
+            table: {
+              marginTop: theme('spacing.6'),
+              width: '100%',
+              thead: { fontWeight: '600', textAlign: 'left' },
+              'th,td': { padding: theme('spacing.2') },
+            },
+            code: { backgroundColor: theme('colors.zinc.100') },
+          },
+        },
         invert: {
           css: {
             // Customize dark mode prose styles

@@ -396,7 +396,7 @@ Authenticated users can manage their account settings at the [/settings](/settin
 - **Route**: `app/(auth)/settings/page.tsx` (Server Component)
 - **UI Components**: Client components (`ProfileForm`, `PasswordForm`, etc.) located in the same directory.
 - **Data**: Fetched server-side via `getProfile` from `lib/supabase/user.ts`.
-- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`.
+- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`. Profile changes are reflected instantly in the UI header via `router.refresh()`.
 - **Database**: Uses the `public.profiles` table (linked to `auth.users`). RLS policies restrict access to the owner.
 
 ## For Stripe Guardian Development
@@ -500,6 +500,7 @@ Guardian provides structured logging and Prometheus metrics for monitoring and d
 ## Type Safety
 
 Guardian development enforces strict TypeScript settings to catch errors early and improve code reliability.
+Improved MDX typography via Tailwind Prose.
 
 - **Strict Compilation**: The `tsconfig.json` is configured with `"strict": true` and related flags. The CI pipeline includes a `pnpm tsc --noEmit` step that fails the build if any TypeScript errors are present.
 - **Supabase Type Generation**: Database types are generated directly from your Supabase schema.
@@ -586,7 +587,7 @@ Authenticated users can manage their account settings at the [/settings](/settin
 - **Route**: `app/(auth)/settings/page.tsx` (Server Component)
 - **UI Components**: Client components (`ProfileForm`, `PasswordForm`, etc.) located in the same directory.
 - **Data**: Fetched server-side via `getProfile` from `lib/supabase/user.ts`.
-- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`.
+- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`. Profile changes are reflected instantly in the UI header via `router.refresh()`.
 - **Database**: Uses the `public.profiles` table (linked to `auth.users`). RLS policies restrict access to the owner.
 
 ## For Stripe Guardian Development
@@ -690,6 +691,7 @@ Guardian provides structured logging and Prometheus metrics for monitoring and d
 ## Type Safety
 
 Guardian development enforces strict TypeScript settings to catch errors early and improve code reliability.
+Improved MDX typography via Tailwind Prose.
 
 - **Strict Compilation**: The `tsconfig.json` is configured with `"strict": true` and related flags. The CI pipeline includes a `pnpm tsc --noEmit` step that fails the build if any TypeScript errors are present.
 - **Supabase Type Generation**: Database types are generated directly from your Supabase schema.
@@ -776,7 +778,7 @@ Authenticated users can manage their account settings at the [/settings](/settin
 - **Route**: `app/(auth)/settings/page.tsx` (Server Component)
 - **UI Components**: Client components (`ProfileForm`, `PasswordForm`, etc.) located in the same directory.
 - **Data**: Fetched server-side via `getProfile` from `lib/supabase/user.ts`.
-- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`.
+- **Mutations**: Handled by Server Actions defined in `app/(auth)/settings/actions.ts`, calling helpers in `lib/supabase/user.ts`. Profile changes are reflected instantly in the UI header via `router.refresh()`.
 - **Database**: Uses the `public.profiles` table (linked to `auth.users`). RLS policies restrict access to the owner.
 
 ## For Stripe Guardian Development

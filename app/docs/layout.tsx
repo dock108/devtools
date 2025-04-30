@@ -29,10 +29,10 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
         <aside className="fixed top-14 z-30 -ml-2 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 overflow-y-auto border-r md:sticky md:block lg:py-6">
           <SidebarNavClient />
         </aside>
-        <main className="relative py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_300px]">
-          <div className="mx-auto w-full min-w-0">
+        <main className="relative py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_300px] prose prose-dock lg:prose-lg max-w-3xl mx-auto">
+          <div className="">
             <div className="pb-12 pt-4">
-              <div className="prose prose-zinc max-w-none">{children}</div>
+              <div className="">{children}</div>
             </div>
           </div>
         </main>

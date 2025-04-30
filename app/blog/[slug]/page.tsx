@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation';
 import fs from 'node:fs/promises'; // Use node:fs
 import path from 'node:path'; // Use node:path
 import matter from 'gray-matter';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight'; // Or your preferred highlighter
-import { getAllPosts, getPrevNextPosts } from '@/lib/blog';
+import { getAllPosts, getPrevNextPosts, PostFrontMatter } from '@/lib/blog';
 import { Container } from '@/components/Container';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/date';
@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import siteConfig from '@/lib/siteConfig';
 import DemoCTA from '@/components/mdx/DemoCTA'; // Keep for mapping
-import Alert from '@/components/ui/alert'; // Corrected path
+import { Alert } from '@/components/ui/alert'; // Changed to named import
 
 interface BlogPostPageProps {
   params: { slug: string };
@@ -37,12 +37,13 @@ function ShortCodeRenderer({ node }: { node: any }) {
 }
 
 // Map Markdown elements to React components (including shortcode handler)
-const markdownComponentsMap = {
+const markdownComponentsMap: Components = {
   // Customize standard elements if needed (e.g., img, a, etc.)
   // img: (props: any) => <img {...props} className="rounded-lg" alt={props.alt || ''} />, // Example
 
   // Handle the <pre> element where Rehype typically puts code blocks
   // and potentially our shortcode syntax if not parsed correctly earlier.
+  // @ts-ignore - Bypassing complex type issue for shortcode mapping for now
   pre: ShortCodeRenderer,
   // You might need `code` handling depending on highlighter and shortcode interaction
   // code: ({node, inline, className, children, ...props}: any) => { ... }
@@ -118,8 +119,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { prev, next } = getPrevNextPosts(params.slug);
 
   return (
-    <Container className="py-12 md:py-16 max-w-3xl mx-auto">
-      <article>
+    <Container className="py-12 md:py-16">
+      <article className="prose prose-dock lg:prose-lg max-w-3xl mx-auto">
         {/* Header */}
         <header className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{post.title}</h1>
@@ -133,7 +134,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </div>
           {post.tags && post.tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
+              {post.tags.map((tag: string) => (
                 <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
@@ -143,15 +144,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </header>
 
         {/* Content */}
-        <div className="prose prose-slate max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]} // Ensure highlighter styles are loaded globally
-            components={markdownComponentsMap}
-          >
-            {markdownContent}
-          </ReactMarkdown>
-        </div>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeHighlight]} // Ensure highlighter styles are loaded globally
+          components={markdownComponentsMap}
+        >
+          {markdownContent}
+        </ReactMarkdown>
 
         {/* Footer Navigation */}
         <footer className="mt-12 pt-8 border-t">

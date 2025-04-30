@@ -13,8 +13,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Removed ThemeProvider wrapper */}
-      {/* TODO: Pass userStripeAccounts if fetched server-side in layout */}
-      <AlertNotificationsProvider>{children}</AlertNotificationsProvider>
+        {/* TODO: Pass userStripeAccounts if fetched server-side in layout */}
+        <AlertNotificationsProvider>{children}</AlertNotificationsProvider>
     </QueryClientProvider>
   );
 }
