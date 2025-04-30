@@ -48,10 +48,13 @@ const corsHeaders = (origin: string | null): Record<string, string> => {
 
 // Define paths that require authentication
 const protectedPaths = [
-  '/settings', // Note: Covers /settings/*
-  '/stripe-guardian', // Note: Covers /stripe-guardian/*
+  '/settings', // Protects /settings and /settings/*
+  '/stripe-guardian/analytics', // Protect analytics dashboard
+  '/stripe-guardian/alerts', // Protect alerts dashboard
   // '/admin', // Assuming admin routes handle their own auth/layout
-  // Add other specific protected routes if needed
+  // /guardian-demo is now public
+  // /info is assumed public (not listed)
+  // /stripe-guardian product page is now public
 ];
 
 export async function middleware(request: NextRequest) {

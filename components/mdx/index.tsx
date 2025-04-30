@@ -34,13 +34,7 @@ const mdxComponents = {
   ),
   // Style blockquotes as Alerts
   blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLQuoteElement>) => (
-    <Alert
-      className={cn(
-        'mt-6 border-l-4 border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-900',
-        className,
-      )}
-      {...props}
-    />
+    <Alert className={cn('mt-6 border-l-4 border-slate-300 bg-slate-50', className)} {...props} />
     // Example with explicit title/desc - requires markdown structure change
     // <Alert className={cn('mt-6', className)}>
     //     <AlertTitle>Note</AlertTitle>

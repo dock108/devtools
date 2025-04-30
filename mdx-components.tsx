@@ -89,7 +89,7 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
     pre: ({ className, ...props }: React.HTMLAttributes<HTMLPreElement>) => (
       <pre
         className={cn(
-          'mb-4 mt-6 max-h-[650px] overflow-x-auto rounded-lg border bg-gray-100 py-4 dark:bg-zinc-900',
+          'mb-4 mt-6 max-h-[650px] overflow-x-auto rounded-lg border bg-gray-100 py-4',
           className,
         )}
         {...props}

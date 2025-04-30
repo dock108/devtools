@@ -103,7 +103,7 @@ export default async function DocPage({ params }: DocPageProps) {
 
   return (
     // Add appropriate layout/styling container if needed
-    <div className="prose prose-slate dark:prose-invert max-w-none py-8">
+    <div className="prose prose-slate max-w-none py-8">
       <h1 className="mb-4 text-4xl font-bold tracking-tight">{doc.title || 'Documentation'}</h1>
       {doc.description && <p className="text-xl text-muted-foreground mb-8">{doc.description}</p>}
       <ReactMarkdown

@@ -20,9 +20,9 @@ export default function DemoCTA({
   href = '/guardian-demo',
 }: DemoCTAProps) {
   return (
-    <div className="my-12 rounded-lg border border-indigo-100 bg-indigo-50 p-6 dark:border-indigo-900 dark:bg-indigo-900/30">
-      <h3 className="mb-2 text-xl font-bold text-indigo-800 dark:text-indigo-300">{title}</h3>
-      <p className="mb-4 text-indigo-700 dark:text-indigo-400">{description}</p>
+    <div className="my-12 rounded-lg border border-indigo-100 bg-indigo-50 p-6">
+      <h3 className="mb-2 text-xl font-bold text-indigo-800">{title}</h3>
+      <p className="mb-4 text-indigo-700">{description}</p>
       <Link href={href} passHref>
         <Button className="group">
           {linkText}

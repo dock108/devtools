@@ -8,7 +8,7 @@ import { getProfile } from '@/lib/supabase/user'; // Import helper
 // TODO: Adjust paths if these components were moved
 import { ProfileForm } from '../ProfileForm';
 import { PasswordForm } from '../PasswordForm';
-import { ThemeSwitcher } from '../ThemeSwitcher';
+// import { ThemeSwitcher } from '../ThemeSwitcher'; // Removed import
 import { ApiKeysManager } from '../ApiKeysManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -74,20 +74,7 @@ export default async function SettingsProfilePage() {
         </CardContent>
       </Card>
 
-      <Separator />
-
-      {/* Theme Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Theme</CardTitle>
-          <CardDescription>Select your preferred interface theme.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ThemeSwitcher currentTheme={profile?.theme ?? 'system'} />
-        </CardContent>
-      </Card>
-
-      <Separator />
+      {/* Removed Theme Section and Separator */}
 
       {/* API Keys Section */}
       <Card>

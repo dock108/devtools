@@ -32,7 +32,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
         <main className="relative py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_300px]">
           <div className="mx-auto w-full min-w-0">
             <div className="pb-12 pt-4">
-              <div className="prose prose-zinc max-w-none dark:prose-invert">{children}</div>
+              <div className="prose prose-zinc max-w-none">{children}</div>
             </div>
           </div>
         </main>

@@ -15,7 +15,6 @@ export interface Profile {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
-  theme: string | null;
   api_keys: ApiKeyInfo[]; // Assuming array of objects
   created_at: string | null;
 }
@@ -57,7 +56,6 @@ export async function getProfile(): Promise<Profile | null> {
 export async function updateProfile(updates: {
   display_name?: string;
   avatar_url?: string;
-  theme?: string;
 }): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient();
   const {
@@ -76,9 +74,6 @@ export async function updateProfile(updates: {
     } catch (_) {
       return { success: false, error: 'Invalid Avatar URL.' };
     }
-  }
-  if (updates.theme && !['system', 'light', 'dark'].includes(updates.theme)) {
-    return { success: false, error: 'Invalid theme value.' };
   }
 
   const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);

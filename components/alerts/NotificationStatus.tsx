@@ -99,10 +99,8 @@ const NotificationStatus: React.FC<NotificationStatusProps> = ({ alertId, isAdmi
   };
 
   return (
-    <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-        Notification Status
-      </h4>
+    <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-4">
+      <h4 className="text-sm font-semibold text-slate-900">Notification Status</h4>
       <div className="space-y-1">
         {Object.entries(deliveryStatus).map(([channel, status]) => {
           const { icon, text, color } = getStatusInfo(status);

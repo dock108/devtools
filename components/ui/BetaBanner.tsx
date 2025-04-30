@@ -15,8 +15,8 @@ const BetaBanner: React.FC = () => {
   }
 
   return (
-    <Alert className="rounded-none border-l-0 border-r-0 border-t-0 border-b border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
-      <Info className="h-4 w-4 !text-yellow-600 dark:!text-yellow-400" />
+    <Alert className="rounded-none border-l-0 border-r-0 border-t-0 border-b border-yellow-300 bg-yellow-50 text-yellow-800">
+      <Info className="h-4 w-4 !text-yellow-600" />
       {/* <AlertTitle>Beta Notice</AlertTitle> */}
       <AlertDescription className="text-xs flex items-center justify-center gap-4">
         <span>

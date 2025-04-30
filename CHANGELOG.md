@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- `/guardian-demo` and `/info` are now public routes; no login required.
+- Removed dark‐mode support; app now ships with a single light theme.
+
 **April 28 2025** – Added typed Supabase mock & regenerated types/supabase.d.ts (Fix-block 2).
 **April 28 2025** – Replaced Vitest with Jest in all remaining suites (#Fix-block 1).
 

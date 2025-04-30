@@ -143,7 +143,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </header>
 
         {/* Content */}
-        <div className="prose prose-slate dark:prose-invert max-w-none">
+        <div className="prose prose-slate max-w-none">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]} // Ensure highlighter styles are loaded globally

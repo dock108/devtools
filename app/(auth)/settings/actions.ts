@@ -48,20 +48,6 @@ export async function updatePasswordServerAction(
   return await updatePassword(newPassword);
 }
 
-export async function updateThemeServerAction(
-  formData: FormData,
-): Promise<{ success: boolean; error?: string }> {
-  const theme = formData.get('theme') as string;
-  if (!theme || !['system', 'light', 'dark'].includes(theme)) {
-    return { success: false, error: 'Invalid theme value.' };
-  }
-  const result = await updateProfile({ theme }); // Update theme via updateProfile
-  if (result.success) {
-    revalidatePath('/settings'); // Revalidate potentially needed if layout changes based on theme initially
-  }
-  return result;
-}
-
 export async function generateApiKeyServerAction(
   formData: FormData,
 ): Promise<{ success: boolean; apiKey?: string; error?: string }> {
