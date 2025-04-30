@@ -16,7 +16,7 @@ export default function Home() {
             Developer-first tools that solve real dev pain.
           </h1>
           <p className="mb-8 text-lg text-muted-foreground">
-            From fraud protection to flawless builds, DOCK108 ships the fixes you need.
+            From cron job monitoring to flawless builds, DOCK108 ships the fixes you need.
           </p>
         </Container>
       </section>
@@ -25,18 +25,6 @@ export default function Home() {
       <section id="products" className="pb-16 pt-8">
         <Container>
           <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:gap-y-12 md:grid-cols-2 lg:grid-cols-3">
-            <ProductCard
-              title="Stripe Guardian"
-              blurb="Stop fraudulent payouts before they reach the bank."
-              href="/stripe-guardian"
-              accent="guardian"
-            />
-            <ProductCard
-              title="Notary CI"
-              blurb="Automated release notarization for macOS apps in CI/CD."
-              href="/notary-ci"
-              accent="notary"
-            />
             <ProductCard
               title="Crondeck"
               blurb="Reliable, observable cron job monitoring and scheduling."

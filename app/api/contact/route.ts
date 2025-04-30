@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import resend from '@/lib/resend';
+import ContactEmailTemplate from '@/components/ContactEmailTemplate';
 
 const FROM_EMAIL = process.env.FROM_EMAIL ?? 'support@dock108.ai';
 
@@ -39,14 +40,10 @@ export async function POST(req: Request) {
 
     // Send notification email
     await resend.emails.send({
-      from: FROM_EMAIL,
-      to: FROM_EMAIL,
-      subject: 'New Stripe Guardian support request',
-      html: `
-        <p><b>From:</b> ${email}</p>
-        <p><b>Name:</b> ${name || '—'}</p>
-        <p>${message}</p>
-      `,
+      from: process.env.FROM_EMAIL!,
+      to: process.env.FEEDBACK_RECIPIENT_EMAIL!,
+      subject: 'New DOCK108 contact form submission',
+      react: ContactEmailTemplate({ name, email, message }) as React.ReactElement,
     });
 
     return NextResponse.json({ ok: true }, { status: 201 });

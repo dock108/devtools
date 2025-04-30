@@ -4,8 +4,9 @@ module.exports = {
     collect: {
       staticDistDir: './.next',
       numberOfRuns: 3,
-      startServerCommand: 'pnpm start-preview',
-      url: ['/', '/stripe-guardian', '/guardian-demo'],
+      url: ['/'],
+      startServerCommand: 'npm run start',
+      startServerReadyPattern: 'started server on',
     },
     assert: {
       preset: 'lighthouse:recommended',

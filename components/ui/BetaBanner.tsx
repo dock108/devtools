@@ -15,28 +15,13 @@ const BetaBanner: React.FC = () => {
   }
 
   return (
-    <Alert className="rounded-none border-l-0 border-r-0 border-t-0 border-b border-yellow-300 bg-yellow-50 text-yellow-800">
-      <Info className="h-4 w-4 !text-yellow-600" />
-      {/* <AlertTitle>Beta Notice</AlertTitle> */}
-      <AlertDescription className="text-xs flex items-center justify-center gap-4">
-        <span>
-          👷‍♂️ You are currently using the <strong>Stripe Guardian Beta</strong>.
-        </span>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/docs/faq" // TODO: Update if final FAQ path differs
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline underline-offset-2"
-          >
-            View FAQ
-          </Link>
-          <FeedbackDialog
-            trigger={<button className="hover:underline underline-offset-2">Send Feedback</button>}
-          />
-        </div>
-      </AlertDescription>
-    </Alert>
+    <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+      <p className="font-bold">Beta Notice</p>
+      <p>
+        👷‍♂️ You are currently using the <strong>DOCK108 Beta</strong>.
+        Some features may change. Send feedback via the chat widget!
+      </p>
+    </div>
   );
 };
 

@@ -109,7 +109,7 @@ export function Header() {
           ) : session ? (
             <div className="flex items-center space-x-4">
               <Link
-                href="/stripe-guardian/alerts"
+                href="/dashboard/alerts"
                 onClick={handleAlertsClick}
                 className="relative text-slate-300 hover:text-white"
                 aria-label={`View alerts (${unreadCount} unread)`}
@@ -133,7 +133,7 @@ export function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link href="/stripe-guardian/alerts" onClick={handleAlertsClick}>
+                    <Link href="/dashboard/alerts" onClick={handleAlertsClick}>
                       <ShieldAlert className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
@@ -141,7 +141,7 @@ export function Header() {
 
                   {showConnectLink && (
                     <DropdownMenuItem asChild>
-                      <Link href="/stripe-guardian/onboard">
+                      <Link href="/dashboard/connect">
                         <Plug className="mr-2 h-4 w-4" />
                         <span>Connect account</span>
                       </Link>

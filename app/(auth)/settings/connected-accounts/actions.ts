@@ -260,7 +260,7 @@ export async function resumePayoutsServerAction(stripeAccountId: string) {
 
     // 4. Revalidate path
     revalidatePath('/settings/connected-accounts');
-    revalidatePath('/stripe-guardian/alerts'); // Also revalidate dashboard
+    revalidatePath('/dashboard/alerts'); // Also revalidate dashboard
 
     return { success: true };
   } catch (error) {

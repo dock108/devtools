@@ -63,14 +63,19 @@ const corsHeaders = (origin: string | null): Record<string, string> => {
 
 // Define paths that require authentication
 const protectedPaths = [
-  '/settings', // Protects /settings and /settings/*
-  '/stripe-guardian/analytics', // Protect analytics dashboard
-  '/stripe-guardian/alerts', // Protect alerts dashboard
-  // '/admin', // Assuming admin routes handle their own auth/layout
-  // /guardian-demo is now public
-  // /info is assumed public (not listed)
-  // /stripe-guardian product page is now public
+  '/settings',
+  '/(auth)/', // Group for auth-related settings like connected-accounts
+  '/dashboard', // Protect generic dashboard root
+  '/dashboard/alerts', // Protect alerts dashboard
+  '/dashboard/analytics', // Protect analytics dashboard
+  // Add other dashboard sub-paths as needed
+  // '/stripe-guardian/settings/', // Keep commented as example
+  // '/stripe-guardian/onboard', // Keep commented as example
 ];
+
+// Public marketing pages (add product pages here if they become public)
+const publicPaths = ['/', '/blog', '/docs', '/contact', '/crondeck'];
+// /stripe-guardian product page is now public // Remove comment
 
 export async function middleware(request: NextRequest) {
   const requestPath = request.nextUrl.pathname;
@@ -163,10 +168,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect logged-in users away from /login or /sign-up
-  if (session && (requestPath === '/login' || requestPath === '/sign-up')) {
-    console.log(`[Middleware] Redirecting logged-in user from ${requestPath}`);
-    const redirectUrl = new URL('/stripe-guardian/alerts', request.url); // Redirect to alerts page
+  // Redirect authenticated users from /login to their dashboard
+  if (session && requestPath === '/login') {
+    // logger.info('[Middleware] Redirecting logged-in user from /login');
+    const redirectUrl = new URL('/dashboard/alerts', request.url); // Redirect to alerts page
     return NextResponse.redirect(redirectUrl);
   }
   // --- End Auth Logic ---

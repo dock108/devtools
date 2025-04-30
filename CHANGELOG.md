@@ -95,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Velocity-breach rule alerts when > N payouts occur inside T-second window.
 - Modular rule engine core evaluates incoming Stripe events against configured rules and returns Alert objects.
 - Initial Guardian schema (connected_accounts, payout_events, alerts).
-- Playwright smoke suite checks /, /stripe-guardian, /guardian-demo to prevent 404s in prod.
+- Playwright smoke suite checks `/` to prevent 404s in prod.
 - Rule engine now covered by table-driven Jest tests using demo scenarios.
 - Schema-validated `rule-set.json` allows tuning fraud thresholds; default values committed.
 - Three detailed fraud scenarios (velocity-breach, bank-swap, geo-mismatch) with rich Stripe event payloads for the Guardian demo.
@@ -238,6 +238,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **feat(blog):** Add blog framework using MDX, Tailwind Typography, and contentlayer (Task 14).
 - **feat(blog):** Add initial blog posts for Monitor/Mitigate, Payout Trends, and Automation (Task 15).
 - **feat(blog):** Create reusable DemoCTA component (`components/blog/DemoCTA.tsx`) (Task 16).
+- Crondeck product page (/crondeck) with hero, pain/solution, features, pricing, Supabase wait-list.
+- Blog framework using Contentlayer & MDX.
 
 ### Changed
 
@@ -274,5 +276,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Experimental Time-Warp seeder code, cron job, environment variables, and
   related documentation/testing artifacts.
+- G-29: Analytics page (`/dashboard/analytics`) with charts for alerts/day, top rules, FP rate/rule, avg risk score.
 
 ## 0.1.0 (Initial Release)
+
+## [0.1.0-alpha.2] - 2024-04-26

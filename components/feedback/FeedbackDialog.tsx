@@ -97,7 +97,7 @@ export function FeedbackDialog({ trigger }: FeedbackDialogProps) {
         <DialogHeader>
           <DialogTitle>Send Beta Feedback</DialogTitle>
           <DialogDescription>
-            We appreciate you helping us improve Stripe Guardian! What could be better?
+            We appreciate you helping us improve DOCK108! What could be better?
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

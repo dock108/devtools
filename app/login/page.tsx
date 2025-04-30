@@ -23,7 +23,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo');
-  const defaultRedirect = '/stripe-guardian/alerts';
+  const defaultRedirect = '/dashboard/alerts';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +38,7 @@ function LoginForm() {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        router.replace('/stripe-guardian/alerts');
+        router.replace(redirectTo || defaultRedirect);
       }
     };
 

@@ -9,7 +9,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
 import BetaBanner from '@/components/ui/BetaBanner'; // Import BetaBanner
-import { BlogFooterSnippets } from '@/components/blog/BlogFooterSnippets'; // Import the component
+// import { BlogFooterSnippets } from '@/components/blog/BlogFooterSnippets'; // Removed unused import
 
 // Metadata export is allowed here
 export const metadata: Metadata = {
@@ -35,7 +35,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>{/* Google Font preconnects removed as we're using self-hosted Inter */}</head>
-      <body>
+      <body className="flex flex-col min-h-screen">
+        <BetaBanner />
+        <Header />
+        <main className="flex-grow">{children}</main>
+        {/* BlogFooterSnippets might be context-specific, consider moving to specific layouts? */}
+        {/* <BlogFooterSnippets /> */}
+        <Footer />
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

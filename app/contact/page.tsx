@@ -16,7 +16,7 @@ export default function ContactPage() {
       <div className="mx-auto max-w-2xl">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-2">Contact & Support</h1>
         <p className="text-lg text-muted-foreground mb-8">
-          Questions about Stripe Guardian? We reply within 1-2 business days.
+          Questions about DOCK108? We reply within 1-2 business days.
         </p>
 
         <div className="grid gap-8 mb-12">

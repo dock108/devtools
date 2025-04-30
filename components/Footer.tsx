@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { Container } from './Container';
+import { Container } from '@/components/ui/container';
 import { Database } from '@/types/supabase';
-import RetentionStatusBadge from './admin/RetentionStatusBadge';
+// import RetentionStatusBadge from './admin/RetentionStatusBadge';
 import { RssIcon } from 'lucide-react';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function Footer() {
-  const supabase = createSupabaseServerClient();
+  const supabase = createClient();
 
   const {
     data: { session },
@@ -20,7 +20,7 @@ export async function Footer() {
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
             © 2025 DOCK108
           </p>
-          {isAdmin && <RetentionStatusBadge />}
+          {/* {isAdmin && <RetentionStatusBadge />} */}
         </div>
         <div className="flex gap-4">
           <Link

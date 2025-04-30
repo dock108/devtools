@@ -1,15 +1,19 @@
 import { Metadata } from 'next';
 import { SidebarNavClient } from '@/components/docs/SidebarNav';
 import { MobileNavClient } from '@/components/docs/MobileNav';
+import docsConfig from '@/lib/docs.config';
 
 interface DocsLayoutProps {
   children: React.ReactNode;
 }
 
 export const metadata: Metadata = {
-  title: 'Stripe Guardian Documentation',
+  title: {
+    default: 'DOCK108 Documentation',
+    template: `%s | DOCK108 Docs`,
+  },
   description:
-    'Documentation for Stripe Guardian, a fraud protection system for Stripe Connect platforms',
+    'Documentation for DOCK108 developer tools.',
 };
 
 export default function DocsLayout({ children }: DocsLayoutProps) {

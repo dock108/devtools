@@ -2,15 +2,11 @@ module.exports = {
   ci: {
     collect: {
       // URLs to run Lighthouse on
-      url: [
-        'http://localhost:3000/blog', // Blog index page
-        // Add URLs for specific blog posts if desired, e.g.:
-        // 'http://localhost:3000/blog/2024-11-stripe-guardian-origin'
-      ],
+      url: ['http://localhost:3000/'], // Only test homepage for now
       // Command to start your Next.js app in production mode
-      startServerCommand: 'npm run start', // Assumes `next start` is mapped to `npm run start`
+      startServerCommand: 'npm run start-preview',
       // Pattern Lighthouse CI waits for in server logs before starting tests
-      startServerReadyPattern: 'started server on',
+      startServerReadyPattern: 'ready on',
       // Optional: Number of runs for each URL
       // numberOfRuns: 3,
     },

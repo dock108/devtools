@@ -45,8 +45,6 @@ module.exports = {
         accent: {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
-          guardian: 'var(--accent-guardian)',
-          notary: 'var(--accent-notary)',
           crondeck: 'var(--accent-crondeck)',
         },
         popover: {
