@@ -76,16 +76,21 @@ export default async function SettingsProfilePage() {
 
       {/* Removed Theme Section and Separator */}
 
-      {/* API Keys Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>API Keys</CardTitle>
-          <CardDescription>Manage API keys for accessing DOCK108 services.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ApiKeysManager initialApiKeys={profile?.api_keys ?? []} />
-        </CardContent>
-      </Card>
+      {/* Conditionally render API Keys Section based on feature flag */}
+      {process.env.NEXT_PUBLIC_SHOW_KEYS === 'true' && (
+        <>
+          <Separator />
+          <Card>
+            <CardHeader>
+              <CardTitle>API Keys</CardTitle>
+              <CardDescription>Manage API keys for accessing DOCK108 services.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ApiKeysManager initialApiKeys={profile?.api_keys ?? []} />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Added `NEXT_PUBLIC_SHOW_KEYS` flag; API-Keys UI is disabled by default for beta.
 - Instant profile refresh after edits (using `router.refresh()`).
 - Added `prose-dock` Tailwind typography variant; Blog & Docs now centred, readable, and styled.
 - Unified Blog & Docs typography using `prose lg:prose-lg max-w-3xl mx-auto`.
