@@ -14,6 +14,8 @@
 /coverage
 /playwright-report/
 /test-results/
+/cypress/videos/
+/cypress/screenshots/
 
 # next.js
 /.next/
@@ -36,6 +38,7 @@ yarn-error.log*
 .env.local
 .env.*.local
 */.env
+.env
 
 # contentlayer cache
 .contentlayer/
@@ -49,3 +52,35 @@ next-env.d.ts
 
 # reports
 lint-report.json
+
+# Supabase
+.supabase/
+supabase/.temp/
+**/supabase/.branches/
+**/supabase/.temp/
+
+# IDE specific files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+logs
+*.log
+
+# Cache directories
+.cache/
+.mf/
+.swc/
+
+# Temp files
+*.tmp
+*.bak
+*~
+temp/
+tmp/

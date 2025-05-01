@@ -13,57 +13,62 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { md5 } from '@/utils/md5';
 import { useEffect, useState } from 'react';
-import { ShieldAlert, Plug, Cog, LogOut, BellIcon } from 'lucide-react';
+import { ShieldAlert, Cog, LogOut, BellIcon } from 'lucide-react';
 import { Container } from '@/components/ui/container';
+import { createClient } from '@/utils/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const [connectedAccounts, setConnectedAccounts] = useState<any[] | null>(null);
-
-  // Placeholder state until session logic is restored
-  const session = null; // TODO: Replace with actual session logic (e.g., from context or server component)
-  const loading = false; // TODO: Replace with actual loading state
+  const supabase = createClient();
+  const [session, setSession] = useState<{ user: User } | null>(null);
+  const [loading, setLoading] = useState(true);
   const unreadCount = 0; // TODO: Replace with actual notification count logic
   const markAllRead = () => {}; // TODO: Replace with actual markAllRead logic
 
   useEffect(() => {
-    // This logic depended on supabase and session, needs replacement
-    // if (session?.user?.id) {
-    //   const fetchAccounts = async () => {
-    //     const { data, error } = await supabase
-    //       .from('connected_accounts')
-    //       .select('id')
-    //       .eq('user_id', session.user.id)
-    //       .limit(1);
+    async function getSession() {
+      setLoading(true);
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error fetching session:', error);
+      } else if (data.session) {
+        setSession(data.session);
+      }
+      
+      setLoading(false);
+    }
 
-    //     if (error) {
-    //       console.error('Error fetching connected accounts:', error);
-    //       setConnectedAccounts([]);
-    //     } else {
-    //       setConnectedAccounts(data || []);
-    //     }
-    //   };
-    //   fetchAccounts();
-    // } else {
-    //   setConnectedAccounts(null);
-    // }
-    console.warn('TODO: Restore fetchAccounts logic in Header.tsx');
-    setConnectedAccounts(null); // Temporarily set to null
-  }, [session]); // Keep dependency array or adjust based on new session logic
+    getSession();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const handleSignOut = async () => {
-    // This logic depended on supabase, needs replacement
-    // await supabase.auth.signOut();
-    console.warn('TODO: Restore sign out logic in Header.tsx');
-    router.push('/login');
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const handleAlertsClick = () => {
     markAllRead(); // This function is now a placeholder
   };
-
-  const showConnectLink = session && connectedAccounts !== null && connectedAccounts.length === 0;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-700/60 bg-slate-900">
@@ -104,12 +109,12 @@ export function Header() {
             Docs
           </Link> */}
 
-          {loading || (session && connectedAccounts === null) ? (
+          {loading ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-slate-700"></div>
           ) : session ? (
             <div className="flex items-center space-x-4">
               <Link
-                href="/dashboard/alerts"
+                href="/dashboard"
                 onClick={handleAlertsClick}
                 className="relative text-slate-300 hover:text-white"
                 aria-label={`View alerts (${unreadCount} unread)`}
@@ -133,23 +138,14 @@ export function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard/alerts" onClick={handleAlertsClick}>
+                    <Link href="/dashboard" onClick={handleAlertsClick}>
                       <ShieldAlert className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  {showConnectLink && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard/connect">
-                        <Plug className="mr-2 h-4 w-4" />
-                        <span>Connect account</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-
                   <DropdownMenuItem asChild>
-                    <Link href="/settings">
+                    <Link href="/settings/profile">
                       <Cog className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </Link>

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Implemented email/password authentication for CronDeck
+  - Created authentication components (LoginForm, LogoutButton)
+  - Added middleware.ts for protecting routes
+  - Implemented auth callback handler
+  - Created protected layout for dashboard and settings pages
+  - Applied Row Level Security (RLS) to jobs table
+  - Added documentation in flow.md with Mermaid diagram
+  - Updated README with authentication flow details
+- Fixed Header component to properly display login/logout state
+- Fixed settings link in user dropdown menu
+- Removed connected accounts functionality from settings
+- Updated pricing section on CronDeck page - replaced $49/mo Pro card with beta waitlist feedback form
+- Added customizable placeholder text to WaitlistForm component
+- Fixed routing issues between settings and dashboard
 - Added `NEXT_PUBLIC_SHOW_KEYS` flag; API-Keys UI is disabled by default for beta.
 - Instant profile refresh after edits (using `router.refresh()`).
 - Added `prose-dock` Tailwind typography variant; Blog & Docs now centred, readable, and styled.
@@ -240,6 +254,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **feat(blog):** Create reusable DemoCTA component (`components/blog/DemoCTA.tsx`) (Task 16).
 - Crondeck product page (/crondeck) with hero, pain/solution, features, pricing, Supabase wait-list.
 - Blog framework using Contentlayer & MDX.
+- **feat(db):** create waitlist, users, jobs tables + RLS (2025-04-30)
+  - Created tables for waitlist sign-ups, authenticated users, and cron jobs
+  - Implemented Row Level Security (RLS) policies for jobs table
+  - Configured Supabase project with CLI version 2.22.6
+  - Set up magic link authentication for email-based logins
 
 ### Changed
 
@@ -266,6 +285,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- fix(waitlist): revive email box on /crondeck (2025-04-30)
 - fix(settings): implement tabbed routes (/profile, /connected-accounts, /notifications)
 - Fix: Join Waitlist CTA functional on all pages.
 - Fix: Demo path break after scenario move.

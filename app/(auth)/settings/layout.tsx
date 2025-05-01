@@ -9,7 +9,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
   const tabs = [
     { slug: 'profile',            label: 'Profile' },
-    { slug: 'connected-accounts', label: 'Connected Accounts' },
     { slug: 'notifications',      label: 'Notifications' },
   ];
 

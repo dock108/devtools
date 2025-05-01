@@ -19,9 +19,10 @@ interface WaitlistFormProps {
   tableName: string; // Supabase table name (e.g., 'guardian_leads', 'notary_leads')
   productIdentifier: string; // GA4 product identifier (e.g., 'guardian', 'notary')
   accentColorVar: string; // CSS variable for accent color (e.g., 'var(--accent-guardian)')
+  placeholderText?: string; // Optional custom placeholder text
 }
 
-export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: WaitlistFormProps) {
+export function WaitlistForm({ tableName, productIdentifier, accentColorVar, placeholderText }: WaitlistFormProps) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -36,7 +37,12 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/waitlist', {
+      // Determine the endpoint based on whether it's for CronDeck
+      const endpoint = tableName === 'crondeck_leads' 
+        ? '/api/waitlist/subscribe' 
+        : '/api/waitlist';
+        
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +102,7 @@ export function WaitlistForm({ tableName, productIdentifier, accentColorVar }: W
         required
         className="min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 disabled:opacity-50"
         style={{ '--focus-ring-color': accentColorVar } as React.CSSProperties} // Custom property for focus ring
-        placeholder="Enter your email"
+        placeholder={placeholderText || "Enter your email"}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         disabled={state === 'sending' || state === 'sent'}

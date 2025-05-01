@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 // import { useSearchParams, useRouter } from 'next/navigation'; // Removed
 import useSWR, { mutate } from 'swr'; // For data fetching and optimistic updates
-import { linkStripeAccountServerAction } from '@/app/(auth)/settings/connected-accounts/actions'; // Reuse existing action
+import { linkStripeAccountServerAction } from '../actions'; // Use local actions file
 // import { createClient } from '@supabase/supabase-js'; // Removed unused
 
 import { Button } from '@/components/ui/button';

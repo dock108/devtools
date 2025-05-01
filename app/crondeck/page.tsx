@@ -70,18 +70,18 @@ const tiers = [
     ],
   },
   {
-    name: 'Pro',
-    id: 'tier-pro',
-    priceMonthly: '$49',
-    description: 'Unlimited monitoring with advanced features and longer retention.',
+    name: 'Join Our Beta',
+    id: 'tier-beta',
+    priceMonthly: 'Free',
+    description: 'Help shape the future of CronDeck with your feedback and suggestions.',
     features: [
-      'Unlimited Cron Jobs',
-      'All Discovery Sources',
-      'Slack, PagerDuty, Webhooks',
-      '6 Months History',
-      'Multi-Environment Support',
-      'Priority Support',
+      'Early access to premium features',
+      'Help prioritize our roadmap',
+      'Direct feedback channel to founders',
+      'No credit card required',
+      'Free during the entire beta period',
     ],
+    isBetaCard: true,
   },
 ];
 
@@ -218,10 +218,10 @@ export default function CrondeckPage() {
         <Container>
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Predictable pricing for all teams
+              Join our free beta program
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Start free, then scale up when you need more history or integrations. No per-job fees.
+              Help us shape CronDeck by providing your feedback on features and pricing that would work for your team.
             </p>
           </div>
           <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -243,29 +243,48 @@ export default function CrondeckPage() {
                       {tier.priceMonthly}
                     </span>
                     <span className="text-sm font-semibold leading-6 tracking-wide text-gray-600">
-                      {tier.priceMonthly !== '$0' ? '/month' : ''}
+                      {tier.priceMonthly !== '$0' && tier.priceMonthly !== 'Free' ? '/month' : ''}
                     </span>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1">
-                  <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-gray-600">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex gap-x-3">
-                        <Check
-                          className="h-6 w-5 flex-none text-[var(--accent-crondeck)]"
-                          aria-hidden="true"
+                  {tier.isBetaCard ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-600">We'd love your feedback on:</p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>• Which features would you pay for?</li>
+                        <li>• Would you prefer $19/mo, $49/mo, or $99/mo?</li>
+                        <li>• What integrations are essential for you?</li>
+                      </ul>
+                      <div className="pt-4">
+                        <WaitlistForm
+                          productIdentifier={productIdentifier}
+                          accentColorVar={accentColor}
+                          tableName={tableName}
+                          placeholderText="Email for beta access + feedback"
                         />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-gray-600">
+                      {tier.features.map((feature) => (
+                        <li key={feature} className="flex gap-x-3">
+                          <Check
+                            className="h-6 w-5 flex-none text-[var(--accent-crondeck)]"
+                            aria-hidden="true"
+                          />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
-          {/* <p className="mt-8 text-center text-sm text-gray-500">
-            Early-access pricing—subject to change after launch.
-          </p> */}
+          <p className="mt-8 text-center text-sm text-gray-500">
+            Your feedback will help us build the perfect tool for your needs.
+          </p>
         </Container>
       </div>
     </>

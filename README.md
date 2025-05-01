@@ -64,6 +64,77 @@ If you're working with features requiring a database (e.g., CronDeck waitlist):
    supabase db reset
    ```
 
+### Local Supabase Setup
+
+For CronDeck, we've set up a Supabase project with authentication and database tables:
+
+1. **Project Details:**
+   - Project ID: htvcpivmlntnaabmlxju
+   - Region: us-east-1
+   - Organization: dock108 (dmlbqbgdmahwdgydirzm)
+
+2. **Tables:**
+   - `waitlist`: Stores email sign-ups (no auth required)
+   - `users`: Authenticated users and plan tiers
+   - `jobs`: Cron job metadata with RLS policies
+
+3. **Authentication:**
+   - Email/password authentication is enabled
+   - Site URL: http://localhost:3000
+   - Additional URLs: http://127.0.0.1:3000
+
+4. **Required Environment Variables:**
+   - `NEXT_PUBLIC_SUPABASE_URL`: Project URL (https://htvcpivmlntnaabmlxju.supabase.co)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Public API key for client-side operations
+   - `SUPABASE_SERVICE_ROLE_KEY`: Private key for server-side operations (use with caution)
+
+5. **Local Testing:**
+   When running locally with `supabase start`, email magic links are captured by Inbucket:
+   ```bash
+   # Check status of local Supabase services
+   supabase status
+   # View URL where local emails are captured
+   # Usually http://localhost:54324
+   ```
+
+6. **Running locally → Auth flow:**
+   - Visit `/dashboard` → redirects to `/login` if not authenticated
+   - Enter email/password → authentication handled by Supabase
+   - On success → redirects to `/auth/callback` → lands on `/dashboard`
+   - Dashboard shows your email and persists after refresh
+   - Sign out returns to landing page
+
+### Authentication Implementation Details
+
+The CronDeck application uses Supabase Authentication with email/password credentials:
+
+1. **Authentication Flow:**
+   - Authentication is handled via Supabase Auth using the `@supabase/auth-helpers-nextjs` library
+   - Protected routes are secured with middleware that checks for valid sessions
+   - Detailed flow diagram available in `docs/flow.md`
+
+2. **Key Components:**
+   - `middleware.ts`: Handles authentication checks for protected routes
+   - `app/auth/callback/route.ts`: Processes authentication callbacks
+   - `components/auth/LoginForm.tsx`: Handles user login
+   - `app/(protected)/layout.tsx`: Wraps all protected routes with auth checks
+
+3. **Protected Routes:**
+   - `/dashboard/*`: All dashboard pages require authentication
+   - `/settings/*`: User settings pages require authentication
+   
+4. **Row Level Security:**
+   - The `jobs` table uses RLS policies to ensure users can only access their own data
+   - The RLS policy uses the authenticated user's ID to filter records
+
+5. **Authentication Methods:**
+   - Email/password authentication is the primary method
+   - Magic link authentication also available as a fallback
+
+For a complete diagram of the authentication flow, see `docs/flow.md`.
+
+**Status:** ✅ Authentication is working correctly with proper session handling and protected routes.
+
 ## Available Scripts
 
 - `npm run dev`: Starts the development server.

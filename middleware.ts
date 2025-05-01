@@ -64,7 +64,7 @@ const corsHeaders = (origin: string | null): Record<string, string> => {
 // Define paths that require authentication
 const protectedPaths = [
   '/settings',
-  '/(auth)/', // Group for auth-related settings like connected-accounts
+  '/(auth)/', // Group for auth-related settings
   '/dashboard', // Protect generic dashboard root
   '/dashboard/alerts', // Protect alerts dashboard
   '/dashboard/analytics', // Protect analytics dashboard
@@ -171,7 +171,7 @@ export async function middleware(request: NextRequest) {
   // Redirect authenticated users from /login to their dashboard
   if (session && requestPath === '/login') {
     // logger.info('[Middleware] Redirecting logged-in user from /login');
-    const redirectUrl = new URL('/dashboard/alerts', request.url); // Redirect to alerts page
+    const redirectUrl = new URL('/dashboard', request.url); // Redirect to dashboard
     return NextResponse.redirect(redirectUrl);
   }
   // --- End Auth Logic ---
